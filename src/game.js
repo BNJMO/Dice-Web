@@ -29,7 +29,7 @@ const SLIDER = {
   maxValue: 98,
   rangeMin: 0,
   rangeMax: 100,
-  step: 0.1,
+  step: 1,
   leftColor: 0xf40029,
   rightColor: 0xf0ff31,
   fadeInDuration: 700,
@@ -38,7 +38,7 @@ const SLIDER = {
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
   trackOffsetRatio: 0.04,
-  tickEdgePaddingRatio: 0.02,
+  tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
 };
@@ -431,7 +431,7 @@ export async function createGame(mount, opts = {}) {
     const trackEnd = trackLength / 2;
     const tickEdgePadding = Math.min(
       trackPadding,
-      Math.max(0, baseWidth * (SLIDER.tickEdgePaddingRatio ?? 0))
+      SLIDER.tickEdgePaddingRatio,
     );
     const barHeight = Math.max(10, baseHeight *trackHeightRatio);
     const barRadius = barHeight / 2;
