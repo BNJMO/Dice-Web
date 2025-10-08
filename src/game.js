@@ -409,7 +409,7 @@ export async function createGame(mount, opts = {}) {
     background.eventMode = "none";
     sliderContainer.addChild(background);
 
-    const trackPadding = Math.max(12, baseWidth * 0.08);
+    const trackPadding = Math.max(12, baseWidth * 0.03);
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
     const trackStart = -trackLength / 2;
     const trackEnd = trackLength / 2;
@@ -437,13 +437,13 @@ export async function createGame(mount, opts = {}) {
         style: {
           fill: 0xffffff,
           fontFamily,
-          fontSize: Math.max(14, baseHeight * 0.16),
+          fontSize: Math.max(14, baseHeight * 0.27),
           fontWeight: "600",
           align: "center",
         },
       });
       label.anchor.set(0.5, 1);
-      label.position.set(0, -2);
+      label.position.set(0, -15);
 
       const line = new Graphics();
       line.eventMode = "none";
@@ -736,7 +736,12 @@ export async function createGame(mount, opts = {}) {
 
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
-      const bottomPadding = Math.max(60, (combinedHeight * scale) / 2);
+      const bottomPaddingRatio = 0.5;
+      const bottomPadding = Math.max(
+        60,
+        (combinedHeight * scale) / 2,
+        app.renderer.height * bottomPaddingRatio
+      );
       sliderContainer.position.set(
         app.renderer.width / 2,
         app.renderer.height - bottomPadding

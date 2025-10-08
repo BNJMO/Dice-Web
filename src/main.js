@@ -3,7 +3,6 @@ import { createGame } from "./game.js";
 import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
 import winSoundUrl from "../assets/sounds/Win.wav";
 
-let bombRandomPercentage = 0.15;
 let game;
 const opts = {
   // Window visuals
