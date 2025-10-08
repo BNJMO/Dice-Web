@@ -35,10 +35,6 @@ const SLIDER = {
   fadeInDuration: 700,
   fadeOutDuration: 400,
   fadeOutDelay: 5000,
-  /**
-   * Moves the slider track vertically relative to the background height.
-   * Positive values push the track down, negative values pull it up.
-   */
   trackOffsetRatio: 0,
 };
 
