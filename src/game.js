@@ -736,7 +736,12 @@ export async function createGame(mount, opts = {}) {
 
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
-      const bottomPadding = Math.max(60, (combinedHeight * scale) / 2);
+      const bottomPaddingRatio = 0.12;
+      const bottomPadding = Math.max(
+        60,
+        (combinedHeight * scale) / 2,
+        app.renderer.height * bottomPaddingRatio
+      );
       sliderContainer.position.set(
         app.renderer.width / 2,
         app.renderer.height - bottomPadding
