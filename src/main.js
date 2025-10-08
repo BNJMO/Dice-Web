@@ -38,12 +38,7 @@ const opts = {
 (async () => {
   try {
     game = await createGame("#game", opts);
-    const sampleRoll = 65.4;
-    const sampleChance = Math.max(0, (100 - sampleRoll) / 100);
-    console.debug(
-      `Revealing roll ${sampleRoll.toFixed(1)} with chance ${(sampleChance * 100).toFixed(2)}%`
-    );
-    game?.revealDiceOutcome?.({ roll: sampleRoll });
+    window.game = game;
   } catch (e) {
     console.error("Game initialization failed:", e);
     const gameDiv = document.querySelector("#game");
@@ -63,4 +58,15 @@ document
   .querySelector("#resetBtn")
   ?.addEventListener("click", () => game.reset());
 
-window.game = game;
+document
+  .querySelector("#betBtn")
+  ?.addEventListener("click", () => {
+    const roll = Math.random() * 100;
+    const winChance = Math.max(0, (100 - roll) / 100);
+    console.debug(
+      `Bet placed. Revealing roll ${roll.toFixed(1)} with ${(winChance * 100).toFixed(
+        2
+      )}% win chance.`
+    );
+    game?.revealDiceOutcome?.({ roll });
+  });
