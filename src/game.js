@@ -35,6 +35,11 @@ const SLIDER = {
   fadeInDuration: 700,
   fadeOutDuration: 400,
   fadeOutDelay: 5000,
+  /**
+   * Moves the slider track vertically relative to the background height.
+   * Positive values push the track down, negative values pull it up.
+   */
+  trackOffsetRatio: 0,
 };
 
 const SOUND_ALIASES = {
@@ -385,6 +390,9 @@ export async function createGame(mount, opts = {}) {
 
     let baseWidth = fallbackWidth;
     let baseHeight = fallbackHeight;
+    const trackOffsetRatio = Number.isFinite(SLIDER.trackOffsetRatio)
+      ? SLIDER.trackOffsetRatio
+      : 0;
 
     let background;
     if (textures.background) {
@@ -408,6 +416,8 @@ export async function createGame(mount, opts = {}) {
     }
     background.eventMode = "none";
     sliderContainer.addChild(background);
+
+    const trackCenterY = baseHeight * trackOffsetRatio;
 
     const trackPadding = Math.max(12, baseWidth * 0.08);
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
@@ -518,7 +528,7 @@ export async function createGame(mount, opts = {}) {
     diceContainer.addChild(diceLabel);
 
     const diceBottomGap = Math.max(10, barHeight * 0.25);
-    diceContainer.position.y = -barHeight / 2 - diceBottomGap;
+    diceContainer.position.y = trackCenterY - barHeight / 2 - diceBottomGap;
 
     const sliderRange = Math.max(1e-4, SLIDER.rangeMax - SLIDER.rangeMin);
     const sliderTrackLength = trackEnd - trackStart;
@@ -561,7 +571,10 @@ export async function createGame(mount, opts = {}) {
       const tickHeight = Math.max(12, barHeight * 0.45);
       tickItems.forEach(({ container, line, value }) => {
         const x = valueToPosition(value);
-        container.position.set(x, -barHeight / 2 - tickHeight);
+        container.position.set(
+          x,
+          trackCenterY - barHeight / 2 - tickHeight
+        );
         line.clear();
         line.roundRect(-1, 0, 2, tickHeight, 1).fill(0xffffff);
         line.alpha = 0.6;
@@ -570,13 +583,19 @@ export async function createGame(mount, opts = {}) {
 
     function updateSliderVisuals() {
       const position = valueToPosition(sliderValue);
-      handle.position.set(position, 0);
+      handle.position.set(position, trackCenterY);
 
       leftBar.clear();
       const leftWidth = Math.max(0, position - trackStart);
       if (leftWidth > 0) {
         leftBar
-          .roundRect(trackStart, -barHeight / 2, leftWidth, barHeight, barRadius)
+          .roundRect(
+            trackStart,
+            trackCenterY - barHeight / 2,
+            leftWidth,
+            barHeight,
+            barRadius
+          )
           .fill(SLIDER.leftColor);
       }
 
@@ -584,7 +603,13 @@ export async function createGame(mount, opts = {}) {
       const rightWidth = Math.max(0, trackEnd - position);
       if (rightWidth > 0) {
         rightBar
-          .roundRect(position, -barHeight / 2, rightWidth, barHeight, barRadius)
+          .roundRect(
+            position,
+            trackCenterY - barHeight / 2,
+            rightWidth,
+            barHeight,
+            barRadius
+          )
           .fill(SLIDER.rightColor);
       }
     }
