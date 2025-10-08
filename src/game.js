@@ -38,6 +38,7 @@ const SLIDER = {
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
   trackOffsetRatio: 0.04,
+  tickEdgePaddingRatio: 0.02,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
 };
@@ -428,6 +429,10 @@ export async function createGame(mount, opts = {}) {
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
     const trackStart = -trackLength / 2;
     const trackEnd = trackLength / 2;
+    const tickEdgePadding = Math.min(
+      trackPadding,
+      Math.max(0, baseWidth * (SLIDER.tickEdgePaddingRatio ?? 0))
+    );
     const barHeight = Math.max(10, baseHeight *trackHeightRatio);
     const barRadius = barHeight / 2;
 
@@ -575,7 +580,10 @@ export async function createGame(mount, opts = {}) {
     function updateTickLayout() {
       const tickHeight = Math.max(12, barHeight * 0.45);
       tickItems.forEach(({ container, line, value }) => {
-        const x = valueToPosition(value);
+        const ratio = (clampRange(value) - SLIDER.rangeMin) / sliderRange;
+        const tickTrackStart = trackStart - tickEdgePadding;
+        const tickTrackLength = sliderTrackLength + tickEdgePadding * 2;
+        const x = tickTrackStart + ratio * tickTrackLength;
         container.position.set(
           x,
           trackCenterY - barHeight / 2 - tickHeight
