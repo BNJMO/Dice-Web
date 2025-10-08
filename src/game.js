@@ -35,7 +35,11 @@ const SLIDER = {
   fadeInDuration: 700,
   fadeOutDuration: 400,
   fadeOutDelay: 5000,
-  trackOffsetRatio: 0,
+  trackHeightRatio: 0.15,
+  trackPaddingRatio: 0.035,
+  trackOffsetRatio: 0.04,
+  tickPadding: -22,
+  tickTextSizeRatio: 0.27,
 };
 
 const SOUND_ALIASES = {
@@ -389,6 +393,12 @@ export async function createGame(mount, opts = {}) {
     const trackOffsetRatio = Number.isFinite(SLIDER.trackOffsetRatio)
       ? SLIDER.trackOffsetRatio
       : 0;
+    const trackPaddingRatio = Number.isFinite(SLIDER.trackPaddingRatio)
+      ? SLIDER.trackPaddingRatio
+      : 0;
+    const trackHeightRatio = Number.isFinite(SLIDER.trackHeightRatio)
+      ? SLIDER.trackHeightRatio
+      : 0;
 
     let background;
     if (textures.background) {
@@ -414,12 +424,11 @@ export async function createGame(mount, opts = {}) {
     sliderContainer.addChild(background);
 
     const trackCenterY = baseHeight * trackOffsetRatio;
-
-    const trackPadding = Math.max(12, baseWidth * 0.08);
+    const trackPadding = Math.max(12, baseWidth * trackPaddingRatio);
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
     const trackStart = -trackLength / 2;
     const trackEnd = trackLength / 2;
-    const barHeight = Math.max(10, baseHeight * 0.32);
+    const barHeight = Math.max(10, baseHeight *trackHeightRatio);
     const barRadius = barHeight / 2;
 
     const leftBar = new Graphics();
@@ -443,13 +452,13 @@ export async function createGame(mount, opts = {}) {
         style: {
           fill: 0xffffff,
           fontFamily,
-          fontSize: Math.max(14, baseHeight * 0.16),
+          fontSize: Math.max(14, baseHeight * SLIDER.tickTextSizeRatio),
           fontWeight: "600",
           align: "center",
         },
       });
       label.anchor.set(0.5, 1);
-      label.position.set(0, -2);
+      label.position.set(0, SLIDER.tickPadding);
 
       const line = new Graphics();
       line.eventMode = "none";
@@ -757,7 +766,12 @@ export async function createGame(mount, opts = {}) {
 
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
-      const bottomPadding = Math.max(60, (combinedHeight * scale) / 2);
+      const bottomPaddingRatio = 0.5;
+      const bottomPadding = Math.max(
+        60,
+        (combinedHeight * scale) / 2,
+        app.renderer.height * bottomPaddingRatio
+      );
       sliderContainer.position.set(
         app.renderer.width / 2,
         app.renderer.height - bottomPadding
