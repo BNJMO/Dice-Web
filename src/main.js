@@ -26,12 +26,24 @@ const opts = {
   },
   onLost: () => {},
   onStateChange: () => {},
+  onSliderValueChange: (target) => {
+    const winChance = Math.max(0, (100 - target) / 100);
+    console.debug(
+      `Main calculated win chance: ${(winChance * 100).toFixed(2)}%`
+    );
+  },
 };
 
 // Initialize game
 (async () => {
   try {
     game = await createGame("#game", opts);
+    const sampleRoll = 65.4;
+    const sampleChance = Math.max(0, (100 - sampleRoll) / 100);
+    console.debug(
+      `Revealing roll ${sampleRoll.toFixed(1)} with chance ${(sampleChance * 100).toFixed(2)}%`
+    );
+    game?.revealDiceOutcome?.({ roll: sampleRoll });
   } catch (e) {
     console.error("Game initialization failed:", e);
     const gameDiv = document.querySelector("#game");
