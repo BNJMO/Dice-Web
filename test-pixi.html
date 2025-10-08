@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixiJS Test - Verify Installation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #0b1a22;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #E3E552;
+        }
+        #test-canvas {
+            border: 2px solid #E3E552;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid #f44336;
+            color: #f44336;
+        }
+        .info {
+            background: rgba(33, 150, 243, 0.2);
+            border: 2px solid #2196F3;
+            color: #2196F3;
+        }
+        pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        button {
+            background: #E3E552;
+            color: #0b1a22;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            background: #f0f25f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 PixiJS Installation Test</h1>
+        <p>This page tests if PixiJS is working correctly in your environment.</p>
+
+        <div id="status"></div>
+        <div id="test-canvas"></div>
+        <div id="info"></div>
+
+        <h2>Actions:</h2>
+        <button onclick="runTest()">🔄 Run Test Again</button>
+        <button onclick="location.href='index.html'">🎮 Go to Game</button>
+    </div>
+
+    <script type="module">
+        const statusDiv = document.getElementById('status');
+        const canvasDiv = document.getElementById('test-canvas');
+        const infoDiv = document.getElementById('info');
+
+        function addStatus(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            statusDiv.appendChild(div);
+        }
+
+        function addInfo(title, content) {
+            const div = document.createElement('div');
+            div.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+            infoDiv.appendChild(div);
+        }
+
+        async function runTest() {
+            statusDiv.innerHTML = '';
+            canvasDiv.innerHTML = '';
+            infoDiv.innerHTML = '';
+
+            addStatus('🔍 Starting PixiJS test...', 'info');
+
+            // Test 1: Check if module imports work
+            try {
+                addStatus('✓ Step 1: Testing module imports...', 'info');
+                const { Application, Graphics, Text } = await import('pixi.js');
+                addStatus('✅ Module imports successful!', 'success');
+
+                // Test 2: Create PixiJS Application
+                addStatus('✓ Step 2: Creating PixiJS Application...', 'info');
+                const app = new Application();
+                
+                await app.init({
+                    width: 600,
+                    height: 400,
+                    backgroundColor: 0x1a2f3a,
+                    antialias: true,
+                });
+
+                canvasDiv.appendChild(app.canvas);
+                addStatus('✅ PixiJS Application created successfully!', 'success');
+
+                // Test 3: Draw some graphics
+                addStatus('✓ Step 3: Drawing test graphics...', 'info');
+                
+                // Draw a rectangle
+                const rect = new Graphics()
+                    .rect(50, 50, 200, 150)
+                    .fill(0xE3E552)
+                    .stroke({ color: 0x161616, width: 3 });
+                app.stage.addChild(rect);
+
+                // Draw a circle
+                const circle = new Graphics()
+                    .circle(400, 200, 80)
+                    .fill(0x4CAF50)
+                    .stroke({ color: 0x161616, width: 3 });
+                app.stage.addChild(circle);
+
+                // Add text
+                const text = new Text({
+                    text: 'PixiJS is Working! 🎉',
+                    style: {
+                        fontFamily: 'Arial',
+                        fontSize: 32,
+                        fill: 0xffffff,
+                        fontWeight: 'bold',
+                    }
+                });
+                text.x = 300;
+                text.y = 350;
+                text.anchor.set(0.5);
+                app.stage.addChild(text);
+
+                // Animate the circle
+                let elapsed = 0;
+                app.ticker.add((delta) => {
+                    elapsed += delta.deltaTime * 0.05;
+                    circle.scale.set(1 + Math.sin(elapsed) * 0.1);
+                    rect.rotation = Math.sin(elapsed * 0.5) * 0.1;
+                });
+
+                addStatus('✅ Graphics rendered successfully!', 'success');
+                addStatus('✅ Animation running!', 'success');
+
+                // Display system info
+                addInfo('System Information', JSON.stringify({
+                    'PixiJS Version': app.renderer.version || 'Unknown',
+                    'Renderer Type': app.renderer.type,
+                    'Canvas Size': `${app.canvas.width}x${app.canvas.height}`,
+                    'Device Pixel Ratio': window.devicePixelRatio,
+                    'WebGL Supported': !!app.renderer.gl,
+                }, null, 2));
+
+                addStatus('🎉 ALL TESTS PASSED! PixiJS is working correctly!', 'success');
+                addStatus('✅ You can now use the main game.', 'success');
+
+            } catch (error) {
+                addStatus('❌ TEST FAILED!', 'error');
+                addStatus(`Error: ${error.message}`, 'error');
+                
+                addInfo('Error Details', error.stack || error.toString());
+                
+                addInfo('Troubleshooting Steps', 
+                    '1. Make sure you are running a web server (not opening file directly)\n' +
+                    '2. Run: npm install\n' +
+                    '3. Run: npm run dev\n' +
+                    '4. Check browser console (F12) for more errors\n' +
+                    '5. Try a different browser\n' +
+                    '6. See TROUBLESHOOTING.md for more help'
+                );
+            }
+        }
+
+        // Run test on page load
+        window.runTest = runTest;
+        runTest();
+    </script>
+</body>
+</html>
+

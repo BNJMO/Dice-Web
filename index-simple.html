@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mines Game - Simple PixiJS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0b1a22 0%, #1a2f3a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #E3E552;
+            margin: 20px 0;
+        }
+
+        #game-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        #game {
+            border: 2px solid #E3E552;
+            border-radius: 8px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #E3E552;
+            color: #0b1a22;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(227, 229, 82, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>💎 Mines Game 💣</h1>
+    
+    <div id="game-container">
+        <div id="game"></div>
+        <div class="controls">
+            <button id="resetBtn">🔄 Reset</button>
+            <button id="easyBtn">Easy (3 💣)</button>
+            <button id="hardBtn">Hard (10 💣)</button>
+        </div>
+        <div id="status">Click a tile to start!</div>
+    </div>
+
+    <script type="module">
+        import { Application, Graphics, Container, Text } from 'pixi.js';
+
+        const GRID = 5;
+        let MINES = 5;
+        const TILE_SIZE = 100;
+        const GAP = 10;
+        const COLORS = {
+            tileBase: 0xE3E552,
+            tileHover: 0xDFE0AC,
+            tileStroke: 0x161616,
+            safe: 0x4CAF50,
+            bomb: 0xf44336,
+        };
+
+        let app, board, tiles = [], bombPositions = new Set(), gameOver = false, revealed = 0;
+
+        async function init() {
+            // Create PixiJS app
+            app = new Application();
+            
+            try {
+                await app.init({
+                    width: GRID * TILE_SIZE + (GRID - 1) * GAP,
+                    height: GRID * TILE_SIZE + (GRID - 1) * GAP,
+                    backgroundColor: 0x0b1a22,
+                    antialias: true,
+                });
+
+                document.getElementById('game').appendChild(app.canvas);
+                console.log('✅ PixiJS initialized successfully!');
+                
+                // Create board
+                board = new Container();
+                app.stage.addChild(board);
+                
+                // Create game
+                reset();
+                
+            } catch (error) {
+                console.error('❌ PixiJS failed:', error);
+                document.getElementById('game').innerHTML = 
+                    '<div style="color: red; padding: 40px;">Failed to initialize PixiJS. Error: ' + error.message + '</div>';
+            }
+        }
+
+        function createTile(row, col) {
+            const container = new Container();
+            container.x = col * (TILE_SIZE + GAP);
+            container.y = row * (TILE_SIZE + GAP);
+
+            // Background
+            const bg = new Graphics()
+                .roundRect(0, 0, TILE_SIZE, TILE_SIZE, 15)
+                .fill(COLORS.tileBase)
+                .stroke({ color: COLORS.tileStroke, width: 3 });
+
+            // Text (hidden initially)
+            const text = new Text({
+                text: '',
+                style: {
+                    fontSize: 48,
+                    fill: 0xffffff,
+                    fontWeight: 'bold',
+                }
+            });
+            text.anchor.set(0.5);
+            text.x = TILE_SIZE / 2;
+            text.y = TILE_SIZE / 2;
+            text.visible = false;
+
+            container.addChild(bg, text);
+
+            // Make interactive
+            container.eventMode = 'static';
+            container.cursor = 'pointer';
+            container.row = row;
+            container.col = col;
+            container.revealed = false;
+            container.bg = bg;
+            container.text = text;
+
+            // Hover effect
+            container.on('pointerover', () => {
+                if (!container.revealed && !gameOver) {
+                    bg.clear()
+                        .roundRect(0, 0, TILE_SIZE, TILE_SIZE, 15)
+                        .fill(COLORS.tileHover)
+                        .stroke({ color: COLORS.tileStroke, width: 3 });
+                    container.scale.set(1.05);
+                }
+            });
+
+            container.on('pointerout', () => {
+                if (!container.revealed && !gameOver) {
+                    bg.clear()
+                        .roundRect(0, 0, TILE_SIZE, TILE_SIZE, 15)
+                        .fill(COLORS.tileBase)
+                        .stroke({ color: COLORS.tileStroke, width: 3 });
+                    container.scale.set(1);
+                }
+            });
+
+            // Click handler
+            container.on('pointerdown', () => {
+                if (!container.revealed && !gameOver) {
+                    revealTile(container);
+                }
+            });
+
+            return container;
+        }
+
+        function revealTile(tile) {
+            tile.revealed = true;
+            const index = tile.row * GRID + tile.col;
+            const isBomb = bombPositions.has(index);
+
+            if (isBomb) {
+                // Bomb!
+                tile.bg.clear()
+                    .roundRect(0, 0, TILE_SIZE, TILE_SIZE, 15)
+                    .fill(COLORS.bomb)
+                    .stroke({ color: COLORS.tileStroke, width: 3 });
+                tile.text.text = '💣';
+                tile.text.visible = true;
+                gameOver = true;
+                updateStatus('💥 BOOM! You hit a bomb! Click Reset to try again.');
+                revealAll();
+            } else {
+                // Safe!
+                tile.bg.clear()
+                    .roundRect(0, 0, TILE_SIZE, TILE_SIZE, 15)
+                    .fill(COLORS.safe)
+                    .stroke({ color: COLORS.tileStroke, width: 3 });
+                tile.text.text = '💎';
+                tile.text.visible = true;
+                revealed++;
+
+                if (revealed === GRID * GRID - MINES) {
+                    gameOver = true;
+                    updateStatus('🎉 YOU WIN! Found all diamonds!');
+                    revealAll();
+                }
+            }
+        }
+
+        function revealAll() {
+            tiles.forEach(tile => {
+                if (!tile.revealed) {
+                    const index = tile.row * GRID + tile.col;
+                    const isBomb = bombPositions.has(index);
+                    
+                    tile.bg.clear()
+                        .roundRect(0, 0, TILE_SIZE, TILE_SIZE, 15)
+                        .fill(isBomb ? COLORS.bomb : COLORS.safe)
+                        .stroke({ color: COLORS.tileStroke, width: 3 });
+                    tile.text.text = isBomb ? '💣' : '💎';
+                    tile.text.visible = true;
+                    tile.alpha = 0.7;
+                }
+            });
+        }
+
+        function reset() {
+            gameOver = false;
+            revealed = 0;
+            board.removeChildren();
+            tiles = [];
+            bombPositions.clear();
+
+            // Place bombs randomly
+            while (bombPositions.size < MINES) {
+                bombPositions.add(Math.floor(Math.random() * GRID * GRID));
+            }
+
+            // Create tiles
+            for (let row = 0; row < GRID; row++) {
+                for (let col = 0; col < GRID; col++) {
+                    const tile = createTile(row, col);
+                    board.addChild(tile);
+                    tiles.push(tile);
+                }
+            }
+
+            updateStatus(`Find all ${GRID * GRID - MINES} diamonds! Avoid ${MINES} bombs!`);
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('status').textContent = msg;
+        }
+
+        // Button handlers
+        document.getElementById('resetBtn').addEventListener('click', reset);
+        document.getElementById('easyBtn').addEventListener('click', () => {
+            MINES = 3;
+            reset();
+        });
+        document.getElementById('hardBtn').addEventListener('click', () => {
+            MINES = 10;
+            reset();
+        });
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
+

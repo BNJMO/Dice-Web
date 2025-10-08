@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mines Game - PixiJS Demo</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>"
+    />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="game-wrapper">
+        <div class="controls">
+
+          <div class="control-group">
+            <h3>Betting</h3>
+            <div class="button-group">
+              <button id="betBtn">Bet</button>
+            </div>
+            <button id="betBtn">CASH OUT</button>
+          </div>
+
+          <div class="control-group">
+            <h3>Game Controls</h3>
+            <button id="resetBtn">🔄 Reset Game</button>
+          </div>
+          
+        </div>
+        <div class="game-container">
+          <div id="game">
+            <div class="loading">Loading Game</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load the game module -->
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
