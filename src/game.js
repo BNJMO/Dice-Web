@@ -52,10 +52,12 @@ const HISTORY = {
   topPadding: 28,
   leftPadding: 28,
   rightPadding: 28,
-  sizeRatio: 0.09,
-  minBubbleSize: 32,
-  maxBubbleSize: 88,
-  spacingRatio: 0.28,
+  heightRatio: 0.09,
+  minBubbleHeight: 30,
+  maxBubbleHeight: 64,
+  widthToHeightRatio: 2.4,
+  spacingRatio: 0.38,
+  fontSizeRatio: 0.52,
   fadeInDuration: 320,
   fadeOutDuration: 260,
 };
@@ -408,32 +410,34 @@ export async function createGame(mount, opts = {}) {
     historyContainer.zIndex = 150;
 
     let entries = [];
-    let bubbleSize = HISTORY.minBubbleSize;
-    let bubbleSpacing = Math.max(8, HISTORY.minBubbleSize * HISTORY.spacingRatio);
+    let bubbleHeight = HISTORY.minBubbleHeight;
+    let bubbleWidth = bubbleHeight * HISTORY.widthToHeightRatio;
+    let bubbleSpacing = Math.max(8, bubbleWidth * HISTORY.spacingRatio);
     let maxVisible = 1;
     const activeEntries = new Set();
 
     function computeMetrics() {
       const width = app.renderer.width;
-      bubbleSize = Math.max(
-        HISTORY.minBubbleSize,
-        Math.min(HISTORY.maxBubbleSize, width * HISTORY.sizeRatio)
+      bubbleHeight = Math.max(
+        HISTORY.minBubbleHeight,
+        Math.min(HISTORY.maxBubbleHeight, width * HISTORY.heightRatio)
       );
-      bubbleSpacing = Math.max(8, bubbleSize * HISTORY.spacingRatio);
+      bubbleWidth = bubbleHeight * HISTORY.widthToHeightRatio;
+      bubbleSpacing = Math.max(8, bubbleWidth * HISTORY.spacingRatio);
 
       const availableWidth = Math.max(
-        bubbleSize,
+        bubbleWidth,
         width - (HISTORY.leftPadding + HISTORY.rightPadding)
       );
 
       const maxCount = Math.floor(
-        (availableWidth + bubbleSpacing) / (bubbleSize + bubbleSpacing)
+        (availableWidth + bubbleSpacing) / (bubbleWidth + bubbleSpacing)
       );
       maxVisible = Math.max(1, maxCount);
 
       historyContainer.position.set(
         width - HISTORY.rightPadding,
-        HISTORY.topPadding + bubbleSize / 2
+        HISTORY.topPadding + bubbleHeight / 2
       );
     }
 
@@ -450,7 +454,7 @@ export async function createGame(mount, opts = {}) {
         style: {
           fill: isWin ? HISTORY_COLORS.winText : HISTORY_COLORS.lossText,
           fontFamily,
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: "700",
           align: "center",
         },
@@ -464,13 +468,16 @@ export async function createGame(mount, opts = {}) {
         text,
         isWin,
         cancelTween: null,
-        applySize(size) {
-          const radius = size / 2;
+        applySize({ width, height }) {
+          const radius = height / 2;
           background.clear();
           background
-            .roundRect(-radius, -radius, size, size, radius)
+            .roundRect(-width / 2, -height / 2, width, height, radius)
             .fill(isWin ? HISTORY_COLORS.winFill : HISTORY_COLORS.lossFill);
-          text.style.fontSize = Math.round(Math.max(12, size * 0.42));
+          const fontSize = Math.round(Math.max(12, height * HISTORY.fontSizeRatio));
+          if (text.style.fontSize !== fontSize) {
+            text.style.fontSize = fontSize;
+          }
           text.style.fill = isWin
             ? HISTORY_COLORS.winText
             : HISTORY_COLORS.lossText;
@@ -526,12 +533,11 @@ export async function createGame(mount, opts = {}) {
 
       const startX = container.position.x;
       const startAlpha = container.alpha;
-      const offscreenX =
-        -(
-          maxVisible * (bubbleSize + bubbleSpacing) +
-          bubbleSize +
-          bubbleSpacing
-        );
+      const offscreenX = -(
+        maxVisible * (bubbleWidth + bubbleSpacing) +
+        bubbleWidth +
+        bubbleSpacing
+      );
 
       if (!animate) {
         container.position.set(offscreenX, 0);
@@ -564,13 +570,13 @@ export async function createGame(mount, opts = {}) {
       const overflow = entries.slice(maxVisible);
 
       kept.forEach((entry, index) => {
-        entry.applySize(bubbleSize);
-        const targetX = -index * (bubbleSize + bubbleSpacing);
+        entry.applySize({ width: bubbleWidth, height: bubbleHeight });
+        const targetX = -index * (bubbleWidth + bubbleSpacing);
         moveEntry(entry, targetX, { animate, targetAlpha: 1 });
       });
 
       overflow.forEach((entry) => {
-        entry.applySize(bubbleSize);
+        entry.applySize({ width: bubbleWidth, height: bubbleHeight });
         removeEntry(entry, { animate });
       });
 
@@ -583,8 +589,8 @@ export async function createGame(mount, opts = {}) {
       const safeLabel = label === null || label === undefined ? "" : `${label}`;
       const displayLabel = safeLabel === "" ? "—" : safeLabel;
       const entry = createEntry(displayLabel, isWin);
-      entry.applySize(bubbleSize);
-      entry.container.position.set(bubbleSize + bubbleSpacing, 0);
+      entry.applySize({ width: bubbleWidth, height: bubbleHeight });
+      entry.container.position.set(bubbleWidth + bubbleSpacing, 0);
       entry.container.alpha = 0;
 
       historyContainer.addChild(entry.container);
@@ -594,8 +600,8 @@ export async function createGame(mount, opts = {}) {
 
       for (let i = 1; i < entries.length; i += 1) {
         const existing = entries[i];
-        existing.applySize(bubbleSize);
-        const targetX = -i * (bubbleSize + bubbleSpacing);
+        existing.applySize({ width: bubbleWidth, height: bubbleHeight });
+        const targetX = -i * (bubbleWidth + bubbleSpacing);
         moveEntry(existing, targetX, { animate: true, targetAlpha: 1 });
       }
 
@@ -603,7 +609,7 @@ export async function createGame(mount, opts = {}) {
         const overflow = entries.slice(maxVisible);
         entries = entries.slice(0, maxVisible);
         overflow.forEach((item) => {
-          item.applySize(bubbleSize);
+          item.applySize({ width: bubbleWidth, height: bubbleHeight });
           removeEntry(item, { animate: true });
         });
       }
