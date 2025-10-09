@@ -71,7 +71,7 @@ h1 {
 .game-bottom-panel {
   position: absolute;
   left: 50%;
-  bottom: 16px;
+  bottom: 32px;
   transform: translateX(-50%);
   display: flex;
   flex-wrap: wrap;
@@ -79,7 +79,7 @@ h1 {
   justify-content: center;
   padding: 16px 20px;
   width: min(90%, calc(100% - 32px));
-  background: #1a191d;
+  background: #1A191D;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(14px);
