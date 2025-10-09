@@ -1033,13 +1033,13 @@ export async function createGame(mount, opts = {}) {
       style: {
         fill: 0x0b212b,
         fontFamily,
-        fontSize: Math.max(18, baseHeight * 0.2),
+        fontSize: Math.max(18, baseHeight * 0.33),
         fontWeight: "700",
         align: "center",
         dropShadow: true,
         dropShadowColor: 0xcfd9eb,
-        dropShadowBlur: 6,
-        dropShadowDistance: 0,
+        dropShadowBlur: 1,
+        dropShadowDistance: 1,
         dropShadowAlpha: 1,
       },
     });
