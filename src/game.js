@@ -187,10 +187,15 @@ export async function createGame(mount, opts = {}) {
     sliderDragMinPitch,
     opts.sliderDragMaxPitch ?? 1.4
   );
+  const sliderDragCooldownMs = Math.max(
+    0,
+    (opts.sliderDragCooldown ?? 0.2) * 1000
+  );
   const sliderSoundConfig = {
     dragMinPitch: sliderDragMinPitch,
     dragMaxPitch: sliderDragMaxPitch,
     dragMaxSpeed: Math.max(0.01, opts.sliderDragMaxSpeed ?? 0.8),
+    dragCooldownMs: sliderDragCooldownMs,
   };
 
   /* Win Popup*/
@@ -925,6 +930,7 @@ export async function createGame(mount, opts = {}) {
       dragMinPitch = 0.9,
       dragMaxPitch = 1.4,
       dragMaxSpeed = 0.8,
+      dragCooldownMs = 200,
     } = soundConfig ?? {};
     const sliderContainer = new Container();
     sliderContainer.sortableChildren = true;
@@ -1100,6 +1106,7 @@ export async function createGame(mount, opts = {}) {
     let diceFadeTimeoutId = null;
     let lastHandlePosition = valueToPosition(sliderValue);
     let lastHandleUpdateTime = performance.now();
+    let lastSliderDragSoundTime = -Infinity;
 
     function emitSliderChange() {
       try {
@@ -1212,9 +1219,14 @@ export async function createGame(mount, opts = {}) {
           pitchRange > 0
             ? dragMinPitch + pitchRange * normalizedSpeed
             : dragMinPitch;
-        playSoundEffect("sliderDrag", {
-          speed: Number.isFinite(playbackSpeed) ? playbackSpeed : dragMinPitch,
-        });
+        if (now - lastSliderDragSoundTime >= dragCooldownMs) {
+          playSoundEffect("sliderDrag", {
+            speed: Number.isFinite(playbackSpeed)
+              ? playbackSpeed
+              : dragMinPitch,
+          });
+          lastSliderDragSoundTime = now;
+        }
         lastHandlePosition = newPosition;
       } else {
         lastHandlePosition = valueToPosition(sliderValue);
