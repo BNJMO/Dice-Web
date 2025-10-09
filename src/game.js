@@ -50,7 +50,7 @@ const SLIDER = {
 const DICE_ANIMATION = {
   fadeInDuration: 400,
   fadeOutDuration: 400,
-  fadeOutDelay: 5000,
+  fadeOutDelay: 4000,
   fadeInScaleStart: 0.7,
   fadeOutScaleEnd: 0.7,
   bumpScale: 1.2,
@@ -87,6 +87,22 @@ const HISTORY_COLORS = {
   lossText: 0xffffff,
 };
 
+const DICE_LABEL_COLORS = {
+  default: 0x0b212b,
+  win: 0x2ecc71,
+  loss: 0xDD2E25,
+};
+
+const DICE_LABEL_SHADOW_COLORS = {
+  default: 0xcfd9eb,
+  target: 0x000000,
+};
+
+function numberToHexColorString(value) {
+  const normalized = ((value ?? 0) >>> 0) & 0xffffff;
+  return `#${normalized.toString(16).padStart(6, "0")}`;
+}
+
 function tween(app, { duration = 300, update, complete, ease = (t) => t }) {
   const start = performance.now();
   const step = () => {
@@ -99,6 +115,20 @@ function tween(app, { duration = 300, update, complete, ease = (t) => t }) {
   };
   app.ticker.add(step);
   return () => app.ticker.remove(step);
+}
+
+function lerpColor(from, to, t) {
+  const clampT = Math.max(0, Math.min(1, t));
+  const fr = (from >> 16) & 0xff;
+  const fg = (from >> 8) & 0xff;
+  const fb = from & 0xff;
+  const tr = (to >> 16) & 0xff;
+  const tg = (to >> 8) & 0xff;
+  const tb = to & 0xff;
+  const r = Math.round(fr + (tr - fr) * clampT);
+  const g = Math.round(fg + (tg - fg) * clampT);
+  const b = Math.round(fb + (tb - fb) * clampT);
+  return (r << 16) | (g << 8) | b;
 }
 
 export async function loadTexture(path) {
@@ -1131,16 +1161,18 @@ export async function createGame(mount, opts = {}) {
     const diceLabel = new Text({
       text: "",
       style: {
-        fill: 0x0b212b,
+        fill: DICE_LABEL_COLORS.default,
         fontFamily,
         fontSize: Math.max(18, baseHeight * 0.33),
         fontWeight: "700",
         align: "center",
-        dropShadow: true,
-        dropShadowColor: 0xcfd9eb,
-        dropShadowBlur: 1,
-        dropShadowDistance: 1,
-        dropShadowAlpha: 1,
+        dropShadow: {
+          alpha: 1,
+          blur: 1,
+          distance: 2.5,
+          angle: Math.PI / 2,
+          color: numberToHexColorString(DICE_LABEL_SHADOW_COLORS.default),
+        },
       },
     });
     diceLabel.anchor.set(0.5);
@@ -1166,6 +1198,8 @@ export async function createGame(mount, opts = {}) {
     let diceFadeOutCancel = null;
     let diceFadeTimeoutId = null;
     let diceBumpCancel = null;
+    let diceLabelColorCancel = null;
+    let diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
     let lastHandlePosition = valueToPosition(sliderValue);
     let lastHandleUpdateTime = performance.now();
     let lastSliderDragSoundTime = -Infinity;
@@ -1409,6 +1443,10 @@ export async function createGame(mount, opts = {}) {
         clearTimeout(diceFadeTimeoutId);
         diceFadeTimeoutId = null;
       }
+      if (diceLabelColorCancel) {
+        diceLabelColorCancel();
+        diceLabelColorCancel = null;
+      }
     }
 
     function scheduleDiceFadeOut() {
@@ -1545,6 +1583,14 @@ export async function createGame(mount, opts = {}) {
 
       cancelDiceAnimations();
 
+      diceLabel.style.fill = DICE_LABEL_COLORS.default;
+      diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
+      if (diceLabel.style.dropShadow) {
+        diceLabel.style.dropShadow.color = numberToHexColorString(
+          diceLabelShadowColor
+        );
+      }
+
       diceContainer.visible = true;
       diceContainer.position.x = startX;
 
@@ -1556,7 +1602,7 @@ export async function createGame(mount, opts = {}) {
 
       diceAnimationCancel = tween(app, {
         duration: diceFadeInDuration,
-        ease: (t) => Ease.easeOutQuad(t),
+        ease: (t) => Ease.easeInOutQuad(t),
         update: (progress) => {
           diceContainer.alpha =
             revealStartAlpha + (1 - revealStartAlpha) * progress;
@@ -1571,6 +1617,46 @@ export async function createGame(mount, opts = {}) {
           setDiceScale(1);
           scheduleDiceFadeOut();
           playDiceBump();
+          const targetColor = isWin
+            ? DICE_LABEL_COLORS.win
+            : DICE_LABEL_COLORS.loss;
+          const startColor =
+            typeof diceLabel.style.fill === "number"
+              ? diceLabel.style.fill
+              : DICE_LABEL_COLORS.default;
+          const startShadowColor = diceLabelShadowColor;
+          diceLabelColorCancel = tween(app, {
+            duration: 150,
+            ease: (t) => t,
+            update: (progress) => {
+              diceLabel.style.fill = lerpColor(
+                startColor,
+                targetColor,
+                progress
+              );
+              const nextShadowColor = lerpColor(
+                startShadowColor,
+                DICE_LABEL_SHADOW_COLORS.target,
+                progress
+              );
+              diceLabelShadowColor = nextShadowColor;
+              if (diceLabel.style.dropShadow) {
+                diceLabel.style.dropShadow.color = numberToHexColorString(
+                  nextShadowColor
+                );
+              }
+            },
+            complete: () => {
+              diceLabel.style.fill = targetColor;
+              diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.target;
+              if (diceLabel.style.dropShadow) {
+                diceLabel.style.dropShadow.color = numberToHexColorString(
+                  diceLabelShadowColor
+                );
+              }
+              diceLabelColorCancel = null;
+            },
+          });
         },
       });
 
@@ -1588,6 +1674,13 @@ export async function createGame(mount, opts = {}) {
       diceContainer.visible = false;
       diceContainer.alpha = 0;
       diceLabel.text = "";
+      diceLabel.style.fill = DICE_LABEL_COLORS.default;
+      diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
+      if (diceLabel.style.dropShadow) {
+        diceLabel.style.dropShadow.color = numberToHexColorString(
+          diceLabelShadowColor
+        );
+      }
       diceContainer.position.x = valueToPosition(SLIDER.rangeMin);
       setDiceScale(diceFadeInScaleStart);
     }
