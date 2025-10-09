@@ -16,6 +16,9 @@ import winSoundUrl from "../assets/sounds/Win.wav";
 import sliderBackgroundUrl from "../assets/sprites/SliderBackground.png";
 import sliderHandleUrl from "../assets/sprites/SliderHandle.png";
 import diceSpriteUrl from "../assets/sprites/Dice.png";
+import multiplierIconUrl from "../assets/sprites/MultiplierIcon.png";
+import rollModeIconUrl from "../assets/sprites/RollOverIcon.png";
+import winChanceIconUrl from "../assets/sprites/WinChanceIcon.png";
 
 const PALETTE = {
   appBg: 0x020401,
@@ -49,24 +52,24 @@ const SOUND_ALIASES = {
 };
 
 const HISTORY = {
-  topPadding: 0,
+  topPadding: 25,
   leftPadding: 0,
   rightPadding: 28,
   heightRatio: 0.09,
   minBubbleHeight: 20,
-  maxBubbleHeight: 35,
+  maxBubbleHeight: 32,
   widthToHeightRatio: 2.0,
-  spacingRatio: 0.15,
-  fontSizeRatio: 0.42,
+  spacingRatio: 0.13,
+  fontSizeRatio: 0.40,
   fadeInDuration: 320,
   fadeOutDuration: 260,
 };
 
 const HISTORY_COLORS = {
-  winFill: 0xeaff00,
-  winText: 0x1c2431,
-  lossFill: 0x2b2f36,
-  lossText: 0xf2f3f5,
+  winFill: 0xF0FF31,
+  winText: 0x000000,
+  lossFill: 0x282A2F,
+  lossText: 0xFFFFFF,
 };
 
 function tween(app, { duration = 300, update, complete, ease = (t) => t }) {
@@ -276,6 +279,8 @@ export async function createGame(mount, opts = {}) {
   const onStateChange = opts.onChange ?? (() => {});
   const onSliderValueChange = opts.onSliderValueChange ?? (() => {});
 
+  let handleSliderChange = () => {};
+
   const sliderUi = createSliderUi({
     textures: {
       background: sliderBackgroundTexture,
@@ -289,9 +294,255 @@ export async function createGame(mount, opts = {}) {
         console.warn("onSliderValueChange callback failed", err);
       }
     },
+    onChange: (details) => handleSliderChange(details),
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
+
+  const bottomPanelUi = setupBottomPanel();
+
+  function setupBottomPanel() {
+    const panel = document.createElement("div");
+    panel.className = "game-bottom-panel";
+
+    function createEditableBox({
+      label,
+      icon,
+      step = 1,
+      getValue = () => NaN,
+      format = (value) => `${value ?? ""}`,
+      onCommit = () => {},
+    }) {
+      const container = document.createElement("div");
+      container.className = "game-panel-item";
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "game-panel-label";
+      labelEl.textContent = label;
+      container.appendChild(labelEl);
+
+      const valueWrapper = document.createElement("div");
+      valueWrapper.className = "game-panel-value has-stepper";
+      container.appendChild(valueWrapper);
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "game-panel-input";
+      input.inputMode = "decimal";
+      input.spellcheck = false;
+      input.autocomplete = "off";
+      input.setAttribute("aria-label", label);
+      valueWrapper.appendChild(input);
+
+      const iconEl = document.createElement("img");
+      iconEl.src = icon;
+      iconEl.alt = "";
+      iconEl.className = "game-panel-icon";
+      valueWrapper.appendChild(iconEl);
+
+      const stepper = document.createElement("div");
+      stepper.className = "game-panel-stepper";
+      stepper.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+
+      const upButton = document.createElement("button");
+      upButton.type = "button";
+      upButton.className = "game-panel-stepper-btn game-panel-stepper-up";
+      upButton.innerHTML = "▲";
+      upButton.setAttribute("aria-label", `Increase ${label}`);
+      upButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const current = Number(getValue());
+        const next = Number.isFinite(current)
+          ? current + step
+          : step;
+        onCommit(next);
+        refresh(true);
+      });
+
+      const downButton = document.createElement("button");
+      downButton.type = "button";
+      downButton.className = "game-panel-stepper-btn game-panel-stepper-down";
+      downButton.innerHTML = "▼";
+      downButton.setAttribute("aria-label", `Decrease ${label}`);
+      downButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const current = Number(getValue());
+        const next = Number.isFinite(current)
+          ? current - step
+          : 0;
+        onCommit(next);
+        refresh(true);
+      });
+
+      stepper.appendChild(upButton);
+      stepper.appendChild(downButton);
+      valueWrapper.appendChild(stepper);
+
+      const state = { editing: false };
+
+      function refresh(force = false) {
+        if (state.editing && !force) return;
+        const value = getValue();
+        if (Number.isFinite(value)) {
+          input.value = format(value);
+        } else {
+          input.value = "";
+        }
+      }
+
+      function commit() {
+        const raw = input.value.trim();
+        if (!raw) {
+          refresh(true);
+          return;
+        }
+        const numeric = Number(raw);
+        if (Number.isFinite(numeric)) {
+          onCommit(numeric);
+        }
+        refresh(true);
+      }
+
+      input.addEventListener("focus", () => {
+        state.editing = true;
+        setTimeout(() => input.select(), 0);
+      });
+
+      input.addEventListener("blur", () => {
+        state.editing = false;
+        commit();
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          state.editing = false;
+          commit();
+          input.blur();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          state.editing = false;
+          refresh(true);
+          input.blur();
+        } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+          event.preventDefault();
+          const direction = event.key === "ArrowUp" ? 1 : -1;
+          const current = Number(getValue());
+          const next = Number.isFinite(current)
+            ? current + direction * step
+            : direction * step;
+          onCommit(next);
+          refresh(true);
+        }
+      });
+
+      valueWrapper.addEventListener("click", () => input.focus());
+
+      return {
+        container,
+        refresh,
+      };
+    }
+
+    function createRollModeBox() {
+      const container = document.createElement("div");
+      container.className = "game-panel-item";
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "game-panel-label";
+      container.appendChild(labelEl);
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "game-panel-value game-panel-toggle";
+      button.setAttribute("aria-label", "Toggle roll mode");
+      container.appendChild(button);
+
+      const valueEl = document.createElement("span");
+      valueEl.className = "game-panel-display";
+      button.appendChild(valueEl);
+
+      const iconEl = document.createElement("img");
+      iconEl.src = rollModeIconUrl;
+      iconEl.alt = "";
+      iconEl.className = "game-panel-icon";
+      button.appendChild(iconEl);
+
+      button.addEventListener("click", () => {
+        sliderUi.toggleRollMode();
+        refresh(true);
+      });
+
+      function refresh(force = false) {
+        const mode = sliderUi.getRollMode();
+        labelEl.textContent = mode === "under" ? "Roll Under" : "Roll Over";
+        button.setAttribute("data-mode", mode);
+        const value = sliderUi.getValue();
+        if (force || document.activeElement !== button) {
+          valueEl.textContent = Number.isFinite(value)
+            ? value.toFixed(2)
+            : "0.00";
+        }
+      }
+
+      return {
+        container,
+        refresh,
+      };
+    }
+
+    const multiplierBox = createEditableBox({
+      label: "Multiplier",
+      icon: multiplierIconUrl,
+      step: 1,
+      getValue: () => sliderUi.getMultiplier(),
+      format: (value) => value.toFixed(4),
+      onCommit: (value) => sliderUi.setMultiplier(value),
+    });
+
+    const rollModeBox = createRollModeBox();
+
+    const winChanceBox = createEditableBox({
+      label: "Win Chance",
+      icon: winChanceIconUrl,
+      step: 1,
+      getValue: () => sliderUi.getWinChance(),
+      format: (value) => value.toFixed(4),
+      onCommit: (value) => sliderUi.setWinChance(value),
+    });
+
+    panel.append(
+      multiplierBox.container,
+      rollModeBox.container,
+      winChanceBox.container
+    );
+
+    root.appendChild(panel);
+
+    function refresh(force = false) {
+      multiplierBox.refresh(force);
+      rollModeBox.refresh(force);
+      winChanceBox.refresh(force);
+    }
+
+    handleSliderChange = () => refresh();
+
+    refresh(true);
+
+    return {
+      panel,
+      refresh,
+      destroy: () => {
+        handleSliderChange = () => {};
+        panel.remove();
+      },
+    };
+  }
 
   function createWinPopup() {
     const popupWidth = winPopupWidth;
@@ -632,7 +883,11 @@ export async function createGame(mount, opts = {}) {
     };
   }
 
-  function createSliderUi({ textures = {}, onRelease = () => {} } = {}) {
+  function createSliderUi({
+    textures = {},
+    onRelease = () => {},
+    onChange = () => {},
+  } = {}) {
     const sliderContainer = new Container();
     sliderContainer.sortableChildren = true;
     sliderContainer.eventMode = "static";
@@ -686,7 +941,7 @@ export async function createGame(mount, opts = {}) {
       trackPadding,
       SLIDER.tickEdgePaddingRatio,
     );
-    const barHeight = Math.max(10, baseHeight *trackHeightRatio);
+    const barHeight = Math.max(10, baseHeight * trackHeightRatio);
     const barRadius = barHeight / 2;
 
     const leftBar = new Graphics();
@@ -800,10 +1055,24 @@ export async function createGame(mount, opts = {}) {
       Math.max(SLIDER.minValue, (SLIDER.minValue + SLIDER.maxValue) / 2)
     );
     let sliderDragging = false;
+    let rollMode = "over";
     let diceHasShown = false;
     let diceAnimationCancel = null;
     let diceFadeOutCancel = null;
     let diceFadeTimeoutId = null;
+
+    function emitSliderChange() {
+      try {
+        onChange({
+          value: sliderValue,
+          rollMode,
+          winChance: getWinChance(),
+          multiplier: getMultiplier(),
+        });
+      } catch (err) {
+        console.warn("Slider change callback failed", err);
+      }
+    }
 
     function clampRange(value) {
       return Math.min(SLIDER.rangeMax, Math.max(SLIDER.rangeMin, value));
@@ -847,8 +1116,11 @@ export async function createGame(mount, opts = {}) {
       handle.position.set(position, trackCenterY);
 
       leftBar.clear();
+      rightBar.clear();
       const leftWidth = Math.max(0, position - trackStart);
+      const rightWidth = Math.max(0, trackEnd - position);
       if (leftWidth > 0) {
+        const color = rollMode === "under" ? SLIDER.rightColor : SLIDER.leftColor;
         leftBar
           .roundRect(
             trackStart,
@@ -857,12 +1129,11 @@ export async function createGame(mount, opts = {}) {
             barHeight,
             barRadius
           )
-          .fill(SLIDER.leftColor);
+          .fill(color);
       }
 
-      rightBar.clear();
-      const rightWidth = Math.max(0, trackEnd - position);
       if (rightWidth > 0) {
+        const color = rollMode === "under" ? SLIDER.leftColor : SLIDER.rightColor;
         rightBar
           .roundRect(
             position,
@@ -871,15 +1142,69 @@ export async function createGame(mount, opts = {}) {
             barHeight,
             barRadius
           )
-          .fill(SLIDER.rightColor);
+          .fill(color);
       }
     }
 
     function setSliderValue(value) {
       const clamped = clampBounds(snapValue(value));
-      sliderValue = Number.isFinite(clamped) ? Number(clamped.toFixed(2)) : sliderValue;
+      const nextValue = Number.isFinite(clamped)
+        ? Number(clamped.toFixed(2))
+        : sliderValue;
+      const changed = nextValue !== sliderValue;
+      sliderValue = nextValue;
       updateSliderVisuals();
+      if (changed) emitSliderChange();
       return sliderValue;
+    }
+
+    function getRollMode() {
+      return rollMode;
+    }
+
+    function setRollMode(mode) {
+      const normalized = mode === "under" ? "under" : "over";
+      if (rollMode === normalized) return rollMode;
+      rollMode = normalized;
+      updateSliderVisuals();
+      emitSliderChange();
+      return rollMode;
+    }
+
+    function toggleRollMode() {
+      return setRollMode(rollMode === "over" ? "under" : "over");
+    }
+
+    function getWinChance() {
+      const clamped = clampRange(clampBounds(sliderValue));
+      const raw = rollMode === "over" ? SLIDER.rangeMax - clamped : clamped;
+      return Number(raw.toFixed(4));
+    }
+
+    function setWinChance(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return sliderValue;
+      const clampedChance = Math.max(0, Math.min(SLIDER.rangeMax, numeric));
+      const targetValue =
+        rollMode === "over"
+          ? SLIDER.rangeMax - clampedChance
+          : clampedChance;
+      return setSliderValue(targetValue);
+    }
+
+    function getMultiplier() {
+      const chance = getWinChance();
+      if (chance <= 0) return Infinity;
+      return Number((99 / chance).toFixed(4));
+    }
+
+    function setMultiplier(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric) || numeric <= 0) {
+        return sliderValue;
+      }
+      const desiredChance = 99 / numeric;
+      return setWinChance(desiredChance);
     }
 
     function updateFromPointer(event) {
@@ -1047,17 +1372,28 @@ export async function createGame(mount, opts = {}) {
     }
 
     updateTickLayout();
-    setSliderValue(sliderValue);
+    updateSliderVisuals();
     resetDice();
     layout();
 
     sliderContainer.sortChildren();
+
+    emitSliderChange();
 
     return {
       container: sliderContainer,
       layout,
       revealDiceRoll,
       resetDice,
+      getValue: () => sliderValue,
+      setValue: (value) => setSliderValue(value),
+      getRollMode,
+      setRollMode,
+      toggleRollMode,
+      getWinChance,
+      setWinChance,
+      getMultiplier,
+      setMultiplier,
       destroy: () => {
         sliderContainer.removeAllListeners();
         handle.removeAllListeners?.();
@@ -1210,6 +1546,7 @@ export async function createGame(mount, opts = {}) {
     try {
       ro.disconnect();
     } catch {}
+    bottomPanelUi?.destroy?.();
     sliderUi.destroy();
     betHistory.destroy();
     app.destroy(true);
