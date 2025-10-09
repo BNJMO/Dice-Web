@@ -1079,13 +1079,13 @@ export async function createGame(mount, opts = {}) {
         fontSize: Math.max(18, baseHeight * 0.33),
         fontWeight: "700",
         align: "center",
-        dropShadow: true,
-        dropShadowColor: numberToHexColorString(
-          DICE_LABEL_SHADOW_COLORS.default
-        ),
-        dropShadowBlur: 1,
-        dropShadowDistance: 1,
-        dropShadowAlpha: 1,
+        dropShadow: {
+          alpha: 1,
+          blur: 1,
+          distance: 1,
+          angle: Math.PI / 6,
+          color: numberToHexColorString(DICE_LABEL_SHADOW_COLORS.default),
+        },
       },
     });
     diceLabel.anchor.set(0.5);
@@ -1373,9 +1373,11 @@ export async function createGame(mount, opts = {}) {
 
       diceLabel.style.fill = DICE_LABEL_COLORS.default;
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
-      diceLabel.style.dropShadowColor = numberToHexColorString(
-        diceLabelShadowColor
-      );
+      if (diceLabel.style.dropShadow) {
+        diceLabel.style.dropShadow.color = numberToHexColorString(
+          diceLabelShadowColor
+        );
+      }
 
       diceContainer.visible = true;
       diceContainer.alpha = 0;
@@ -1416,16 +1418,20 @@ export async function createGame(mount, opts = {}) {
                 progress
               );
               diceLabelShadowColor = nextShadowColor;
-              diceLabel.style.dropShadowColor = numberToHexColorString(
-                nextShadowColor
-              );
+              if (diceLabel.style.dropShadow) {
+                diceLabel.style.dropShadow.color = numberToHexColorString(
+                  nextShadowColor
+                );
+              }
             },
             complete: () => {
               diceLabel.style.fill = targetColor;
               diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.target;
-              diceLabel.style.dropShadowColor = numberToHexColorString(
-                diceLabelShadowColor
-              );
+              if (diceLabel.style.dropShadow) {
+                diceLabel.style.dropShadow.color = numberToHexColorString(
+                  diceLabelShadowColor
+                );
+              }
               diceLabelColorCancel = null;
             },
           });
@@ -1448,9 +1454,11 @@ export async function createGame(mount, opts = {}) {
       diceLabel.text = "";
       diceLabel.style.fill = DICE_LABEL_COLORS.default;
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
-      diceLabel.style.dropShadowColor = numberToHexColorString(
-        diceLabelShadowColor
-      );
+      if (diceLabel.style.dropShadow) {
+        diceLabel.style.dropShadow.color = numberToHexColorString(
+          diceLabelShadowColor
+        );
+      }
       diceContainer.position.x = valueToPosition(SLIDER.rangeMin);
     }
 
