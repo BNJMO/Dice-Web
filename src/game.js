@@ -75,12 +75,12 @@ const HISTORY_COLORS = {
 const DICE_LABEL_COLORS = {
   default: 0x0b212b,
   win: 0x2ecc71,
-  loss: 0xe74c3c,
+  loss: 0xDD2E25,
 };
 
 const DICE_LABEL_SHADOW_COLORS = {
   default: 0xcfd9eb,
-  target: 0x0b212b,
+  target: 0x000000,
 };
 
 function numberToHexColorString(value) {
@@ -1082,8 +1082,8 @@ export async function createGame(mount, opts = {}) {
         dropShadow: {
           alpha: 1,
           blur: 1,
-          distance: 1,
-          angle: Math.PI / 6,
+          distance: 2.5,
+          angle: Math.PI / 2,
           color: numberToHexColorString(DICE_LABEL_SHADOW_COLORS.default),
         },
       },
@@ -1404,7 +1404,7 @@ export async function createGame(mount, opts = {}) {
               : DICE_LABEL_COLORS.default;
           const startShadowColor = diceLabelShadowColor;
           diceLabelColorCancel = tween(app, {
-            duration: 250,
+            duration: 150,
             ease: (t) => t,
             update: (progress) => {
               diceLabel.style.fill = lerpColor(
