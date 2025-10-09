@@ -59,7 +59,8 @@ h1 {
 }
 
 #game {
-  width: min(100%, 600px);
+  width: 100%;
+  max-width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 8px;
   overflow: hidden;
@@ -70,16 +71,15 @@ h1 {
 .game-bottom-panel {
   position: absolute;
   left: 50%;
-  bottom: 16px;
+  bottom: 32px;
   transform: translateX(-50%);
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   justify-content: center;
   padding: 16px 20px;
-  width: calc(100% - 32px);
-  max-width: 540px;
-  background: #1a191d;
+  width: min(90%, calc(100% - 32px));
+  background: #1A191D;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(14px);

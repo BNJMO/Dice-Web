@@ -6,7 +6,6 @@ import winSoundUrl from "../assets/sounds/Win.wav";
 let game;
 const opts = {
   // Window visuals
-  size: 600,
   backgroundColor: "#121212",
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Arial",
 
