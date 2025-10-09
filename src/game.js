@@ -14,6 +14,7 @@ import Ease from "./ease.js";
 import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
 import winSoundUrl from "../assets/sounds/Win.wav";
 import loseSoundUrl from "../assets/sounds/Lost.wav";
+import diceRollSoundUrl from "../assets/sounds/DiceRoll.wav";
 import sliderDownSoundUrl from "../assets/sounds/SliderDown.wav";
 import sliderUpSoundUrl from "../assets/sounds/SliderUp.wav";
 import sliderDragSoundUrl from "../assets/sounds/SliderDrag.wav";
@@ -61,6 +62,7 @@ const SOUND_ALIASES = {
   gameStart: "game.gameStart",
   win: "game.win",
   lose: "game.lose",
+  diceRoll: "game.diceRoll",
   sliderDown: "game.sliderDown",
   sliderUp: "game.sliderUp",
   sliderDrag: "game.sliderDrag",
@@ -211,6 +213,7 @@ export async function createGame(mount, opts = {}) {
   const gameStartSoundPath = opts.gameStartSoundPath ?? gameStartSoundUrl;
   const winSoundPath = opts.winSoundPath ?? winSoundUrl;
   const loseSoundPath = opts.loseSoundPath ?? loseSoundUrl;
+  const diceRollSoundPath = opts.diceRollSoundPath ?? diceRollSoundUrl;
   const sliderDownSoundPath = opts.sliderDownSoundPath ?? sliderDownSoundUrl;
   const sliderUpSoundPath = opts.sliderUpSoundPath ?? sliderUpSoundUrl;
   const sliderDragSoundPath = opts.sliderDragSoundPath ?? sliderDragSoundUrl;
@@ -276,6 +279,7 @@ export async function createGame(mount, opts = {}) {
     gameStart: gameStartSoundPath,
     win: winSoundPath,
     lose: loseSoundPath,
+    diceRoll: diceRollSoundPath,
     sliderDown: sliderDownSoundPath,
     sliderUp: sliderUpSoundPath,
     sliderDrag: sliderDragSoundPath,
@@ -1617,6 +1621,7 @@ export async function createGame(mount, opts = {}) {
           setDiceScale(1);
           scheduleDiceFadeOut();
           playDiceBump();
+          playSoundEffect(isWin ? "win" : "lose");
           const targetColor = isWin
             ? DICE_LABEL_COLORS.win
             : DICE_LABEL_COLORS.loss;
@@ -1888,9 +1893,9 @@ export async function createGame(mount, opts = {}) {
   }
 
   function revealDiceOutcome({ roll, label, displayValue } = {}) {
+    playSoundEffect("diceRoll");
     const result = sliderUi.revealDiceRoll({ roll, label, displayValue });
     if (result) {
-      playSoundEffect(result.isWin ? "win" : "lose");
       betHistory.addEntry({
         label: result.label,
         isWin: Boolean(result.isWin),
