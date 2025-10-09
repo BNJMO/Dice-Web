@@ -39,15 +39,22 @@ const SLIDER = {
   step: 1,
   leftColor: 0xf40029,
   rightColor: 0xf0ff31,
-  fadeInDuration: 700,
-  fadeOutDuration: 400,
-  fadeOutDelay: 5000,
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
   trackOffsetRatio: 0.04,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
+};
+
+const DICE_ANIMATION = {
+  fadeInDuration: 400,
+  fadeOutDuration: 400,
+  fadeOutDelay: 4000,
+  fadeInScaleStart: 0.7,
+  fadeOutScaleEnd: 0.7,
+  bumpScale: 1.2,
+  bumpDuration: 300,
 };
 
 const SOUND_ALIASES = {
@@ -68,16 +75,16 @@ const HISTORY = {
   maxBubbleHeight: 32,
   widthToHeightRatio: 2.0,
   spacingRatio: 0.13,
-  fontSizeRatio: 0.40,
+  fontSizeRatio: 0.4,
   fadeInDuration: 320,
   fadeOutDuration: 260,
 };
 
 const HISTORY_COLORS = {
-  winFill: 0xF0FF31,
+  winFill: 0xf0ff31,
   winText: 0x000000,
-  lossFill: 0x282A2F,
-  lossText: 0xFFFFFF,
+  lossFill: 0x282a2f,
+  lossText: 0xffffff,
 };
 
 const DICE_LABEL_COLORS = {
@@ -206,13 +213,9 @@ export async function createGame(mount, opts = {}) {
   const loseSoundPath = opts.loseSoundPath ?? loseSoundUrl;
   const sliderDownSoundPath = opts.sliderDownSoundPath ?? sliderDownSoundUrl;
   const sliderUpSoundPath = opts.sliderUpSoundPath ?? sliderUpSoundUrl;
-  const sliderDragSoundPath =
-    opts.sliderDragSoundPath ?? sliderDragSoundUrl;
+  const sliderDragSoundPath = opts.sliderDragSoundPath ?? sliderDragSoundUrl;
 
-  const sliderDragMinPitch = Math.max(
-    0.01,
-    opts.sliderDragMinPitch ?? 0.9
-  );
+  const sliderDragMinPitch = Math.max(0.01, opts.sliderDragMinPitch ?? 0.9);
   const sliderDragMaxPitch = Math.max(
     sliderDragMinPitch,
     opts.sliderDragMaxPitch ?? 1.4
@@ -227,6 +230,42 @@ export async function createGame(mount, opts = {}) {
     dragMaxSpeed: Math.max(0.01, opts.sliderDragMaxSpeed ?? 1.5),
     dragCooldownMs: sliderDragCooldownMs,
   };
+
+  const diceFadeInDuration = Math.max(
+    0,
+    opts.diceFadeInDuration ?? DICE_ANIMATION.fadeInDuration
+  );
+  const diceFadeOutDuration = Math.max(
+    0,
+    opts.diceFadeOutDuration ?? DICE_ANIMATION.fadeOutDuration
+  );
+  const diceFadeOutDelay = Math.max(
+    0,
+    opts.diceFadeOutDelay ?? DICE_ANIMATION.fadeOutDelay
+  );
+  const clampScaleOption = (value, fallback) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    return Math.max(0, numeric);
+  };
+  const diceFadeInScaleStart = clampScaleOption(
+    opts.diceFadeInScaleStart,
+    DICE_ANIMATION.fadeInScaleStart
+  );
+  const diceFadeOutScaleEnd = clampScaleOption(
+    opts.diceFadeOutScaleEnd,
+    DICE_ANIMATION.fadeOutScaleEnd
+  );
+  const diceBumpScale = clampScaleOption(
+    opts.diceBumpScale,
+    DICE_ANIMATION.bumpScale
+  );
+  const diceBumpDuration = Math.max(
+    0,
+    opts.diceBumpDuration ?? DICE_ANIMATION.bumpDuration
+  );
 
   /* Win Popup*/
   const winPopupShowDuration = opts.winPopupShowDuration ?? 260;
@@ -264,10 +303,7 @@ export async function createGame(mount, opts = {}) {
   function measureRootSize() {
     const rect = root.getBoundingClientRect();
     const width = Math.max(1, rect.width || root.clientWidth || initialSize);
-    const height = Math.max(
-      1,
-      rect.height || root.clientHeight || width
-    );
+    const height = Math.max(1, rect.height || root.clientHeight || width);
     return { width, height };
   }
 
@@ -329,7 +365,12 @@ export async function createGame(mount, opts = {}) {
   const ui = new Container();
   app.stage.addChild(scene, ui);
   app.stage.eventMode = "static";
-  app.stage.hitArea = new Rectangle(0, 0, app.renderer.width, app.renderer.height);
+  app.stage.hitArea = new Rectangle(
+    0,
+    0,
+    app.renderer.width,
+    app.renderer.height
+  );
 
   const backgroundLayer = new Container();
   scene.addChild(backgroundLayer);
@@ -436,9 +477,7 @@ export async function createGame(mount, opts = {}) {
         event.preventDefault();
         event.stopPropagation();
         const current = Number(getValue());
-        const next = Number.isFinite(current)
-          ? current + step
-          : step;
+        const next = Number.isFinite(current) ? current + step : step;
         onCommit(next);
         refresh(true);
       });
@@ -452,9 +491,7 @@ export async function createGame(mount, opts = {}) {
         event.preventDefault();
         event.stopPropagation();
         const current = Number(getValue());
-        const next = Number.isFinite(current)
-          ? current - step
-          : 0;
+        const next = Number.isFinite(current) ? current - step : 0;
         onCommit(next);
         refresh(true);
       });
@@ -805,7 +842,9 @@ export async function createGame(mount, opts = {}) {
           background
             .roundRect(-width / 2, -height / 2, width, height, radius)
             .fill(isWin ? HISTORY_COLORS.winFill : HISTORY_COLORS.lossFill);
-          const fontSize = Math.round(Math.max(12, height * HISTORY.fontSizeRatio));
+          const fontSize = Math.round(
+            Math.max(12, height * HISTORY.fontSizeRatio)
+          );
           if (text.style.fontSize !== fontSize) {
             text.style.fontSize = fontSize;
           }
@@ -828,7 +867,11 @@ export async function createGame(mount, opts = {}) {
       return entry;
     }
 
-    function moveEntry(entry, targetX, { animate = true, targetAlpha = 1 } = {}) {
+    function moveEntry(
+      entry,
+      targetX,
+      { animate = true, targetAlpha = 1 } = {}
+    ) {
       const { container } = entry;
       entry.stopTween();
 
@@ -1000,8 +1043,10 @@ export async function createGame(mount, opts = {}) {
     if (textures.background) {
       background = new Sprite(textures.background);
       background.anchor.set(0.5);
-      baseWidth = textures.background.width ?? background.width ?? fallbackWidth;
-      baseHeight = textures.background.height ?? background.height ?? fallbackHeight;
+      baseWidth =
+        textures.background.width ?? background.width ?? fallbackWidth;
+      baseHeight =
+        textures.background.height ?? background.height ?? fallbackHeight;
     } else {
       background = new Graphics();
       background
@@ -1024,10 +1069,7 @@ export async function createGame(mount, opts = {}) {
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
     const trackStart = -trackLength / 2;
     const trackEnd = trackLength / 2;
-    const tickEdgePadding = Math.min(
-      trackPadding,
-      SLIDER.tickEdgePaddingRatio,
-    );
+    const tickEdgePadding = Math.min(trackPadding, SLIDER.tickEdgePaddingRatio);
     const barHeight = Math.max(10, baseHeight * trackHeightRatio);
     const barRadius = barHeight / 2;
 
@@ -1102,7 +1144,8 @@ export async function createGame(mount, opts = {}) {
     if (textures.dice) {
       diceSprite = new Sprite(textures.dice);
       diceSprite.anchor.set(0.5, 1);
-      diceSpriteHeight = textures.dice.height ?? diceSprite.height ?? barHeight * 2.4;
+      diceSpriteHeight =
+        textures.dice.height ?? diceSprite.height ?? barHeight * 2.4;
     } else {
       const size = barHeight * 2.8;
       const fallbackDice = new Graphics();
@@ -1154,6 +1197,7 @@ export async function createGame(mount, opts = {}) {
     let diceAnimationCancel = null;
     let diceFadeOutCancel = null;
     let diceFadeTimeoutId = null;
+    let diceBumpCancel = null;
     let diceLabelColorCancel = null;
     let diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
     let lastHandlePosition = valueToPosition(sliderValue);
@@ -1203,10 +1247,7 @@ export async function createGame(mount, opts = {}) {
         const tickTrackStart = trackStart - tickEdgePadding;
         const tickTrackLength = sliderTrackLength + tickEdgePadding * 2;
         const x = tickTrackStart + ratio * tickTrackLength;
-        container.position.set(
-          x,
-          trackCenterY - barHeight / 2 - labelOffset
-        );
+        container.position.set(x, trackCenterY - barHeight / 2 - labelOffset);
       });
     }
 
@@ -1219,7 +1260,8 @@ export async function createGame(mount, opts = {}) {
       const leftWidth = Math.max(0, position - trackStart);
       const rightWidth = Math.max(0, trackEnd - position);
       if (leftWidth > 0) {
-        const color = rollMode === "under" ? SLIDER.rightColor : SLIDER.leftColor;
+        const color =
+          rollMode === "under" ? SLIDER.rightColor : SLIDER.leftColor;
         leftBar
           .roundRect(
             trackStart,
@@ -1232,7 +1274,8 @@ export async function createGame(mount, opts = {}) {
       }
 
       if (rightWidth > 0) {
-        const color = rollMode === "under" ? SLIDER.leftColor : SLIDER.rightColor;
+        const color =
+          rollMode === "under" ? SLIDER.leftColor : SLIDER.rightColor;
         rightBar
           .roundRect(
             position,
@@ -1263,9 +1306,7 @@ export async function createGame(mount, opts = {}) {
         const deltaTime = Math.max(1, now - lastHandleUpdateTime);
         const positionSpeed = deltaPosition / deltaTime;
         const normalizedSpeed =
-          dragMaxSpeed > 0
-            ? Math.min(1, positionSpeed / dragMaxSpeed)
-            : 0;
+          dragMaxSpeed > 0 ? Math.min(1, positionSpeed / dragMaxSpeed) : 0;
         const pitchRange = Math.max(0, dragMaxPitch - dragMinPitch);
         const playbackSpeed =
           pitchRange > 0
@@ -1315,9 +1356,7 @@ export async function createGame(mount, opts = {}) {
       if (!Number.isFinite(numeric)) return sliderValue;
       const clampedChance = Math.max(0, Math.min(SLIDER.rangeMax, numeric));
       const targetValue =
-        rollMode === "over"
-          ? SLIDER.rangeMax - clampedChance
-          : clampedChance;
+        rollMode === "over" ? SLIDER.rangeMax - clampedChance : clampedChance;
       return setSliderValue(targetValue);
     }
 
@@ -1357,9 +1396,7 @@ export async function createGame(mount, opts = {}) {
       sliderContainer.cursor = "pointer";
       handle.cursor = "pointer";
       playSoundEffect("sliderUp");
-      console.debug(
-        `Roll over target set to ${sliderValue.toFixed(1)}%`
-      );
+      console.debug(`Roll over target set to ${sliderValue.toFixed(1)}%`);
       try {
         onRelease(sliderValue);
       } catch (err) {
@@ -1384,6 +1421,11 @@ export async function createGame(mount, opts = {}) {
     app.stage.on("pointerup", stagePointerUp);
     app.stage.on("pointerupoutside", stagePointerUp);
 
+    function setDiceScale(scale) {
+      const safeScale = Number.isFinite(scale) ? Math.max(0, scale) : 1;
+      diceContainer.scale.set(safeScale, safeScale);
+    }
+
     function cancelDiceAnimations() {
       if (diceAnimationCancel) {
         diceAnimationCancel();
@@ -1392,6 +1434,10 @@ export async function createGame(mount, opts = {}) {
       if (diceFadeOutCancel) {
         diceFadeOutCancel();
         diceFadeOutCancel = null;
+      }
+      if (diceBumpCancel) {
+        diceBumpCancel();
+        diceBumpCancel = null;
       }
       if (diceFadeTimeoutId) {
         clearTimeout(diceFadeTimeoutId);
@@ -1406,19 +1452,101 @@ export async function createGame(mount, opts = {}) {
     function scheduleDiceFadeOut() {
       diceFadeTimeoutId = setTimeout(() => {
         diceFadeTimeoutId = null;
+        if (diceBumpCancel) {
+          diceBumpCancel();
+          diceBumpCancel = null;
+        }
+        const startScale = diceContainer.scale.x;
         diceFadeOutCancel = tween(app, {
-          duration: SLIDER.fadeOutDuration,
+          duration: diceFadeOutDuration,
           ease: (t) => Ease.easeOutQuad(t),
           update: (progress) => {
             diceContainer.alpha = 1 - progress;
+            const scale =
+              startScale + (diceFadeOutScaleEnd - startScale) * progress;
+            setDiceScale(scale);
           },
           complete: () => {
             diceFadeOutCancel = null;
             diceContainer.visible = false;
             diceContainer.alpha = 0;
+            setDiceScale(diceFadeInScaleStart);
           },
         });
-      }, SLIDER.fadeOutDelay);
+      }, diceFadeOutDelay);
+    }
+
+    function playDiceBump() {
+      if (diceBumpCancel) {
+        diceBumpCancel();
+        diceBumpCancel = null;
+      }
+
+      if (diceBumpDuration <= 0 || diceBumpScale <= 0) {
+        setDiceScale(1);
+        return;
+      }
+
+      const upDuration = Math.max(0, diceBumpDuration / 2);
+      const downDuration = Math.max(0, diceBumpDuration - upDuration);
+      const peakScale = diceBumpScale;
+
+      let activeCancel = null;
+
+      const stopActive = () => {
+        if (activeCancel) {
+          activeCancel();
+          activeCancel = null;
+        }
+      };
+
+      const finish = () => {
+        stopActive();
+        setDiceScale(1);
+        diceBumpCancel = null;
+      };
+
+      diceBumpCancel = finish;
+
+      const startDownPhase = () => {
+        const downStart = diceContainer.scale.x;
+        if (downDuration <= 0) {
+          finish();
+          return;
+        }
+        activeCancel = tween(app, {
+          duration: downDuration,
+          ease: (t) => Ease.easeInQuad(t),
+          update: (progress) => {
+            const scale = downStart + (1 - downStart) * progress;
+            setDiceScale(scale);
+          },
+          complete: () => {
+            activeCancel = null;
+            finish();
+          },
+        });
+      };
+
+      const upStart = diceContainer.scale.x;
+      if (upDuration <= 0) {
+        setDiceScale(peakScale);
+        startDownPhase();
+        return;
+      }
+
+      activeCancel = tween(app, {
+        duration: upDuration,
+        ease: (t) => Ease.easeOutQuad(t),
+        update: (progress) => {
+          const scale = upStart + (peakScale - upStart) * progress;
+          setDiceScale(scale);
+        },
+        complete: () => {
+          activeCancel = null;
+          startDownPhase();
+        },
+      });
     }
 
     function revealDiceRoll({ roll, label, displayValue } = {}) {
@@ -1428,7 +1556,9 @@ export async function createGame(mount, opts = {}) {
         : SLIDER.rangeMin;
       const clampedRoll = clampRange(safeRoll);
       let textValue =
-        label ?? displayValue ?? (Number.isFinite(numericRoll)
+        label ??
+        displayValue ??
+        (Number.isFinite(numericRoll)
           ? numericRoll.toFixed(1)
           : clampedRoll.toFixed(1));
       if (textValue === null || textValue === undefined) {
@@ -1448,6 +1578,9 @@ export async function createGame(mount, opts = {}) {
         ? clampedRoll >= sliderValue
         : false;
 
+      const diceWasVisible =
+        diceHasShown && diceContainer.visible && diceContainer.alpha > 0;
+
       cancelDiceAnimations();
 
       diceLabel.style.fill = DICE_LABEL_COLORS.default;
@@ -1459,21 +1592,31 @@ export async function createGame(mount, opts = {}) {
       }
 
       diceContainer.visible = true;
-      diceContainer.alpha = 0;
       diceContainer.position.x = startX;
 
+      const revealStartAlpha = diceWasVisible ? 1 : 0;
+      const revealStartScale = diceWasVisible ? 1 : diceFadeInScaleStart;
+
+      diceContainer.alpha = revealStartAlpha;
+      setDiceScale(revealStartScale);
+
       diceAnimationCancel = tween(app, {
-        duration: SLIDER.fadeInDuration,
-        ease: (t) => Ease.easeOutQuad(t),
+        duration: diceFadeInDuration,
+        ease: (t) => Ease.easeInOutQuad(t),
         update: (progress) => {
-          diceContainer.alpha = progress;
+          diceContainer.alpha =
+            revealStartAlpha + (1 - revealStartAlpha) * progress;
           diceContainer.position.x = startX + (endX - startX) * progress;
+          const scale = revealStartScale + (1 - revealStartScale) * progress;
+          setDiceScale(scale);
         },
         complete: () => {
           diceAnimationCancel = null;
           diceHasShown = true;
           diceContainer.position.x = endX;
+          setDiceScale(1);
           scheduleDiceFadeOut();
+          playDiceBump();
           const targetColor = isWin
             ? DICE_LABEL_COLORS.win
             : DICE_LABEL_COLORS.loss;
@@ -1539,6 +1682,7 @@ export async function createGame(mount, opts = {}) {
         );
       }
       diceContainer.position.x = valueToPosition(SLIDER.rangeMin);
+      setDiceScale(diceFadeInScaleStart);
     }
 
     function layout() {
@@ -1765,7 +1909,12 @@ export async function createGame(mount, opts = {}) {
     const resizedWidth = Math.max(1, Math.floor(width));
     const resizedHeight = Math.max(1, Math.floor(height));
     app.renderer.resize(resizedWidth, resizedHeight);
-    app.stage.hitArea = new Rectangle(0, 0, app.renderer.width, app.renderer.height);
+    app.stage.hitArea = new Rectangle(
+      0,
+      0,
+      app.renderer.width,
+      app.renderer.height
+    );
     updateBackground();
     positionWinPopup();
     betHistory.layout({ animate: false });
