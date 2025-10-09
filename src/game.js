@@ -13,6 +13,10 @@ import {
 import Ease from "./ease.js";
 import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
 import winSoundUrl from "../assets/sounds/Win.wav";
+import loseSoundUrl from "../assets/sounds/Lost.wav";
+import sliderDownSoundUrl from "../assets/sounds/SliderDown.wav";
+import sliderUpSoundUrl from "../assets/sounds/SliderUp.wav";
+import sliderDragSoundUrl from "../assets/sounds/SliderDrag.wav";
 import sliderBackgroundUrl from "../assets/sprites/SliderBackground.png";
 import sliderHandleUrl from "../assets/sprites/SliderHandle.png";
 import diceSpriteUrl from "../assets/sprites/Dice.png";
@@ -49,6 +53,10 @@ const SLIDER = {
 const SOUND_ALIASES = {
   gameStart: "game.gameStart",
   win: "game.win",
+  lose: "game.lose",
+  sliderDown: "game.sliderDown",
+  sliderUp: "game.sliderUp",
+  sliderDrag: "game.sliderDrag",
 };
 
 const HISTORY = {
@@ -165,6 +173,25 @@ export async function createGame(mount, opts = {}) {
   /* Sounds */
   const gameStartSoundPath = opts.gameStartSoundPath ?? gameStartSoundUrl;
   const winSoundPath = opts.winSoundPath ?? winSoundUrl;
+  const loseSoundPath = opts.loseSoundPath ?? loseSoundUrl;
+  const sliderDownSoundPath = opts.sliderDownSoundPath ?? sliderDownSoundUrl;
+  const sliderUpSoundPath = opts.sliderUpSoundPath ?? sliderUpSoundUrl;
+  const sliderDragSoundPath =
+    opts.sliderDragSoundPath ?? sliderDragSoundUrl;
+
+  const sliderDragMinPitch = Math.max(
+    0.01,
+    opts.sliderDragMinPitch ?? 0.9
+  );
+  const sliderDragMaxPitch = Math.max(
+    sliderDragMinPitch,
+    opts.sliderDragMaxPitch ?? 1.4
+  );
+  const sliderSoundConfig = {
+    dragMinPitch: sliderDragMinPitch,
+    dragMaxPitch: sliderDragMaxPitch,
+    dragMaxSpeed: Math.max(0.01, opts.sliderDragMaxSpeed ?? 0.8),
+  };
 
   /* Win Popup*/
   const winPopupShowDuration = opts.winPopupShowDuration ?? 260;
@@ -174,6 +201,10 @@ export async function createGame(mount, opts = {}) {
   const soundEffectPaths = {
     gameStart: gameStartSoundPath,
     win: winSoundPath,
+    lose: loseSoundPath,
+    sliderDown: sliderDownSoundPath,
+    sliderUp: sliderUpSoundPath,
+    sliderDrag: sliderDragSoundPath,
   };
 
   const enabledSoundKeys = new Set(
@@ -287,6 +318,7 @@ export async function createGame(mount, opts = {}) {
       handle: sliderHandleTexture,
       dice: diceTexture,
     },
+    soundConfig: sliderSoundConfig,
     onRelease: (value) => {
       try {
         onSliderValueChange(value);
@@ -885,9 +917,15 @@ export async function createGame(mount, opts = {}) {
 
   function createSliderUi({
     textures = {},
+    soundConfig = {},
     onRelease = () => {},
     onChange = () => {},
   } = {}) {
+    const {
+      dragMinPitch = 0.9,
+      dragMaxPitch = 1.4,
+      dragMaxSpeed = 0.8,
+    } = soundConfig ?? {};
     const sliderContainer = new Container();
     sliderContainer.sortableChildren = true;
     sliderContainer.eventMode = "static";
@@ -1060,6 +1098,8 @@ export async function createGame(mount, opts = {}) {
     let diceAnimationCancel = null;
     let diceFadeOutCancel = null;
     let diceFadeTimeoutId = null;
+    let lastHandlePosition = valueToPosition(sliderValue);
+    let lastHandleUpdateTime = performance.now();
 
     function emitSliderChange() {
       try {
@@ -1147,6 +1187,7 @@ export async function createGame(mount, opts = {}) {
     }
 
     function setSliderValue(value) {
+      const previousPosition = lastHandlePosition;
       const clamped = clampBounds(snapValue(value));
       const nextValue = Number.isFinite(clamped)
         ? Number(clamped.toFixed(2))
@@ -1154,7 +1195,31 @@ export async function createGame(mount, opts = {}) {
       const changed = nextValue !== sliderValue;
       sliderValue = nextValue;
       updateSliderVisuals();
-      if (changed) emitSliderChange();
+
+      const now = performance.now();
+      if (changed) {
+        emitSliderChange();
+        const newPosition = valueToPosition(sliderValue);
+        const deltaPosition = Math.abs(newPosition - previousPosition);
+        const deltaTime = Math.max(1, now - lastHandleUpdateTime);
+        const positionSpeed = deltaPosition / deltaTime;
+        const normalizedSpeed =
+          dragMaxSpeed > 0
+            ? Math.min(1, positionSpeed / dragMaxSpeed)
+            : 0;
+        const pitchRange = Math.max(0, dragMaxPitch - dragMinPitch);
+        const playbackSpeed =
+          pitchRange > 0
+            ? dragMinPitch + pitchRange * normalizedSpeed
+            : dragMinPitch;
+        playSoundEffect("sliderDrag", {
+          speed: Number.isFinite(playbackSpeed) ? playbackSpeed : dragMinPitch,
+        });
+        lastHandlePosition = newPosition;
+      } else {
+        lastHandlePosition = valueToPosition(sliderValue);
+      }
+      lastHandleUpdateTime = now;
       return sliderValue;
     }
 
@@ -1218,6 +1283,7 @@ export async function createGame(mount, opts = {}) {
       sliderDragging = true;
       sliderContainer.cursor = "grabbing";
       handle.cursor = "grabbing";
+      playSoundEffect("sliderDown");
       updateFromPointer(event);
     }
 
@@ -1226,6 +1292,7 @@ export async function createGame(mount, opts = {}) {
       sliderDragging = false;
       sliderContainer.cursor = "pointer";
       handle.cursor = "pointer";
+      playSoundEffect("sliderUp");
       console.debug(
         `Roll over target set to ${sliderValue.toFixed(1)}%`
       );
@@ -1373,6 +1440,8 @@ export async function createGame(mount, opts = {}) {
 
     updateTickLayout();
     updateSliderVisuals();
+    lastHandlePosition = valueToPosition(sliderValue);
+    lastHandleUpdateTime = performance.now();
     resetDice();
     layout();
 
@@ -1450,8 +1519,6 @@ export async function createGame(mount, opts = {}) {
     winPopup.container.visible = true;
     winPopup.container.alpha = 1;
     winPopup.container.scale.set(0);
-
-    playSoundEffect("win");
 
     tween(app, {
       duration: winPopupShowDuration,
@@ -1556,6 +1623,7 @@ export async function createGame(mount, opts = {}) {
   function revealDiceOutcome({ roll, label, displayValue } = {}) {
     const result = sliderUi.revealDiceRoll({ roll, label, displayValue });
     if (result) {
+      playSoundEffect(result.isWin ? "win" : "lose");
       betHistory.addEntry({
         label: result.label,
         isWin: Boolean(result.isWin),
