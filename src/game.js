@@ -189,12 +189,12 @@ export async function createGame(mount, opts = {}) {
   );
   const sliderDragCooldownMs = Math.max(
     0,
-    (opts.sliderDragCooldown ?? 0.2) * 1000
+    (opts.sliderDragCooldown ?? 0.05) * 1000
   );
   const sliderSoundConfig = {
     dragMinPitch: sliderDragMinPitch,
     dragMaxPitch: sliderDragMaxPitch,
-    dragMaxSpeed: Math.max(0.01, opts.sliderDragMaxSpeed ?? 0.8),
+    dragMaxSpeed: Math.max(0.01, opts.sliderDragMaxSpeed ?? 1.5),
     dragCooldownMs: sliderDragCooldownMs,
   };
 
