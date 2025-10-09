@@ -268,6 +268,8 @@ export async function createGame(mount, opts = {}) {
   });
   ui.addChild(sliderUi.container);
 
+  const historyUi = createHistoryUi(root);
+
   function createWinPopup() {
     const popupWidth = winPopupWidth;
     const popupHeight = winPopupHeight;
@@ -750,6 +752,11 @@ export async function createGame(mount, opts = {}) {
           scheduleDiceFadeOut();
         },
       });
+
+      return {
+        roll: clampedRoll,
+        displayedValue: `${textValue}`,
+      };
     }
 
     function resetDice() {
@@ -793,6 +800,7 @@ export async function createGame(mount, opts = {}) {
       layout,
       revealDiceRoll,
       resetDice,
+      getCurrentTarget: () => sliderValue,
       destroy: () => {
         sliderContainer.removeAllListeners();
         handle.removeAllListeners?.();
@@ -801,6 +809,119 @@ export async function createGame(mount, opts = {}) {
         app.stage.off("pointerupoutside", stagePointerUp);
         cancelDiceAnimations();
       },
+    };
+  }
+
+  function createHistoryUi(rootElement) {
+    const container = document.createElement("div");
+    container.className = "bet-history is-empty";
+
+    const list = document.createElement("div");
+    list.className = "bet-history__list";
+    container.appendChild(list);
+
+    rootElement.appendChild(container);
+
+    let trimScheduled = false;
+
+    function scheduleTrim() {
+      if (trimScheduled) return;
+      trimScheduled = true;
+      requestAnimationFrame(() => {
+        trimScheduled = false;
+        trimOverflow();
+      });
+    }
+
+    function trimOverflow() {
+      const availableWidth = container.clientWidth;
+      if (!availableWidth) return;
+
+      const children = Array.from(list.children);
+      if (!children.length) return;
+
+      if (list.scrollWidth <= availableWidth + 1) {
+        return;
+      }
+
+      const candidate = children.find(
+        (child) => !child.classList.contains("exiting")
+      );
+
+      if (!candidate) {
+        return;
+      }
+
+      markForRemoval(candidate);
+    }
+
+    function markForRemoval(element) {
+      if (!element || element.classList.contains("exiting")) return;
+
+      element.classList.add("exiting");
+      element.setAttribute("aria-hidden", "true");
+
+      const removalTimeout = setTimeout(() => {
+        if (element.parentNode === list) {
+          element.remove();
+          scheduleTrim();
+        }
+      }, 500);
+
+      element.addEventListener(
+        "transitionend",
+        (event) => {
+          if (event.propertyName !== "opacity") return;
+          clearTimeout(removalTimeout);
+          element.remove();
+          scheduleTrim();
+        },
+        { once: true }
+      );
+    }
+
+    function addEntry({ value, win }) {
+      const bubble = document.createElement("div");
+      bubble.className = "bet-history__bubble entering";
+      bubble.textContent = value;
+      bubble.setAttribute("role", "presentation");
+      bubble.setAttribute("aria-label", win ? "Win" : "Loss");
+      bubble.classList.add(
+        win ? "bet-history__bubble--win" : "bet-history__bubble--lose"
+      );
+
+      if (container.classList.contains("is-empty")) {
+        container.classList.remove("is-empty");
+      }
+
+      list.appendChild(bubble);
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          bubble.classList.remove("entering");
+          scheduleTrim();
+        });
+      });
+    }
+
+    function clear() {
+      list.replaceChildren();
+      if (!container.classList.contains("is-empty")) {
+        container.classList.add("is-empty");
+      }
+    }
+
+    function destroy() {
+      clear();
+      container.remove();
+    }
+
+    return {
+      container,
+      addEntry,
+      clear,
+      scheduleTrim,
+      destroy,
     };
   }
 
@@ -945,13 +1066,34 @@ export async function createGame(mount, opts = {}) {
     try {
       ro.disconnect();
     } catch {}
+    historyUi.destroy();
     sliderUi.destroy();
     app.destroy(true);
     if (app.canvas?.parentNode === root) root.removeChild(app.canvas);
   }
 
   function revealDiceOutcome({ roll, label, displayValue } = {}) {
-    sliderUi.revealDiceRoll({ roll, label, displayValue });
+    const result =
+      sliderUi.revealDiceRoll({ roll, label, displayValue }) ?? {};
+
+    const sliderTarget = sliderUi.getCurrentTarget?.();
+    const resolvedRoll = Number.isFinite(result.roll)
+      ? result.roll
+      : typeof roll === "number"
+      ? roll
+      : Number(roll);
+
+    const rawLabel =
+      result.displayedValue ?? label ?? displayValue ?? resolvedRoll;
+    const labelText =
+      rawLabel === null || rawLabel === undefined ? "" : `${rawLabel}`;
+
+    const isWin =
+      Number.isFinite(resolvedRoll) && Number.isFinite(sliderTarget)
+        ? resolvedRoll >= sliderTarget
+        : false;
+
+    historyUi.addEntry({ value: labelText, win: isWin });
   }
 
   function playStartSoundIfNeeded() {
@@ -969,6 +1111,7 @@ export async function createGame(mount, opts = {}) {
     updateBackground();
     positionWinPopup();
     sliderUi.layout();
+    historyUi.scheduleTrim();
   }
 
   resizeSquare();

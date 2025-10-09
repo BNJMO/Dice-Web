@@ -73,6 +73,81 @@ h1 {
   display: block;
 }
 
+.bet-history {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: 16px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(12, 12, 12, 0.7);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.bet-history.is-empty {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
+.bet-history__list {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.bet-history__bubble {
+  min-width: 64px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  background: #3a3a3d;
+  color: #f0f0f0;
+  opacity: 1;
+  transform: translateX(0);
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.bet-history__bubble--win {
+  background: #eaff00;
+  color: #1b1b1b;
+  box-shadow: 0 10px 22px rgba(234, 255, 0, 0.4);
+}
+
+.bet-history__bubble--lose {
+  background: #2d2d30;
+  color: #f0f0f0;
+}
+
+.bet-history__bubble.entering {
+  opacity: 0;
+  transform: translateX(120%);
+}
+
+.bet-history__bubble.exiting {
+  opacity: 0;
+  transform: translateX(-120%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bet-history,
+  .bet-history__bubble {
+    transition: none;
+  }
+}
+
 .controls {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
