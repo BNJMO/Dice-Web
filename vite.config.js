@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
-  base: '/Mines-Demo/',
+  base: '/Dice-Web/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
