@@ -436,7 +436,7 @@ export async function createGame(mount, opts = {}) {
       maxVisible = Math.max(1, maxCount);
 
       historyContainer.position.set(
-        width - HISTORY.rightPadding,
+        width - HISTORY.rightPadding - bubbleWidth / 2,
         HISTORY.topPadding + bubbleHeight / 2
       );
     }
