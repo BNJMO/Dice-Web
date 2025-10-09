@@ -78,8 +78,7 @@ h1 {
   gap: 16px;
   justify-content: center;
   padding: 16px 20px;
-  width: calc(100% - 32px);
-  max-width: 540px;
+  width: min(90%, calc(100% - 32px));
   background: #1a191d;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
