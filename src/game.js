@@ -189,8 +189,20 @@ export async function createGame(mount, opts = {}) {
   root.style.position = root.style.position || "relative";
   root.style.aspectRatio = root.style.aspectRatio || "1 / 1";
   if (!root.style.width && !root.style.height) {
-    root.style.width = `${initialSize}px`;
+    root.style.width = "100%";
+  }
+  if (!root.style.maxWidth) {
     root.style.maxWidth = "100%";
+  }
+
+  function measureRootSize() {
+    const rect = root.getBoundingClientRect();
+    const width = Math.max(1, rect.width || root.clientWidth || initialSize);
+    const height = Math.max(
+      1,
+      rect.height || root.clientHeight || width
+    );
+    return { width, height };
   }
 
   let backgroundTexture = null;
@@ -231,10 +243,11 @@ export async function createGame(mount, opts = {}) {
 
   const app = new Application();
   try {
+    const { width: startWidth, height: startHeight } = measureRootSize();
     await app.init({
       background: backgroundColor,
-      width: initialSize,
-      height: initialSize,
+      width: startWidth,
+      height: startHeight,
       antialias: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
     });
@@ -1569,11 +1582,11 @@ export async function createGame(mount, opts = {}) {
     shouldPlayStartSound = false;
   }
 
-  function resizeSquare() {
-    const cw = Math.max(1, root.clientWidth || initialSize);
-    const ch = Math.max(1, root.clientHeight || cw);
-    const size = Math.floor(Math.min(cw, ch));
-    app.renderer.resize(size, size);
+  function resizeToContainer() {
+    const { width, height } = measureRootSize();
+    const resizedWidth = Math.max(1, Math.floor(width));
+    const resizedHeight = Math.max(1, Math.floor(height));
+    app.renderer.resize(resizedWidth, resizedHeight);
     app.stage.hitArea = new Rectangle(0, 0, app.renderer.width, app.renderer.height);
     updateBackground();
     positionWinPopup();
@@ -1581,10 +1594,10 @@ export async function createGame(mount, opts = {}) {
     sliderUi.layout();
   }
 
-  resizeSquare();
-  setTimeout(resizeSquare, 0);
+  resizeToContainer();
+  setTimeout(resizeToContainer, 0);
 
-  const ro = new ResizeObserver(() => resizeSquare());
+  const ro = new ResizeObserver(() => resizeToContainer());
   ro.observe(root);
 
   playStartSoundIfNeeded();

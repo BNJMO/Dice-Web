@@ -59,7 +59,8 @@ h1 {
 }
 
 #game {
-  width: min(100%, 600px);
+  width: 100%;
+  max-width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 8px;
   overflow: hidden;
