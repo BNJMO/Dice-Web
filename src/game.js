@@ -993,7 +993,7 @@ export async function createGame(mount, opts = {}) {
       }
     }
 
-    function destroy() {
+    function clear() {
       activeEntries.forEach((entry) => {
         entry.stopTween();
         historyContainer.removeChild(entry.container);
@@ -1002,10 +1002,15 @@ export async function createGame(mount, opts = {}) {
       activeEntries.clear();
     }
 
+    function destroy() {
+      clear();
+    }
+
     return {
       container: historyContainer,
       addEntry,
       layout,
+      clear,
       destroy,
     };
   }
@@ -1191,10 +1196,11 @@ export async function createGame(mount, opts = {}) {
     const sliderTrackLength = trackEnd - trackStart;
 
     const precision = SLIDER.step > 0 ? Math.round(1 / SLIDER.step) : 0;
-    let sliderValue = Math.min(
+    const defaultSliderValue = Math.min(
       SLIDER.maxValue,
       Math.max(SLIDER.minValue, (SLIDER.minValue + SLIDER.maxValue) / 2)
     );
+    let sliderValue = defaultSliderValue;
     let sliderDragging = false;
     let rollMode = "over";
     let diceHasShown = false;
@@ -1347,6 +1353,16 @@ export async function createGame(mount, opts = {}) {
 
     function toggleRollMode() {
       return setRollMode(rollMode === "over" ? "under" : "over");
+    }
+
+    function resetState() {
+      sliderDragging = false;
+      sliderContainer.cursor = "pointer";
+      handle.cursor = "pointer";
+      const now = performance.now();
+      lastSliderDragSoundTime = now;
+      setRollMode("over");
+      setSliderValue(defaultSliderValue);
     }
 
     function getWinChance() {
@@ -1726,6 +1742,7 @@ export async function createGame(mount, opts = {}) {
       layout,
       revealDiceRoll,
       resetDice,
+      resetState,
       getValue: () => sliderValue,
       setValue: (value) => setSliderValue(value),
       getRollMode,
@@ -1869,6 +1886,9 @@ export async function createGame(mount, opts = {}) {
 
   function reset() {
     hideWinPopup();
+    betHistory.clear();
+    betHistory.layout({ animate: false });
+    sliderUi.resetState();
     sliderUi.resetDice();
     shouldPlayStartSound = true;
     playStartSoundIfNeeded();
