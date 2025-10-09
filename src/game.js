@@ -1545,21 +1545,29 @@ export async function createGame(mount, opts = {}) {
         ? clampedRoll >= sliderValue
         : false;
 
+      const diceWasVisible =
+        diceHasShown && diceContainer.visible && diceContainer.alpha > 0;
+
       cancelDiceAnimations();
 
       diceContainer.visible = true;
-      diceContainer.alpha = 0;
       diceContainer.position.x = startX;
-      setDiceScale(diceFadeInScaleStart);
+
+      const revealStartAlpha = diceWasVisible ? 1 : 0;
+      const revealStartScale = diceWasVisible ? 1 : diceFadeInScaleStart;
+
+      diceContainer.alpha = revealStartAlpha;
+      setDiceScale(revealStartScale);
 
       diceAnimationCancel = tween(app, {
         duration: diceFadeInDuration,
         ease: (t) => Ease.easeOutQuad(t),
         update: (progress) => {
-          diceContainer.alpha = progress;
+          diceContainer.alpha =
+            revealStartAlpha + (1 - revealStartAlpha) * progress;
           diceContainer.position.x = startX + (endX - startX) * progress;
           const scale =
-            diceFadeInScaleStart + (1 - diceFadeInScaleStart) * progress;
+            revealStartScale + (1 - revealStartScale) * progress;
           setDiceScale(scale);
         },
         complete: () => {
