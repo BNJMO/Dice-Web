@@ -49,15 +49,15 @@ const SOUND_ALIASES = {
 };
 
 const HISTORY = {
-  topPadding: 28,
-  leftPadding: 28,
+  topPadding: 0,
+  leftPadding: 0,
   rightPadding: 28,
   heightRatio: 0.09,
-  minBubbleHeight: 30,
-  maxBubbleHeight: 64,
-  widthToHeightRatio: 2.4,
-  spacingRatio: 0.38,
-  fontSizeRatio: 0.52,
+  minBubbleHeight: 20,
+  maxBubbleHeight: 35,
+  widthToHeightRatio: 2.0,
+  spacingRatio: 0.15,
+  fontSizeRatio: 0.42,
   fadeInDuration: 320,
   fadeOutDuration: 260,
 };
