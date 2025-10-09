@@ -1031,11 +1031,16 @@ export async function createGame(mount, opts = {}) {
     const diceLabel = new Text({
       text: "",
       style: {
-        fill: 0x1c2431,
+        fill: 0x0b212b,
         fontFamily,
         fontSize: Math.max(18, baseHeight * 0.2),
         fontWeight: "700",
         align: "center",
+        dropShadow: true,
+        dropShadowColor: 0xcfd9eb,
+        dropShadowBlur: 6,
+        dropShadowDistance: 0,
+        dropShadowAlpha: 1,
       },
     });
     diceLabel.anchor.set(0.5);
