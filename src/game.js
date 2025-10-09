@@ -48,6 +48,27 @@ const SOUND_ALIASES = {
   win: "game.win",
 };
 
+const HISTORY = {
+  topPadding: 28,
+  leftPadding: 28,
+  rightPadding: 28,
+  heightRatio: 0.09,
+  minBubbleHeight: 30,
+  maxBubbleHeight: 64,
+  widthToHeightRatio: 2.4,
+  spacingRatio: 0.38,
+  fontSizeRatio: 0.52,
+  fadeInDuration: 320,
+  fadeOutDuration: 260,
+};
+
+const HISTORY_COLORS = {
+  winFill: 0xeaff00,
+  winText: 0x1c2431,
+  lossFill: 0x2b2f36,
+  lossText: 0xf2f3f5,
+};
+
 function tween(app, { duration = 300, update, complete, ease = (t) => t }) {
   const start = performance.now();
   const step = () => {
@@ -246,6 +267,9 @@ export async function createGame(mount, opts = {}) {
 
   let shouldPlayStartSound = true;
 
+  const betHistory = createBetHistory();
+  ui.addChild(betHistory.container);
+
   // API callbacks
   const onWin = opts.onWin ?? (() => {});
   const onLost = opts.onLost ?? (() => {});
@@ -267,6 +291,7 @@ export async function createGame(mount, opts = {}) {
     },
   });
   ui.addChild(sliderUi.container);
+  betHistory.layout({ animate: false });
 
   function createWinPopup() {
     const popupWidth = winPopupWidth;
@@ -376,6 +401,234 @@ export async function createGame(mount, opts = {}) {
       multiplierText,
       amountText,
       layoutAmountRow,
+    };
+  }
+
+  function createBetHistory() {
+    const historyContainer = new Container();
+    historyContainer.eventMode = "none";
+    historyContainer.zIndex = 150;
+
+    let entries = [];
+    let bubbleHeight = HISTORY.minBubbleHeight;
+    let bubbleWidth = bubbleHeight * HISTORY.widthToHeightRatio;
+    let bubbleSpacing = Math.max(8, bubbleWidth * HISTORY.spacingRatio);
+    let maxVisible = 1;
+    const activeEntries = new Set();
+
+    function computeMetrics() {
+      const width = app.renderer.width;
+      bubbleHeight = Math.max(
+        HISTORY.minBubbleHeight,
+        Math.min(HISTORY.maxBubbleHeight, width * HISTORY.heightRatio)
+      );
+      bubbleWidth = bubbleHeight * HISTORY.widthToHeightRatio;
+      bubbleSpacing = Math.max(8, bubbleWidth * HISTORY.spacingRatio);
+
+      const availableWidth = Math.max(
+        bubbleWidth,
+        width - (HISTORY.leftPadding + HISTORY.rightPadding)
+      );
+
+      const maxCount = Math.floor(
+        (availableWidth + bubbleSpacing) / (bubbleWidth + bubbleSpacing)
+      );
+      maxVisible = Math.max(1, maxCount);
+
+      historyContainer.position.set(
+        width - HISTORY.rightPadding - bubbleWidth / 2,
+        HISTORY.topPadding + bubbleHeight / 2
+      );
+    }
+
+    function createEntry(label, isWin) {
+      const container = new Container();
+      container.eventMode = "none";
+      container.alpha = 0;
+
+      const background = new Graphics();
+      container.addChild(background);
+
+      const text = new Text({
+        text: label,
+        style: {
+          fill: isWin ? HISTORY_COLORS.winText : HISTORY_COLORS.lossText,
+          fontFamily,
+          fontSize: 20,
+          fontWeight: "700",
+          align: "center",
+        },
+      });
+      text.anchor.set(0.5);
+      container.addChild(text);
+
+      const entry = {
+        container,
+        background,
+        text,
+        isWin,
+        cancelTween: null,
+        applySize({ width, height }) {
+          const radius = height / 2;
+          background.clear();
+          background
+            .roundRect(-width / 2, -height / 2, width, height, radius)
+            .fill(isWin ? HISTORY_COLORS.winFill : HISTORY_COLORS.lossFill);
+          const fontSize = Math.round(Math.max(12, height * HISTORY.fontSizeRatio));
+          if (text.style.fontSize !== fontSize) {
+            text.style.fontSize = fontSize;
+          }
+          text.style.fill = isWin
+            ? HISTORY_COLORS.winText
+            : HISTORY_COLORS.lossText;
+        },
+        setLabel(value) {
+          text.text = value;
+        },
+        stopTween() {
+          if (entry.cancelTween) {
+            entry.cancelTween();
+            entry.cancelTween = null;
+          }
+        },
+      };
+
+      activeEntries.add(entry);
+      return entry;
+    }
+
+    function moveEntry(entry, targetX, { animate = true, targetAlpha = 1 } = {}) {
+      const { container } = entry;
+      entry.stopTween();
+
+      const startX = container.position.x;
+      const startAlpha = container.alpha;
+      container.position.y = 0;
+
+      if (!animate) {
+        container.position.set(targetX, 0);
+        container.alpha = targetAlpha;
+        return;
+      }
+
+      entry.cancelTween = tween(app, {
+        duration: HISTORY.fadeInDuration,
+        ease: (t) => Ease.easeOutQuad(t),
+        update: (p) => {
+          container.position.x = startX + (targetX - startX) * p;
+          container.position.y = 0;
+          container.alpha = startAlpha + (targetAlpha - startAlpha) * p;
+        },
+        complete: () => {
+          container.position.set(targetX, 0);
+          container.alpha = targetAlpha;
+          entry.cancelTween = null;
+        },
+      });
+    }
+
+    function removeEntry(entry, { animate = true } = {}) {
+      const { container } = entry;
+      entry.stopTween();
+
+      const startX = container.position.x;
+      const startAlpha = container.alpha;
+      const offscreenX = -(
+        maxVisible * (bubbleWidth + bubbleSpacing) +
+        bubbleWidth +
+        bubbleSpacing
+      );
+
+      if (!animate) {
+        container.position.set(offscreenX, 0);
+        container.alpha = 0;
+        historyContainer.removeChild(container);
+        activeEntries.delete(entry);
+        return;
+      }
+
+      entry.cancelTween = tween(app, {
+        duration: HISTORY.fadeOutDuration,
+        ease: (t) => Ease.easeInQuad(t),
+        update: (p) => {
+          container.position.x = startX + (offscreenX - startX) * p;
+          container.alpha = startAlpha * (1 - p);
+        },
+        complete: () => {
+          container.alpha = 0;
+          historyContainer.removeChild(container);
+          activeEntries.delete(entry);
+          entry.cancelTween = null;
+        },
+      });
+    }
+
+    function layout({ animate = false } = {}) {
+      computeMetrics();
+
+      const kept = entries.slice(0, maxVisible);
+      const overflow = entries.slice(maxVisible);
+
+      kept.forEach((entry, index) => {
+        entry.applySize({ width: bubbleWidth, height: bubbleHeight });
+        const targetX = -index * (bubbleWidth + bubbleSpacing);
+        moveEntry(entry, targetX, { animate, targetAlpha: 1 });
+      });
+
+      overflow.forEach((entry) => {
+        entry.applySize({ width: bubbleWidth, height: bubbleHeight });
+        removeEntry(entry, { animate });
+      });
+
+      entries = kept;
+    }
+
+    function addEntry({ label, isWin }) {
+      computeMetrics();
+
+      const safeLabel = label === null || label === undefined ? "" : `${label}`;
+      const displayLabel = safeLabel === "" ? "—" : safeLabel;
+      const entry = createEntry(displayLabel, isWin);
+      entry.applySize({ width: bubbleWidth, height: bubbleHeight });
+      entry.container.position.set(bubbleWidth + bubbleSpacing, 0);
+      entry.container.alpha = 0;
+
+      historyContainer.addChild(entry.container);
+      entries = [entry, ...entries];
+
+      moveEntry(entry, 0, { animate: true, targetAlpha: 1 });
+
+      for (let i = 1; i < entries.length; i += 1) {
+        const existing = entries[i];
+        existing.applySize({ width: bubbleWidth, height: bubbleHeight });
+        const targetX = -i * (bubbleWidth + bubbleSpacing);
+        moveEntry(existing, targetX, { animate: true, targetAlpha: 1 });
+      }
+
+      if (entries.length > maxVisible) {
+        const overflow = entries.slice(maxVisible);
+        entries = entries.slice(0, maxVisible);
+        overflow.forEach((item) => {
+          item.applySize({ width: bubbleWidth, height: bubbleHeight });
+          removeEntry(item, { animate: true });
+        });
+      }
+    }
+
+    function destroy() {
+      activeEntries.forEach((entry) => {
+        entry.stopTween();
+        historyContainer.removeChild(entry.container);
+      });
+      entries = [];
+      activeEntries.clear();
+    }
+
+    return {
+      container: historyContainer,
+      addEntry,
+      layout,
+      destroy,
     };
   }
 
@@ -721,7 +974,8 @@ export async function createGame(mount, opts = {}) {
       if (textValue === null || textValue === undefined) {
         textValue = clampedRoll.toFixed(1);
       }
-      diceLabel.text = `${textValue}`;
+      const displayLabel = `${textValue}`;
+      diceLabel.text = displayLabel;
 
       const currentPosition = diceContainer.position.x;
       const startingValue = diceHasShown
@@ -729,6 +983,10 @@ export async function createGame(mount, opts = {}) {
         : SLIDER.rangeMin;
       const startX = valueToPosition(startingValue);
       const endX = valueToPosition(clampedRoll);
+
+      const isWin = Number.isFinite(numericRoll)
+        ? clampedRoll >= sliderValue
+        : false;
 
       cancelDiceAnimations();
 
@@ -750,6 +1008,13 @@ export async function createGame(mount, opts = {}) {
           scheduleDiceFadeOut();
         },
       });
+
+      return {
+        label: displayLabel,
+        isWin,
+        roll: clampedRoll,
+        target: sliderValue,
+      };
     }
 
     function resetDice() {
@@ -946,12 +1211,19 @@ export async function createGame(mount, opts = {}) {
       ro.disconnect();
     } catch {}
     sliderUi.destroy();
+    betHistory.destroy();
     app.destroy(true);
     if (app.canvas?.parentNode === root) root.removeChild(app.canvas);
   }
 
   function revealDiceOutcome({ roll, label, displayValue } = {}) {
-    sliderUi.revealDiceRoll({ roll, label, displayValue });
+    const result = sliderUi.revealDiceRoll({ roll, label, displayValue });
+    if (result) {
+      betHistory.addEntry({
+        label: result.label,
+        isWin: Boolean(result.isWin),
+      });
+    }
   }
 
   function playStartSoundIfNeeded() {
@@ -968,6 +1240,7 @@ export async function createGame(mount, opts = {}) {
     app.stage.hitArea = new Rectangle(0, 0, app.renderer.width, app.renderer.height);
     updateBackground();
     positionWinPopup();
+    betHistory.layout({ animate: false });
     sliderUi.layout();
   }
 
