@@ -402,6 +402,7 @@ export async function createGame(mount, opts = {}) {
   const onLost = opts.onLost ?? (() => {});
   const onStateChange = opts.onChange ?? (() => {});
   const onSliderValueChange = opts.onSliderValueChange ?? (() => {});
+  const onRollModeChangeCallback = opts.onRollModeChange ?? (() => {});
 
   let handleSliderChange = () => {};
 
@@ -427,6 +428,13 @@ export async function createGame(mount, opts = {}) {
       bottomPanelUi?.getScaledHeight?.() ??
       bottomPanelUi?.panel?.offsetHeight ??
       0,
+    onRollModeChange: (mode) => {
+      try {
+        onRollModeChangeCallback(mode);
+      } catch (err) {
+        console.warn("onRollModeChange callback failed", err);
+      }
+    },
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -1131,6 +1139,7 @@ export async function createGame(mount, opts = {}) {
     onRelease = () => {},
     onChange = () => {},
     getBottomPanelHeight = () => 0,
+    onRollModeChange = () => {},
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1289,7 +1298,7 @@ export async function createGame(mount, opts = {}) {
         dropShadow: {
           alpha: 1,
           blur: 1,
-          distance: 2.5,
+          distance: 2.0,
           angle: Math.PI / 2,
           color: numberToHexColorString(DICE_LABEL_SHADOW_COLORS.default),
         },
@@ -1335,6 +1344,14 @@ export async function createGame(mount, opts = {}) {
         });
       } catch (err) {
         console.warn("Slider change callback failed", err);
+      }
+    }
+
+    function emitRollModeChange() {
+      try {
+        onRollModeChange(rollMode);
+      } catch (err) {
+        console.warn("Roll mode change callback failed", err);
       }
     }
 
@@ -1458,6 +1475,7 @@ export async function createGame(mount, opts = {}) {
       if (rollMode === normalized) return rollMode;
       rollMode = normalized;
       updateSliderVisuals();
+      emitRollModeChange();
       emitSliderChange();
       return rollMode;
     }
@@ -1706,7 +1724,9 @@ export async function createGame(mount, opts = {}) {
       const endX = valueToPosition(clampedRoll);
 
       const isWin = Number.isFinite(numericRoll)
-        ? clampedRoll >= sliderValue
+        ? rollMode === "under"
+          ? clampedRoll < sliderValue
+          : clampedRoll >= sliderValue
         : false;
 
       const diceWasVisible =
