@@ -1,9 +1,11 @@
 import { createGame } from "./game.js";
+import { ControlPanel } from "./controlPanel.js";
 
 import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
 import winSoundUrl from "../assets/sounds/Win.wav";
 
 let game;
+let controlPanel;
 const opts = {
   // Window visuals
   backgroundColor: "#0C0B0F",
@@ -21,6 +23,12 @@ const opts = {
   // API Events Callbacks
   onWin: () => {
     game?.showWinPopup?.(24.75, "0.00000003");
+    const betValue = controlPanel?.getBetValue?.() ?? 0;
+    const estimatedProfit = betValue * 0.015;
+    controlPanel?.setProfitValue(estimatedProfit);
+    controlPanel?.setProfitOnWinDisplay?.(
+      `$${estimatedProfit.toFixed(2)}`
+    );
   },
   onLost: () => {},
   onStateChange: () => {},
@@ -37,6 +45,24 @@ const opts = {
 
 // Initialize game
 (async () => {
+  try {
+    controlPanel = new ControlPanel("#control-panel", {
+      gameName: "Dice",
+    });
+    controlPanel.addEventListener("modechange", (event) => {
+      console.debug(`Control panel mode changed to ${event.detail.mode}`);
+    });
+    controlPanel.addEventListener("betvaluechange", (event) => {
+      console.debug(`Bet value updated to ${event.detail.value}`);
+    });
+    controlPanel.addEventListener("bet", () => handleBet());
+    controlPanel.setBetAmountDisplay("$0.00");
+    controlPanel.setProfitOnWinDisplay("$0.00");
+    controlPanel.setProfitValue("0.00000000");
+  } catch (err) {
+    console.error("Control panel initialization failed:", err);
+  }
+
   try {
     game = await createGame("#game", opts);
     window.game = game;
@@ -55,19 +81,20 @@ const opts = {
   }
 })();
 
-document
-  .querySelector("#resetBtn")
-  ?.addEventListener("click", () => game.reset());
+function handleBet() {
+  const roll = Math.random() * 100;
+  const winChance = Math.max(0, (100 - roll) / 100);
+  console.debug(
+    `Bet placed. Revealing roll ${roll.toFixed(1)} with ${(winChance * 100).toFixed(
+      2
+    )}% win chance.`
+  );
 
-document
-  .querySelector("#betBtn")
-  ?.addEventListener("click", () => {
-    const roll = Math.random() * 100;
-    const winChance = Math.max(0, (100 - roll) / 100);
-    console.debug(
-      `Bet placed. Revealing roll ${roll.toFixed(1)} with ${(winChance * 100).toFixed(
-        2
-      )}% win chance.`
-    );
-    game?.revealDiceOutcome?.({ roll });
-  });
+  const betValue = controlPanel?.getBetValue?.() ?? 0;
+  controlPanel?.setBetAmountDisplay?.(`$${betValue.toFixed(2)}`);
+  const potentialProfit = betValue * winChance;
+  controlPanel?.setProfitOnWinDisplay?.(`$${potentialProfit.toFixed(2)}`);
+  controlPanel?.setProfitValue?.(potentialProfit);
+
+  game?.revealDiceOutcome?.({ roll });
+}

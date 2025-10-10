@@ -11,6 +11,7 @@ import {
 } from "pixi.js";
 
 import Ease from "./ease.js";
+import { Stepper } from "./stepper.js";
 import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
 import winSoundUrl from "../assets/sounds/Win.wav";
 import loseSoundUrl from "../assets/sounds/Lost.wav";
@@ -493,44 +494,24 @@ export async function createGame(mount, opts = {}) {
       iconEl.className = "game-panel-icon";
       valueWrapper.appendChild(iconEl);
 
-      const stepper = document.createElement("div");
-      stepper.className = "game-panel-stepper";
-      stepper.addEventListener("pointerdown", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+      const stepper = new Stepper({
+        upAriaLabel: `Increase ${label}`,
+        downAriaLabel: `Decrease ${label}`,
+        onStepUp: () => {
+          const current = Number(getValue());
+          const next = Number.isFinite(current) ? current + step : step;
+          onCommit(next);
+          refresh(true);
+        },
+        onStepDown: () => {
+          const current = Number(getValue());
+          const next = Number.isFinite(current) ? current - step : 0;
+          onCommit(next);
+          refresh(true);
+        },
       });
 
-      const upButton = document.createElement("button");
-      upButton.type = "button";
-      upButton.className = "game-panel-stepper-btn game-panel-stepper-up";
-      upButton.innerHTML = "▲";
-      upButton.setAttribute("aria-label", `Increase ${label}`);
-      upButton.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const current = Number(getValue());
-        const next = Number.isFinite(current) ? current + step : step;
-        onCommit(next);
-        refresh(true);
-      });
-
-      const downButton = document.createElement("button");
-      downButton.type = "button";
-      downButton.className = "game-panel-stepper-btn game-panel-stepper-down";
-      downButton.innerHTML = "▼";
-      downButton.setAttribute("aria-label", `Decrease ${label}`);
-      downButton.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const current = Number(getValue());
-        const next = Number.isFinite(current) ? current - step : 0;
-        onCommit(next);
-        refresh(true);
-      });
-
-      stepper.appendChild(upButton);
-      stepper.appendChild(downButton);
-      valueWrapper.appendChild(stepper);
+      valueWrapper.appendChild(stepper.element);
 
       const state = { editing: false };
 
