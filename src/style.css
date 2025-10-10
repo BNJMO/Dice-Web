@@ -35,6 +35,8 @@ body {
   border: 1px solid #282A2F;
   padding: 32px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+  flex-direction: row;
+  align-items: stretch;
 }
 
 .game-container {
@@ -45,6 +47,7 @@ body {
   position: relative;
   overflow: hidden;
   min-height: 480px;
+  order: 2;
 }
 
 #game {
@@ -56,8 +59,10 @@ body {
 }
 
 .control-panel-mount {
-  flex: 0 0 320px;
+  flex: 0 1 27%;
   display: flex;
+  max-width: 27%;
+  order: 1;
 }
 
 .control-panel {
@@ -71,9 +76,9 @@ body {
 .control-toggle {
   display: flex;
   gap: 8px;
-  background: #282A2F;
+  background: #000000;
   padding: 6px;
-  border-radius: 18px;
+  border-radius: 40px;
 }
 
 .control-toggle-btn {
@@ -83,14 +88,14 @@ body {
   color: #9a9da6;
   font-size: 0.95rem;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 40px;
   padding: 10px 0;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .control-toggle-btn.is-active {
-  background: #000000;
+  background: #282A2F;
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -123,7 +128,7 @@ body {
   gap: 12px;
   background: #282A2F;
   border-radius: 20px;
-  padding: 12px;
+  padding: 2px;
 }
 
 .control-bet-input-field {
@@ -161,7 +166,7 @@ body {
 
 .control-bet-action {
   border: none;
-  background: #0d0d0f;
+  background: #282A2F;
   color: #f5f6ff;
   font-weight: 700;
   font-size: 0.95rem;
@@ -172,7 +177,7 @@ body {
 }
 
 .control-bet-action:hover {
-  background: #1a191d;
+  background: #34363d;
   transform: translateY(-1px);
 }
 
@@ -228,14 +233,21 @@ body {
   margin-top: 6px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1100px), (orientation: portrait) {
   .app-container {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .game-container {
+    order: 1;
+  }
+
   .control-panel-mount {
+    order: 2;
     flex: 1 1 auto;
+    max-width: none;
+    width: 100%;
   }
 
   .control-panel {
