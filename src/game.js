@@ -19,6 +19,7 @@ import diceRollSoundUrl from "../assets/sounds/DiceRoll.wav";
 import sliderDownSoundUrl from "../assets/sounds/SliderDown.wav";
 import sliderUpSoundUrl from "../assets/sounds/SliderUp.wav";
 import sliderDragSoundUrl from "../assets/sounds/SliderDrag.wav";
+import toggleRollModeSoundUrl from "../assets/sounds/ToggleRollMode.wav";
 import sliderBackgroundUrl from "../assets/sprites/SliderBackground.png";
 import sliderHandleUrl from "../assets/sprites/SliderHandle.png";
 import diceSpriteUrl from "../assets/sprites/Dice.png";
@@ -67,6 +68,7 @@ const SOUND_ALIASES = {
   sliderDown: "game.sliderDown",
   sliderUp: "game.sliderUp",
   sliderDrag: "game.sliderDrag",
+  rollModeToggle: "game.rollModeToggle",
 };
 
 const HISTORY = {
@@ -218,6 +220,8 @@ export async function createGame(mount, opts = {}) {
   const sliderDownSoundPath = opts.sliderDownSoundPath ?? sliderDownSoundUrl;
   const sliderUpSoundPath = opts.sliderUpSoundPath ?? sliderUpSoundUrl;
   const sliderDragSoundPath = opts.sliderDragSoundPath ?? sliderDragSoundUrl;
+  const toggleRollModeSoundPath =
+    opts.toggleRollModeSoundPath ?? toggleRollModeSoundUrl;
 
   const sliderDragMinPitch = Math.max(0.01, opts.sliderDragMinPitch ?? 0.9);
   const sliderDragMaxPitch = Math.max(
@@ -284,6 +288,7 @@ export async function createGame(mount, opts = {}) {
     sliderDown: sliderDownSoundPath,
     sliderUp: sliderUpSoundPath,
     sliderDrag: sliderDragSoundPath,
+    rollModeToggle: toggleRollModeSoundPath,
   };
 
   const enabledSoundKeys = new Set(
@@ -1455,6 +1460,7 @@ export async function createGame(mount, opts = {}) {
       const normalized = mode === "under" ? "under" : "over";
       if (rollMode === normalized) return rollMode;
       rollMode = normalized;
+      playSoundEffect("rollModeToggle");
       updateSliderVisuals();
       emitRollModeChange();
       emitSliderChange();
