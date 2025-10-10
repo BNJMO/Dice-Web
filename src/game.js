@@ -402,6 +402,7 @@ export async function createGame(mount, opts = {}) {
   const onLost = opts.onLost ?? (() => {});
   const onStateChange = opts.onChange ?? (() => {});
   const onSliderValueChange = opts.onSliderValueChange ?? (() => {});
+  const onRollModeChangeCallback = opts.onRollModeChange ?? (() => {});
 
   let handleSliderChange = () => {};
 
@@ -420,6 +421,13 @@ export async function createGame(mount, opts = {}) {
       }
     },
     onChange: (details) => handleSliderChange(details),
+    onRollModeChange: (mode) => {
+      try {
+        onRollModeChangeCallback(mode);
+      } catch (err) {
+        console.warn("onRollModeChange callback failed", err);
+      }
+    },
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -1020,6 +1028,7 @@ export async function createGame(mount, opts = {}) {
     soundConfig = {},
     onRelease = () => {},
     onChange = () => {},
+    onRollModeChange = () => {},
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1227,6 +1236,14 @@ export async function createGame(mount, opts = {}) {
       }
     }
 
+    function emitRollModeChange() {
+      try {
+        onRollModeChange(rollMode);
+      } catch (err) {
+        console.warn("Roll mode change callback failed", err);
+      }
+    }
+
     function clampRange(value) {
       return Math.min(SLIDER.rangeMax, Math.max(SLIDER.rangeMin, value));
     }
@@ -1347,6 +1364,7 @@ export async function createGame(mount, opts = {}) {
       if (rollMode === normalized) return rollMode;
       rollMode = normalized;
       updateSliderVisuals();
+      emitRollModeChange();
       emitSliderChange();
       return rollMode;
     }
@@ -1595,7 +1613,9 @@ export async function createGame(mount, opts = {}) {
       const endX = valueToPosition(clampedRoll);
 
       const isWin = Number.isFinite(numericRoll)
-        ? clampedRoll >= sliderValue
+        ? rollMode === "under"
+          ? clampedRoll < sliderValue
+          : clampedRoll >= sliderValue
         : false;
 
       const diceWasVisible =

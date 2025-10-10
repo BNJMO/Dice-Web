@@ -30,6 +30,9 @@ const opts = {
       `Main calculated win chance: ${(winChance * 100).toFixed(2)}%`
     );
   },
+  onRollModeChange: (mode) => {
+    console.debug(`Roll mode changed to ${mode}`);
+  },
 };
 
 // Initialize game
