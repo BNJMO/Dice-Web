@@ -1178,7 +1178,7 @@ export async function createGame(mount, opts = {}) {
         dropShadow: {
           alpha: 1,
           blur: 1,
-          distance: 2.5,
+          distance: 2.0,
           angle: Math.PI / 2,
           color: numberToHexColorString(DICE_LABEL_SHADOW_COLORS.default),
         },
