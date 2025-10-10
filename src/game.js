@@ -405,6 +405,8 @@ export async function createGame(mount, opts = {}) {
 
   let handleSliderChange = () => {};
 
+  let panelResizeObserver = null;
+
   const sliderUi = createSliderUi({
     textures: {
       background: sliderBackgroundTexture,
@@ -420,11 +422,21 @@ export async function createGame(mount, opts = {}) {
       }
     },
     onChange: (details) => handleSliderChange(details),
+    getBottomPanelHeight: () => bottomPanelUi?.panel?.offsetHeight ?? 0,
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
 
   const bottomPanelUi = setupBottomPanel();
+  if (bottomPanelUi?.panel) {
+    try {
+      panelResizeObserver = new ResizeObserver(() => sliderUi.layout());
+      panelResizeObserver.observe(bottomPanelUi.panel);
+    } catch (err) {
+      console.warn("Bottom panel ResizeObserver failed", err);
+    }
+  }
+  sliderUi.layout();
 
   function setupBottomPanel() {
     const panel = document.createElement("div");
@@ -1020,6 +1032,7 @@ export async function createGame(mount, opts = {}) {
     soundConfig = {},
     onRelease = () => {},
     onChange = () => {},
+    getBottomPanelHeight = () => 0,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1715,15 +1728,25 @@ export async function createGame(mount, opts = {}) {
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
       const bottomPaddingRatio = 0.5;
-      const bottomPadding = Math.max(
+      const rawPanelHeight = Number(
+        typeof getBottomPanelHeight === "function"
+          ? getBottomPanelHeight()
+          : 0
+      );
+      const panelHeight = Number.isFinite(rawPanelHeight) ? rawPanelHeight : 0;
+      const panelOffset = panelHeight > 0 ? panelHeight + 48 : 0;
+      const bottomPaddingCandidate = Math.max(
         60,
         (combinedHeight * scale) / 2,
-        app.renderer.height * bottomPaddingRatio
+        app.renderer.height * bottomPaddingRatio,
+        panelOffset
       );
-      sliderContainer.position.set(
-        app.renderer.width / 2,
-        app.renderer.height - bottomPadding
+      const minY = (baseHeight * scale) / 2 + 16;
+      const sliderY = Math.max(
+        minY,
+        app.renderer.height - bottomPaddingCandidate
       );
+      sliderContainer.position.set(app.renderer.width / 2, sliderY);
     }
 
     updateTickLayout();
@@ -1904,6 +1927,9 @@ export async function createGame(mount, opts = {}) {
   function destroy() {
     try {
       ro.disconnect();
+    } catch {}
+    try {
+      panelResizeObserver?.disconnect?.();
     } catch {}
     bottomPanelUi?.destroy?.();
     sliderUi.destroy();
