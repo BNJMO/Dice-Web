@@ -7,7 +7,8 @@
 }
 
 body {
-  font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Arial,
+    sans-serif;
   background: #000000;
   color: #ffffff;
   min-height: 100vh;
@@ -30,9 +31,9 @@ body {
   max-width: 1280px;
   display: flex;
   gap: 32px;
-  background: #1A191D;
+  background: #1a191d;
   border-radius: 28px;
-  border: 1px solid #282A2F;
+  border: 1px solid #282a2f;
   padding: 16px;
   padding-right: 8px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
@@ -42,9 +43,9 @@ body {
 
 .game-container {
   flex: 1 1 640px;
-  background: #0C0B0F;
+  background: #0c0b0f;
   border-radius: 20px;
-  border: 1px solid #282A2F;
+  border: 1px solid #282a2f;
   position: relative;
   overflow: hidden;
   min-height: 480px;
@@ -56,7 +57,7 @@ body {
   height: 100%;
   min-height: 480px;
   position: relative;
-  background: #0C0B0F;
+  background: #0c0b0f;
 }
 
 .control-panel-mount {
@@ -71,7 +72,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: #1A191D;
+  background: #1a191d;
 }
 
 .control-toggle {
@@ -96,7 +97,7 @@ body {
 }
 
 .control-toggle-btn.is-active {
-  background: #282A2F;
+  background: #282a2f;
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -128,7 +129,7 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: #282A2F;
+  background: #282a2f;
   border-radius: 8px;
   padding: 2px;
   min-width: 0;
@@ -174,7 +175,7 @@ body {
 
 .control-bet-action {
   border: none;
-  background: #282A2F;
+  background: #282a2f;
   color: #f5f6ff;
   font-weight: 700;
   font-size: 0.95rem;
@@ -201,7 +202,7 @@ body {
   width: 100%;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #EAFF00 0%, #EAFF00 100%);
+  background: linear-gradient(135deg, #eaff00 0%, #eaff00 100%);
   color: #000000;
   font-size: 1.05rem;
   font-weight: 700;
@@ -219,7 +220,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #282A2F;
+  background: #282a2f;
   border-radius: 8px;
   padding: 14px 18px;
 }
@@ -238,6 +239,7 @@ body {
 .control-game-name {
   font-weight: 700;
   font-size: 1.1rem;
+  padding-top: 48px;
   padding-left: 16px;
   color: #ffffff;
   margin-top: auto;
@@ -267,7 +269,7 @@ body {
 
 @media (max-width: 768px) {
   body {
-    padding: 24px 16px;
+    padding: 0px;
   }
 
   .app-container {
@@ -277,6 +279,7 @@ body {
 
   .game-container {
     min-height: 360px;
+    max-height: 440px;
   }
 
   #game {
@@ -312,7 +315,7 @@ body {
   padding: 16px 20px;
   width: calc(100% - 40px);
   max-width: calc(100% - 40px);
-  background: #1A191D;
+  background: #1a191d;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(14px);
@@ -430,7 +433,7 @@ button.game-panel-value:focus-visible {
   flex-direction: column;
   gap: 4px;
   padding: 4px;
-  background: #1A191D;
+  background: #1a191d;
   border-radius: 6px;
   opacity: 0;
   pointer-events: none;
@@ -479,7 +482,7 @@ button.game-panel-value:focus-visible {
     padding: 14px 20px;
     bottom: 12px;
     width: calc(100% - 40px);
-    max-width: calc(100% - 40px);
+    max-width: calc(100% - 10px);
   }
 
   .game-panel-item {
@@ -512,7 +515,7 @@ button.game-panel-value:focus-visible {
   align-items: center;
   height: 100%;
   font-size: 1.5rem;
-  color: #EAFF00;
+  color: #eaff00;
 }
 
 .loading::after {

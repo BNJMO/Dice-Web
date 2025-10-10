@@ -43,8 +43,9 @@ const opts = {
   },
 };
 
-// Initialize game
+
 (async () => {
+  // Initialize Control Panel
   try {
     controlPanel = new ControlPanel("#control-panel", {
       gameName: "Dice",
@@ -63,6 +64,7 @@ const opts = {
     console.error("Control panel initialization failed:", err);
   }
 
+  // Initialize Game
   try {
     game = await createGame("#game", opts);
     window.game = game;
