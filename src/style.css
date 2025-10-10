@@ -74,13 +74,15 @@ h1 {
   position: absolute;
   left: 50%;
   bottom: 32px;
-  transform: translateX(-50%);
+  transform: translate(-50%, 0) scale(var(--panel-scale, 1));
+  transform-origin: bottom center;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   justify-content: center;
   padding: 16px 20px;
-  width: min(90%, calc(100% - 32px));
+  width: 100%;
+  max-width: 100%;
   background: #1A191D;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);

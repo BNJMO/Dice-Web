@@ -406,6 +406,9 @@ export async function createGame(mount, opts = {}) {
 
   let handleSliderChange = () => {};
 
+  let panelResizeObserver = null;
+  let bottomPanelUi = null;
+
   const sliderUi = createSliderUi({
     textures: {
       background: sliderBackgroundTexture,
@@ -421,6 +424,10 @@ export async function createGame(mount, opts = {}) {
       }
     },
     onChange: (details) => handleSliderChange(details),
+    getBottomPanelHeight: () =>
+      bottomPanelUi?.getScaledHeight?.() ??
+      bottomPanelUi?.panel?.offsetHeight ??
+      0,
     onRollModeChange: (mode) => {
       try {
         onRollModeChangeCallback(mode);
@@ -432,7 +439,20 @@ export async function createGame(mount, opts = {}) {
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
 
-  const bottomPanelUi = setupBottomPanel();
+  bottomPanelUi = setupBottomPanel();
+  if (bottomPanelUi?.panel) {
+    try {
+      panelResizeObserver = new ResizeObserver(() => {
+        bottomPanelUi.layout?.();
+        sliderUi.layout();
+      });
+      panelResizeObserver.observe(bottomPanelUi.panel);
+    } catch (err) {
+      console.warn("Bottom panel ResizeObserver failed", err);
+    }
+  }
+  bottomPanelUi?.layout?.();
+  sliderUi.layout();
 
   function setupBottomPanel() {
     const panel = document.createElement("div");
@@ -653,21 +673,111 @@ export async function createGame(mount, opts = {}) {
 
     root.appendChild(panel);
 
+    const SCALE_EPSILON = 0.0001;
+    let appliedScale = 1;
+    let lastScaledHeight = 0;
+    let lastWidthFactor = 1;
+
+    function layout() {
+      const panelHeight = Number(panel.offsetHeight);
+      const gameHeight = Number(app?.renderer?.height ?? 0);
+      const maxPanelHeight =
+        Number.isFinite(gameHeight) && gameHeight > 0 ? gameHeight * 0.4 : 0;
+
+      let desiredScale = 1;
+      if (
+        Number.isFinite(panelHeight) &&
+        panelHeight > 0 &&
+        maxPanelHeight > 0
+      ) {
+        desiredScale = Math.min(1, maxPanelHeight / panelHeight);
+      }
+
+      if (!Number.isFinite(desiredScale) || desiredScale <= 0) {
+        desiredScale = 1;
+      }
+
+      const previousScale = appliedScale;
+      appliedScale = Math.max(0, Math.min(1, desiredScale));
+      const scaleChanged =
+        Math.abs(appliedScale - previousScale) > SCALE_EPSILON;
+
+      const scaleIsDefault = Math.abs(appliedScale - 1) < SCALE_EPSILON;
+
+      if (scaleChanged) {
+        if (scaleIsDefault) {
+          panel.style.removeProperty("--panel-scale");
+        } else {
+          panel.style.setProperty("--panel-scale", `${appliedScale}`);
+        }
+      } else if (scaleIsDefault) {
+        panel.style.removeProperty("--panel-scale");
+      }
+
+      if (!scaleIsDefault && appliedScale > 0) {
+        const widthFactor = 1 / appliedScale;
+        if (Number.isFinite(widthFactor) && widthFactor > 0) {
+          const widthPercent = `${(widthFactor * 100).toFixed(4)}%`;
+          if (panel.style.width !== widthPercent) {
+            panel.style.width = widthPercent;
+          }
+          lastWidthFactor = widthFactor;
+        } else if (lastWidthFactor !== 1) {
+          panel.style.removeProperty("width");
+          lastWidthFactor = 1;
+        }
+      } else if (lastWidthFactor !== 1 || panel.style.width) {
+        panel.style.removeProperty("width");
+        lastWidthFactor = 1;
+      }
+
+      const scaledHeight =
+        Number.isFinite(panelHeight) && panelHeight > 0
+          ? panelHeight * appliedScale
+          : 0;
+      const heightChanged =
+        Math.abs(scaledHeight - lastScaledHeight) > 0.5;
+      lastScaledHeight = scaledHeight;
+
+      return scaleChanged || heightChanged;
+    }
+
+    function getScaledHeight() {
+      const panelHeight = Number(panel.offsetHeight);
+      if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
+        return 0;
+      }
+      return panelHeight * appliedScale;
+    }
+
     function refresh(force = false) {
       multiplierBox.refresh(force);
       rollModeBox.refresh(force);
       winChanceBox.refresh(force);
     }
 
-    handleSliderChange = () => refresh();
+    handleSliderChange = () => {
+      refresh();
+      if (layout()) {
+        sliderUi.layout();
+      }
+    };
 
     refresh(true);
+    layout();
 
     return {
       panel,
       refresh,
+      layout,
+      getScaledHeight,
       destroy: () => {
         handleSliderChange = () => {};
+        panel.style.removeProperty("--panel-scale");
+        panel.style.removeProperty("width");
+        appliedScale = 1;
+        lastScaledHeight = 0;
+        lastWidthFactor = 1;
         panel.remove();
       },
     };
@@ -1028,6 +1138,7 @@ export async function createGame(mount, opts = {}) {
     soundConfig = {},
     onRelease = () => {},
     onChange = () => {},
+    getBottomPanelHeight = () => 0,
     onRollModeChange = () => {},
   } = {}) {
     const {
@@ -1735,15 +1846,25 @@ export async function createGame(mount, opts = {}) {
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
       const bottomPaddingRatio = 0.5;
-      const bottomPadding = Math.max(
+      const rawPanelHeight = Number(
+        typeof getBottomPanelHeight === "function"
+          ? getBottomPanelHeight()
+          : 0
+      );
+      const panelHeight = Number.isFinite(rawPanelHeight) ? rawPanelHeight : 0;
+      const panelOffset = panelHeight > 0 ? panelHeight + 48 : 0;
+      const bottomPaddingCandidate = Math.max(
         60,
         (combinedHeight * scale) / 2,
-        app.renderer.height * bottomPaddingRatio
+        app.renderer.height * bottomPaddingRatio,
+        panelOffset
       );
-      sliderContainer.position.set(
-        app.renderer.width / 2,
-        app.renderer.height - bottomPadding
+      const minY = (baseHeight * scale) / 2 + 16;
+      const sliderY = Math.max(
+        minY,
+        app.renderer.height - bottomPaddingCandidate
       );
+      sliderContainer.position.set(app.renderer.width / 2, sliderY);
     }
 
     updateTickLayout();
@@ -1925,6 +2046,9 @@ export async function createGame(mount, opts = {}) {
     try {
       ro.disconnect();
     } catch {}
+    try {
+      panelResizeObserver?.disconnect?.();
+    } catch {}
     bottomPanelUi?.destroy?.();
     sliderUi.destroy();
     betHistory.destroy();
@@ -1963,6 +2087,7 @@ export async function createGame(mount, opts = {}) {
     updateBackground();
     positionWinPopup();
     betHistory.layout({ animate: false });
+    bottomPanelUi?.layout?.();
     sliderUi.layout();
   }
 
