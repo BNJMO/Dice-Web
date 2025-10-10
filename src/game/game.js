@@ -19,6 +19,7 @@ import diceRollSoundUrl from "../../assets/sounds/DiceRoll.wav";
 import sliderDownSoundUrl from "../../assets/sounds/SliderDown.wav";
 import sliderUpSoundUrl from "../../assets/sounds/SliderUp.wav";
 import sliderDragSoundUrl from "../../assets/sounds/SliderDrag.wav";
+import toggleRollModeSoundUrl from "../../assets/sounds/ToggleRollMode.wav";
 import sliderBackgroundUrl from "../../assets/sprites/SliderBackground.png";
 import sliderHandleUrl from "../../assets/sprites/SliderHandle.png";
 import diceSpriteUrl from "../../assets/sprites/Dice.png";
@@ -67,6 +68,7 @@ const SOUND_ALIASES = {
   sliderDown: "game.sliderDown",
   sliderUp: "game.sliderUp",
   sliderDrag: "game.sliderDrag",
+  rollModeToggle: "game.rollModeToggle",
 };
 
 const HISTORY = {
@@ -93,7 +95,7 @@ const HISTORY_COLORS = {
 const DICE_LABEL_COLORS = {
   default: 0x0b212b,
   win: 0x2ecc71,
-  loss: 0xDD2E25,
+  loss: 0xdd2e25,
 };
 
 const DICE_LABEL_SHADOW_COLORS = {
@@ -218,7 +220,8 @@ export async function createGame(mount, opts = {}) {
   const sliderDownSoundPath = opts.sliderDownSoundPath ?? sliderDownSoundUrl;
   const sliderUpSoundPath = opts.sliderUpSoundPath ?? sliderUpSoundUrl;
   const sliderDragSoundPath = opts.sliderDragSoundPath ?? sliderDragSoundUrl;
-
+  const toggleRollModeSoundPath =
+    opts.toggleRollModeSoundPath ?? toggleRollModeSoundUrl;
   const sliderDragMinPitch = Math.max(0.01, opts.sliderDragMinPitch ?? 0.9);
   const sliderDragMaxPitch = Math.max(
     sliderDragMinPitch,
@@ -284,6 +287,7 @@ export async function createGame(mount, opts = {}) {
     sliderDown: sliderDownSoundPath,
     sliderUp: sliderUpSoundPath,
     sliderDrag: sliderDragSoundPath,
+    rollModeToggle: toggleRollModeSoundPath,
   };
 
   const enabledSoundKeys = new Set(
@@ -716,8 +720,7 @@ export async function createGame(mount, opts = {}) {
         Number.isFinite(panelHeight) && panelHeight > 0
           ? panelHeight * appliedScale
           : 0;
-      const heightChanged =
-        Math.abs(scaledHeight - lastScaledHeight) > 0.5;
+      const heightChanged = Math.abs(scaledHeight - lastScaledHeight) > 0.5;
       lastScaledHeight = scaledHeight;
 
       return scaleChanged || heightChanged;
@@ -1455,6 +1458,7 @@ export async function createGame(mount, opts = {}) {
       const normalized = mode === "under" ? "under" : "over";
       if (rollMode === normalized) return rollMode;
       rollMode = normalized;
+      playSoundEffect("rollModeToggle");
       updateSliderVisuals();
       emitRollModeChange();
       emitSliderChange();
@@ -1718,9 +1722,8 @@ export async function createGame(mount, opts = {}) {
       diceLabel.style.fill = DICE_LABEL_COLORS.default;
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
       if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color = numberToHexColorString(
-          diceLabelShadowColor
-        );
+        diceLabel.style.dropShadow.color =
+          numberToHexColorString(diceLabelShadowColor);
       }
 
       diceContainer.visible = true;
@@ -1774,18 +1777,16 @@ export async function createGame(mount, opts = {}) {
               );
               diceLabelShadowColor = nextShadowColor;
               if (diceLabel.style.dropShadow) {
-                diceLabel.style.dropShadow.color = numberToHexColorString(
-                  nextShadowColor
-                );
+                diceLabel.style.dropShadow.color =
+                  numberToHexColorString(nextShadowColor);
               }
             },
             complete: () => {
               diceLabel.style.fill = targetColor;
               diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.target;
               if (diceLabel.style.dropShadow) {
-                diceLabel.style.dropShadow.color = numberToHexColorString(
-                  diceLabelShadowColor
-                );
+                diceLabel.style.dropShadow.color =
+                  numberToHexColorString(diceLabelShadowColor);
               }
               diceLabelColorCancel = null;
             },
@@ -1810,9 +1811,8 @@ export async function createGame(mount, opts = {}) {
       diceLabel.style.fill = DICE_LABEL_COLORS.default;
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
       if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color = numberToHexColorString(
-          diceLabelShadowColor
-        );
+        diceLabel.style.dropShadow.color =
+          numberToHexColorString(diceLabelShadowColor);
       }
       diceContainer.position.x = valueToPosition(SLIDER.rangeMin);
       setDiceScale(diceFadeInScaleStart);
@@ -1828,9 +1828,7 @@ export async function createGame(mount, opts = {}) {
       const combinedHeight = baseHeight + diceHeight * 0.9;
       const bottomPaddingRatio = 0.5;
       const rawPanelHeight = Number(
-        typeof getBottomPanelHeight === "function"
-          ? getBottomPanelHeight()
-          : 0
+        typeof getBottomPanelHeight === "function" ? getBottomPanelHeight() : 0
       );
       const panelHeight = Number.isFinite(rawPanelHeight) ? rawPanelHeight : 0;
       const panelOffset = panelHeight > 0 ? panelHeight + 48 : 0;
