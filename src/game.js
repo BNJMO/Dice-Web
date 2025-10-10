@@ -423,7 +423,10 @@ export async function createGame(mount, opts = {}) {
       }
     },
     onChange: (details) => handleSliderChange(details),
-    getBottomPanelHeight: () => bottomPanelUi?.panel?.offsetHeight ?? 0,
+    getBottomPanelHeight: () =>
+      bottomPanelUi?.getScaledHeight?.() ??
+      bottomPanelUi?.panel?.offsetHeight ??
+      0,
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -431,12 +434,16 @@ export async function createGame(mount, opts = {}) {
   bottomPanelUi = setupBottomPanel();
   if (bottomPanelUi?.panel) {
     try {
-      panelResizeObserver = new ResizeObserver(() => sliderUi.layout());
+      panelResizeObserver = new ResizeObserver(() => {
+        bottomPanelUi.layout?.();
+        sliderUi.layout();
+      });
       panelResizeObserver.observe(bottomPanelUi.panel);
     } catch (err) {
       console.warn("Bottom panel ResizeObserver failed", err);
     }
   }
+  bottomPanelUi?.layout?.();
   sliderUi.layout();
 
   function setupBottomPanel() {
@@ -658,21 +665,89 @@ export async function createGame(mount, opts = {}) {
 
     root.appendChild(panel);
 
+    const SCALE_EPSILON = 0.0001;
+    let appliedScale = 1;
+    let lastScaledHeight = 0;
+
+    function layout() {
+      const panelHeight = Number(panel.offsetHeight);
+      const gameHeight = Number(app?.renderer?.height ?? 0);
+      const maxPanelHeight =
+        Number.isFinite(gameHeight) && gameHeight > 0 ? gameHeight * 0.4 : 0;
+
+      let desiredScale = 1;
+      if (
+        Number.isFinite(panelHeight) &&
+        panelHeight > 0 &&
+        maxPanelHeight > 0
+      ) {
+        desiredScale = Math.min(1, maxPanelHeight / panelHeight);
+      }
+
+      if (!Number.isFinite(desiredScale) || desiredScale <= 0) {
+        desiredScale = 1;
+      }
+
+      const previousScale = appliedScale;
+      appliedScale = Math.max(0, Math.min(1, desiredScale));
+      const scaleChanged =
+        Math.abs(appliedScale - previousScale) > SCALE_EPSILON;
+
+      if (scaleChanged) {
+        if (Math.abs(appliedScale - 1) < SCALE_EPSILON) {
+          panel.style.removeProperty("--panel-scale");
+        } else {
+          panel.style.setProperty("--panel-scale", `${appliedScale}`);
+        }
+      } else if (Math.abs(appliedScale - 1) < SCALE_EPSILON) {
+        panel.style.removeProperty("--panel-scale");
+      }
+
+      const scaledHeight =
+        Number.isFinite(panelHeight) && panelHeight > 0
+          ? panelHeight * appliedScale
+          : 0;
+      const heightChanged =
+        Math.abs(scaledHeight - lastScaledHeight) > 0.5;
+      lastScaledHeight = scaledHeight;
+
+      return scaleChanged || heightChanged;
+    }
+
+    function getScaledHeight() {
+      const panelHeight = Number(panel.offsetHeight);
+      if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
+        return 0;
+      }
+      return panelHeight * appliedScale;
+    }
+
     function refresh(force = false) {
       multiplierBox.refresh(force);
       rollModeBox.refresh(force);
       winChanceBox.refresh(force);
     }
 
-    handleSliderChange = () => refresh();
+    handleSliderChange = () => {
+      refresh();
+      if (layout()) {
+        sliderUi.layout();
+      }
+    };
 
     refresh(true);
+    layout();
 
     return {
       panel,
       refresh,
+      layout,
+      getScaledHeight,
       destroy: () => {
         handleSliderChange = () => {};
+        panel.style.removeProperty("--panel-scale");
+        appliedScale = 1;
+        lastScaledHeight = 0;
         panel.remove();
       },
     };
@@ -1970,6 +2045,7 @@ export async function createGame(mount, opts = {}) {
     updateBackground();
     positionWinPopup();
     betHistory.layout({ animate: false });
+    bottomPanelUi?.layout?.();
     sliderUi.layout();
   }
 

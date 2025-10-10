@@ -74,7 +74,8 @@ h1 {
   position: absolute;
   left: 50%;
   bottom: 32px;
-  transform: translateX(-50%);
+  transform: translate(-50%, 0) scale(var(--panel-scale, 1));
+  transform-origin: bottom center;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
