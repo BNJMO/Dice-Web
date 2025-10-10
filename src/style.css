@@ -81,8 +81,8 @@ h1 {
   gap: 16px;
   justify-content: center;
   padding: 16px 20px;
-  width: 100%;
-  max-width: 100%;
+  width: calc(100% - 40px);
+  max-width: calc(100% - 40px);
   background: #1A191D;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
@@ -239,8 +239,10 @@ button.game-panel-value:focus-visible {
 @media (max-width: 600px) {
   .game-bottom-panel {
     gap: 12px;
-    padding: 14px 16px;
+    padding: 14px 20px;
     bottom: 12px;
+    width: calc(100% - 40px);
+    max-width: calc(100% - 40px);
   }
 
   .game-panel-item {
