@@ -362,6 +362,7 @@ footer a:hover {
 @media (max-width: 768px) {
   .game-container {
     width: 100%;
+    order: -1;
   }
 
   #game {
@@ -377,6 +378,7 @@ footer a:hover {
   }
 
   .controls {
+    order: 2;
     width: 100%;
   }
 }
