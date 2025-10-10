@@ -33,7 +33,8 @@ body {
   background: #1A191D;
   border-radius: 28px;
   border: 1px solid #282A2F;
-  padding: 32px;
+  padding: 16px;
+  padding-right: 8px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
   flex-direction: row;
   align-items: stretch;
@@ -126,9 +127,9 @@ body {
 .control-bet-box {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 2px;
   background: #282A2F;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 2px;
   min-width: 0;
 }
@@ -139,7 +140,7 @@ body {
   align-items: center;
   gap: 10px;
   background: #000000;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px solid #2f3136;
   color: #f1f5ff;
   font-size: 1rem;
@@ -199,7 +200,7 @@ body {
 .control-bet-btn {
   width: 100%;
   border: none;
-  border-radius: 18px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #EAFF00 0%, #EAFF00 100%);
   color: #000000;
   font-size: 1.05rem;
@@ -219,7 +220,7 @@ body {
   align-items: center;
   justify-content: space-between;
   background: #282A2F;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 14px 18px;
 }
 
@@ -237,6 +238,7 @@ body {
 .control-game-name {
   font-weight: 700;
   font-size: 1.1rem;
+  padding-left: 16px;
   color: #ffffff;
   margin-top: auto;
 }
