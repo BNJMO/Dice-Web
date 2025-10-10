@@ -129,11 +129,11 @@ body {
   background: #282A2F;
   border-radius: 20px;
   padding: 2px;
+  min-width: 0;
 }
 
 .control-bet-input-field {
   position: relative;
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -143,11 +143,17 @@ body {
   color: #f1f5ff;
   font-size: 1rem;
   font-weight: 600;
-  padding: 14px 118px 14px 16px;
+  flex: 1 1 140px;
+  min-width: 0;
+  --control-bet-padding-right: clamp(56px, 20%, 118px);
+  --control-bet-stepper-offset: clamp(28px, 14%, 72px);
+  --control-bet-icon-offset: clamp(10px, 6%, 18px);
+  padding: 14px var(--control-bet-padding-right) 14px 16px;
 }
 
 .control-bet-input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   border: none;
   background: transparent;
   color: inherit;
@@ -157,7 +163,7 @@ body {
 
 .control-bet-input-icon {
   position: absolute;
-  right: 18px;
+  right: var(--control-bet-icon-offset);
   width: 18px;
   height: 18px;
   opacity: 0.85;
@@ -434,7 +440,7 @@ button.game-panel-value:focus-visible {
 }
 
 .control-bet-input-field.has-stepper .game-panel-stepper {
-  right: 72px;
+  right: var(--control-bet-stepper-offset);
 }
 
 .game-panel-stepper-btn {
