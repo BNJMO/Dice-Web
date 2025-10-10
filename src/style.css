@@ -109,17 +109,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-weight: 600;
 }
 
 .control-row-label {
-  color: #8f929c;
+  color: #999999;
   font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .control-row-value {
-  color: #ffffff;
+  color: #999999;
   font-size: 1rem;
+  font-weight: 400;
 }
 
 .control-bet-box {
@@ -236,7 +237,7 @@ body {
   font-weight: 700;
   font-size: 1.1rem;
   color: #ffffff;
-  margin-top: 6px;
+  margin-top: auto;
 }
 
 @media (max-width: 1100px), (orientation: portrait) {
