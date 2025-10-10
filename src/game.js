@@ -668,6 +668,7 @@ export async function createGame(mount, opts = {}) {
     const SCALE_EPSILON = 0.0001;
     let appliedScale = 1;
     let lastScaledHeight = 0;
+    let lastWidthFactor = 1;
 
     function layout() {
       const panelHeight = Number(panel.offsetHeight);
@@ -693,14 +694,33 @@ export async function createGame(mount, opts = {}) {
       const scaleChanged =
         Math.abs(appliedScale - previousScale) > SCALE_EPSILON;
 
+      const scaleIsDefault = Math.abs(appliedScale - 1) < SCALE_EPSILON;
+
       if (scaleChanged) {
-        if (Math.abs(appliedScale - 1) < SCALE_EPSILON) {
+        if (scaleIsDefault) {
           panel.style.removeProperty("--panel-scale");
         } else {
           panel.style.setProperty("--panel-scale", `${appliedScale}`);
         }
-      } else if (Math.abs(appliedScale - 1) < SCALE_EPSILON) {
+      } else if (scaleIsDefault) {
         panel.style.removeProperty("--panel-scale");
+      }
+
+      if (!scaleIsDefault && appliedScale > 0) {
+        const widthFactor = 1 / appliedScale;
+        if (Number.isFinite(widthFactor) && widthFactor > 0) {
+          const widthPercent = `${(widthFactor * 100).toFixed(4)}%`;
+          if (panel.style.width !== widthPercent) {
+            panel.style.width = widthPercent;
+          }
+          lastWidthFactor = widthFactor;
+        } else if (lastWidthFactor !== 1) {
+          panel.style.removeProperty("width");
+          lastWidthFactor = 1;
+        }
+      } else if (lastWidthFactor !== 1 || panel.style.width) {
+        panel.style.removeProperty("width");
+        lastWidthFactor = 1;
       }
 
       const scaledHeight =
@@ -746,8 +766,10 @@ export async function createGame(mount, opts = {}) {
       destroy: () => {
         handleSliderChange = () => {};
         panel.style.removeProperty("--panel-scale");
+        panel.style.removeProperty("width");
         appliedScale = 1;
         lastScaledHeight = 0;
+        lastWidthFactor = 1;
         panel.remove();
       },
     };
