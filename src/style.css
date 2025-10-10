@@ -269,7 +269,7 @@ body {
 
 @media (max-width: 768px) {
   body {
-    padding: 24px 16px;
+    padding: 0px;
   }
 
   .app-container {
@@ -279,6 +279,7 @@ body {
 
   .game-container {
     min-height: 360px;
+    max-height: 440px;
   }
 
   #game {
