@@ -482,7 +482,7 @@ button.game-panel-value:focus-visible {
     padding: 14px 20px;
     bottom: 12px;
     width: calc(100% - 40px);
-    max-width: calc(100% - 10px);
+    max-width: calc(120% - 15px);
   }
 
   .game-panel-item {
