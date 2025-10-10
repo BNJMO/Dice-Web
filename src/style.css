@@ -279,7 +279,7 @@ body {
 
   .game-container {
     min-height: 360px;
-    max-height: 440px;
+    max-height: 380px;
   }
 
   #game {
