@@ -406,6 +406,7 @@ export async function createGame(mount, opts = {}) {
   let handleSliderChange = () => {};
 
   let panelResizeObserver = null;
+  let bottomPanelUi = null;
 
   const sliderUi = createSliderUi({
     textures: {
@@ -427,7 +428,7 @@ export async function createGame(mount, opts = {}) {
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
 
-  const bottomPanelUi = setupBottomPanel();
+  bottomPanelUi = setupBottomPanel();
   if (bottomPanelUi?.panel) {
     try {
       panelResizeObserver = new ResizeObserver(() => sliderUi.layout());
