@@ -1,5 +1,5 @@
-import { Stepper } from "./stepper.js";
-import bitcoinIconUrl from "../assets/sprites/BitCoin.png";
+import { Stepper } from "../stepper/stepper.js";
+import bitcoinIconUrl from "../../assets/sprites/BitCoin.png";
 
 function resolveMount(mount) {
   if (!mount) {

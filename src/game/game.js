@@ -10,21 +10,21 @@ import {
   Sprite,
 } from "pixi.js";
 
-import Ease from "./ease.js";
-import { Stepper } from "./stepper.js";
-import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
-import winSoundUrl from "../assets/sounds/Win.wav";
-import loseSoundUrl from "../assets/sounds/Lost.wav";
-import diceRollSoundUrl from "../assets/sounds/DiceRoll.wav";
-import sliderDownSoundUrl from "../assets/sounds/SliderDown.wav";
-import sliderUpSoundUrl from "../assets/sounds/SliderUp.wav";
-import sliderDragSoundUrl from "../assets/sounds/SliderDrag.wav";
-import sliderBackgroundUrl from "../assets/sprites/SliderBackground.png";
-import sliderHandleUrl from "../assets/sprites/SliderHandle.png";
-import diceSpriteUrl from "../assets/sprites/Dice.png";
-import multiplierIconUrl from "../assets/sprites/MultiplierIcon.png";
-import rollModeIconUrl from "../assets/sprites/RollOverIcon.png";
-import winChanceIconUrl from "../assets/sprites/WinChanceIcon.png";
+import Ease from "../ease.js";
+import { Stepper } from "../stepper/stepper.js";
+import gameStartSoundUrl from "../../assets/sounds/GameStart.wav";
+import winSoundUrl from "../../assets/sounds/Win.wav";
+import loseSoundUrl from "../../assets/sounds/Lost.wav";
+import diceRollSoundUrl from "../../assets/sounds/DiceRoll.wav";
+import sliderDownSoundUrl from "../../assets/sounds/SliderDown.wav";
+import sliderUpSoundUrl from "../../assets/sounds/SliderUp.wav";
+import sliderDragSoundUrl from "../../assets/sounds/SliderDrag.wav";
+import sliderBackgroundUrl from "../../assets/sprites/SliderBackground.png";
+import sliderHandleUrl from "../../assets/sprites/SliderHandle.png";
+import diceSpriteUrl from "../../assets/sprites/Dice.png";
+import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.png";
+import rollModeIconUrl from "../../assets/sprites/RollOverIcon.png";
+import winChanceIconUrl from "../../assets/sprites/WinChanceIcon.png";
 
 const PALETTE = {
   appBg: 0x020401,

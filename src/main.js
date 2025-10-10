@@ -1,5 +1,5 @@
-import { createGame } from "./game.js";
-import { ControlPanel } from "./controlPanel.js";
+import { createGame } from "./game/game.js";
+import { ControlPanel } from "./controlPanel/controlPanel.js";
 
 import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
 import winSoundUrl from "../assets/sounds/Win.wav";

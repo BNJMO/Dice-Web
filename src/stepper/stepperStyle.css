@@ -1,0 +1,72 @@
+.game-panel-value.has-stepper {
+  padding-right: 88px;
+}
+
+.has-stepper {
+  position: relative;
+}
+
+.has-stepper .game-panel-stepper {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  background: #1a191d;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.has-stepper:hover .game-panel-stepper,
+.has-stepper:focus-within .game-panel-stepper {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.game-panel-stepper {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.game-panel-stepper-btn {
+  width: 24px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.7rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.game-panel-stepper-btn:hover {
+  background: rgba(234, 255, 0, 0.18);
+  color: #eaff00;
+}
+
+.game-panel-stepper-btn:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 600px) {
+  .game-panel-value.has-stepper {
+    padding-right: 72px;
+  }
+
+  .game-panel-value.has-stepper .game-panel-stepper {
+    right: 36px;
+  }
+}
