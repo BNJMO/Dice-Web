@@ -1595,7 +1595,9 @@ export async function createGame(mount, opts = {}) {
       const endX = valueToPosition(clampedRoll);
 
       const isWin = Number.isFinite(numericRoll)
-        ? clampedRoll >= sliderValue
+        ? rollMode === "under"
+          ? clampedRoll < sliderValue
+          : clampedRoll >= sliderValue
         : false;
 
       const diceWasVisible =
