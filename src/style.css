@@ -2,6 +2,7 @@
 @import "./game/gameStyle.css";
 @import "./controlPanel/controlPanelStyle.css";
 @import "./stepper/stepperStyle.css";
+@import "./betHistory/betHistoryStyle.css";
 
 * {
   margin: 0;

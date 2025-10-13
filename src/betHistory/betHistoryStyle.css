@@ -1,0 +1,6 @@
+:root {
+  --bet-history-win-fill: #f0ff31;
+  --bet-history-win-text: #000000;
+  --bet-history-loss-fill: #282a2f;
+  --bet-history-loss-text: #ffffff;
+}
