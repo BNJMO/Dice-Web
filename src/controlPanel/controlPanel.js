@@ -31,12 +31,18 @@ export class ControlPanel extends EventTarget {
       initialProfitValue: options.initialProfitValue ?? "0.00000000",
       initialMode: options.initialMode ?? "manual",
       gameName: options.gameName ?? "Game Name",
+      gameOptions: Array.isArray(options.gameOptions)
+        ? options.gameOptions
+        : [],
     };
 
     this.host = resolveMount(mount);
     this.host.innerHTML = "";
 
     this.mode = this.options.initialMode === "auto" ? "auto" : "manual";
+
+    this.gameOptionValues = {};
+    this.gameOptionControls = new Map();
 
     this.container = document.createElement("div");
     this.container.className = "control-panel";
@@ -48,6 +54,7 @@ export class ControlPanel extends EventTarget {
     this.buildBetButton();
     this.buildProfitOnWinDisplay();
     this.buildProfitDisplay();
+    this.buildGameOptions();
     this.buildGameName();
 
     this.setBetAmountDisplay(this.options.initialBetAmountDisplay);
@@ -199,6 +206,141 @@ export class ControlPanel extends EventTarget {
     this.container.appendChild(this.profitBox);
   }
 
+  buildGameOptions() {
+    const optionConfigs = Array.isArray(this.options.gameOptions)
+      ? this.options.gameOptions
+      : [];
+    if (!optionConfigs.length) {
+      return;
+    }
+
+    const section = document.createElement("div");
+    section.className = "control-game-options";
+
+    const title = document.createElement("div");
+    title.className = "control-game-options-title";
+    title.textContent = "Game Options";
+    section.appendChild(title);
+
+    optionConfigs.forEach((config) => {
+      if (!config || typeof config !== "object") {
+        return;
+      }
+
+      const name = String(config.name ?? "").trim();
+      if (!name) {
+        return;
+      }
+
+      if (this.gameOptionControls.has(name)) {
+        return;
+      }
+
+      const type = config.type ?? config.kind ?? "select";
+      if (type !== "select" && type !== "dropdown") {
+        return;
+      }
+
+      const items = Array.isArray(config.options ?? config.items)
+        ? (config.options ?? config.items).filter(
+            (item) =>
+              item &&
+              typeof item === "object" &&
+              ("label" in item || "value" in item)
+          )
+        : [];
+
+      if (!items.length) {
+        return;
+      }
+
+      const optionWrapper = document.createElement("label");
+      optionWrapper.className = "control-game-option";
+      optionWrapper.dataset.optionName = name;
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "control-game-option-label";
+      labelEl.textContent = config.label ?? name;
+      optionWrapper.appendChild(labelEl);
+
+      const select = document.createElement("select");
+      select.className = "control-game-option-select";
+      select.name = name;
+      select.setAttribute(
+        "aria-label",
+        config.ariaLabel ?? `Select value for ${labelEl.textContent}`
+      );
+
+      const valueMap = new Map();
+      items.forEach((item, index) => {
+        const optionEl = document.createElement("option");
+        const optionValue =
+          "value" in item && item.value !== undefined
+            ? item.value
+            : item.label;
+        const optionKey = `opt-${index}`;
+        optionEl.value = optionKey;
+        optionEl.textContent = String(item.label ?? optionValue ?? "");
+        select.appendChild(optionEl);
+        valueMap.set(optionKey, optionValue);
+      });
+
+      optionWrapper.appendChild(select);
+
+      if (config.description) {
+        const description = document.createElement("span");
+        description.className = "control-game-option-description";
+        description.textContent = String(config.description);
+        optionWrapper.appendChild(description);
+      }
+
+      const control = {
+        element: select,
+        valueMap,
+        findKeyForValue(value) {
+          for (const [key, storedValue] of valueMap.entries()) {
+            if (Object.is(storedValue, value)) {
+              return key;
+            }
+            if (
+              typeof storedValue === "number" &&
+              typeof value === "number" &&
+              !Number.isNaN(storedValue) &&
+              !Number.isNaN(value) &&
+              storedValue === value
+            ) {
+              return key;
+            }
+            if (String(storedValue) === String(value)) {
+              return key;
+            }
+          }
+          return undefined;
+        },
+      };
+
+      select.addEventListener("change", () => {
+        const selectedValue = valueMap.get(select.value);
+        this.setGameOptionValue(name, selectedValue, { emit: true });
+      });
+
+      this.gameOptionControls.set(name, control);
+
+      const initialValue =
+        config.initialValue !== undefined
+          ? config.initialValue
+          : valueMap.values().next().value;
+
+      this.setGameOptionValue(name, initialValue, { emit: false });
+
+      section.appendChild(optionWrapper);
+    });
+
+    if (section.children.length > 1) {
+      this.container.appendChild(section);
+    }
+  }
+
   buildGameName() {
     this.gameName = document.createElement("div");
     this.gameName.className = "control-game-name";
@@ -304,6 +446,64 @@ export class ControlPanel extends EventTarget {
     if (this.gameName) {
       this.gameName.textContent = name;
     }
+  }
+
+  setGameOptionValue(name, value, { emit = true } = {}) {
+    if (!name) {
+      return undefined;
+    }
+
+    const control = this.gameOptionControls.get(name);
+    let normalizedValue = value;
+    if (control) {
+      const key = control.findKeyForValue(value);
+      if (key !== undefined) {
+        if (control.element.value !== key) {
+          control.element.value = key;
+        }
+        normalizedValue = control.valueMap.get(key);
+      } else if (control.valueMap.size && !control.valueMap.has(value)) {
+        const firstEntry = control.valueMap.entries().next().value;
+        if (firstEntry) {
+          const [firstKey, firstValue] = firstEntry;
+          if (control.element.value !== firstKey) {
+            control.element.value = firstKey;
+          }
+          normalizedValue = firstValue;
+        }
+      }
+    }
+
+    const previousValue = this.gameOptionValues[name];
+    this.gameOptionValues[name] = normalizedValue;
+
+    const valuesAreNaN =
+      typeof previousValue === "number" &&
+      typeof normalizedValue === "number" &&
+      Number.isNaN(previousValue) &&
+      Number.isNaN(normalizedValue);
+
+    if (
+      emit &&
+      !valuesAreNaN &&
+      !Object.is(previousValue, normalizedValue)
+    ) {
+      this.dispatchEvent(
+        new CustomEvent("gameoptionchange", {
+          detail: { name, value: normalizedValue },
+        })
+      );
+    }
+
+    return normalizedValue;
+  }
+
+  getGameOptionValue(name) {
+    return this.gameOptionValues?.[name];
+  }
+
+  getGameOptions() {
+    return { ...this.gameOptionValues };
   }
 
   getMode() {

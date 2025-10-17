@@ -6,6 +6,9 @@ import winSoundUrl from "../assets/sounds/Win.wav";
 
 let game;
 let controlPanel;
+const gameOptionState = {
+  mines: 5,
+};
 const opts = {
   // Window visuals
   backgroundColor: "#0C0B0F",
@@ -14,6 +17,9 @@ const opts = {
   // Sounds
   gameStartSoundPath: gameStartSoundUrl,
   winSoundPath: winSoundUrl,
+
+  // Game configuration
+  mines: gameOptionState.mines,
 
   // Win pop-up
   winPopupShowDuration: 260,
@@ -49,6 +55,20 @@ const opts = {
   try {
     controlPanel = new ControlPanel("#control-panel", {
       gameName: "Dice",
+      gameOptions: [
+        {
+          name: "mines",
+          type: "select",
+          label: "Mines",
+          description: "Number of mines per round",
+          initialValue: gameOptionState.mines,
+          options: [
+            { label: "3 Mines", value: 3 },
+            { label: "5 Mines", value: 5 },
+            { label: "10 Mines", value: 10 },
+          ],
+        },
+      ],
     });
     controlPanel.addEventListener("modechange", (event) => {
       console.debug(`Control panel mode changed to ${event.detail.mode}`);
@@ -57,6 +77,27 @@ const opts = {
       console.debug(`Bet value updated to ${event.detail.value}`);
     });
     controlPanel.addEventListener("bet", () => handleBet());
+    controlPanel.addEventListener("gameoptionchange", (event) => {
+      const { name, value } = event.detail ?? {};
+      if (!name) {
+        return;
+      }
+      gameOptionState[name] = value;
+
+      if (name === "mines") {
+        const numericValue = Number(value);
+        const minesValue = Number.isFinite(numericValue)
+          ? numericValue
+          : value;
+        opts.mines = minesValue;
+        console.debug(`Mines option updated to ${minesValue}`);
+        try {
+          game?.setMines?.(minesValue);
+        } catch (err) {
+          console.warn("Failed to apply mines option to game", err);
+        }
+      }
+    });
     controlPanel.setBetAmountDisplay("$0.00");
     controlPanel.setProfitOnWinDisplay("$0.00");
     controlPanel.setProfitValue("0.00000000");
