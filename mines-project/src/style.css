@@ -1,0 +1,85 @@
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap");
+@import "./game/gameStyle.css";
+@import "./controlPanel/controlPanelStyle.css";
+@import "./stepper/stepperStyle.css";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --control-elevation-shadow: 0 4px 6px rgba(7, 23, 33, 1.0),
+    0 0 0 1px rgba(34, 56, 69, 0.4);
+  --control-elevation-shadow-strong: 0 4px 10px rgba(7, 23, 33, 1.0),
+    0 0 0 1px rgba(34, 56, 69, 0.45);
+  --control-elevation-shadow-hover: 0 4px 14px rgba(7, 23, 33, 1.0),
+    0 0 0 1px rgba(34, 56, 69, 0.5);
+}
+
+body {
+  font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background: #091b26;
+  color: #ffffff;
+  --app-body-vertical-padding: 80px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.app-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1280px;
+  min-height: 100%;
+  display: flex;
+  gap: 32px;
+  background: #142733;
+  border-radius: 28px;
+  border: 1px solid #223845;
+  padding: 16px;
+  padding-right: 8px;
+  box-shadow: 0 24px 48px rgba(9, 27, 38, 0.35);
+  flex-direction: row;
+  align-items: stretch;
+  --app-container-vertical-padding: 32px;
+}
+
+@media (max-width: 1100px), (orientation: portrait) {
+  .app-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    --app-body-vertical-padding: 0px;
+    padding: 0px;
+  }
+
+  .app-container {
+    --app-container-vertical-padding: 48px;
+    padding: 24px;
+    gap: 24px;
+  }
+}
+
+@media (orientation: portrait) {
+  .app-container {
+    --app-container-vertical-padding: 32px;
+    padding: 16px;
+  }
+}
