@@ -136,6 +136,43 @@ export function createServerDummy(relay, options = {}) {
 
   const manualControls = createControlsGroup("Manual Actions");
   const autoControls = createControlsGroup("Auto Actions");
+  const profitControls = createControlsGroup("PROFIT");
+
+  function createInputRow({
+    placeholder = "",
+    defaultValue = "",
+    type = "text",
+    step,
+    onSubmit,
+  }) {
+    const row = document.createElement("div");
+    row.className = "server-dummy__input-row";
+
+    const input = document.createElement("input");
+    input.className = "server-dummy__input";
+    input.type = type;
+    if (step) {
+      input.step = step;
+    }
+    input.placeholder = placeholder;
+    input.value = defaultValue;
+
+    const submit = createButton("Update", () => {
+      if (typeof onSubmit === "function") {
+        onSubmit(input.value);
+      }
+    }, row);
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submit.click();
+      }
+    });
+
+    row.insertBefore(input, submit);
+    return { row, input, button: submit };
+  }
 
   const buttons = [];
 
@@ -238,6 +275,43 @@ export function createServerDummy(relay, options = {}) {
     },
     autoControls
   );
+
+  const multiplierControls = createInputRow({
+    placeholder: "Multiplier",
+    defaultValue: "1.00",
+    type: "number",
+    step: "0.01",
+    onSubmit: (raw) => {
+      const trimmed = `${raw ?? ""}`.trim();
+      const numeric = Number(trimmed);
+      const payload = { value: trimmed };
+      if (Number.isFinite(numeric)) {
+        payload.numericValue = numeric;
+      }
+      serverRelay.deliver("profit:update-multiplier", payload);
+    },
+  });
+  const multiplierButton = multiplierControls.button;
+  multiplierButton.textContent = "Update Multiplier";
+  profitControls.appendChild(multiplierControls.row);
+
+  const profitControlsRow = createInputRow({
+    placeholder: "Total Profit",
+    defaultValue: "0.00000000",
+    type: "text",
+    onSubmit: (raw) => {
+      const trimmed = `${raw ?? ""}`.trim();
+      const numeric = Number(trimmed);
+      const payload = { value: trimmed };
+      if (Number.isFinite(numeric)) {
+        payload.numericValue = numeric;
+      }
+      serverRelay.deliver("profit:update-total", payload);
+    },
+  });
+  const profitButton = profitControlsRow.button;
+  profitButton.textContent = "Update Profit";
+  profitControls.appendChild(profitControlsRow.row);
 
   mount.prepend(container);
 
