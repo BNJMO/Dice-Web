@@ -15,12 +15,12 @@
   flex-direction: column;
   gap: 4px;
   padding: 4px;
-  background: #1a191d;
+  background: #142733;
   border-radius: 6px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 10px rgba(9, 27, 38, 0.35);
 }
 
 .has-stepper:hover .game-panel-stepper,

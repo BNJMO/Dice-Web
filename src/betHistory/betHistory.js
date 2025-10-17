@@ -18,7 +18,7 @@ const DEFAULT_HISTORY_CONFIG = {
 const DEFAULT_HISTORY_COLORS = {
   winFill: 0xf0ff31,
   winText: 0x000000,
-  lossFill: 0x282a2f,
+  lossFill: 0x223845,
   lossText: 0xffffff,
 };
 

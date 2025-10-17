@@ -8,7 +8,7 @@ let game;
 let controlPanel;
 const opts = {
   // Window visuals
-  backgroundColor: "#0C0B0F",
+  backgroundColor: "#091B26",
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Arial",
 
   // Sounds

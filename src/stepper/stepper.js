@@ -33,6 +33,19 @@ export class Stepper {
     this.element.appendChild(this.downButton);
   }
 
+  setClickable(isClickable = true) {
+    const clickable = Boolean(isClickable);
+    if (this.upButton) {
+      this.upButton.disabled = !clickable;
+    }
+    if (this.downButton) {
+      this.downButton.disabled = !clickable;
+    }
+    if (this.element) {
+      this.element.classList.toggle("is-non-clickable", !clickable);
+    }
+  }
+
   handlePointerDown = (event) => {
     event.preventDefault();
     event.stopPropagation();
