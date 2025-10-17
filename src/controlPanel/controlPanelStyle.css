@@ -179,6 +179,56 @@
   opacity: 0.85;
 }
 
+.control-game-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #101015;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #2f3136;
+}
+
+.control-game-options-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8b8d94;
+}
+
+.control-game-option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-game-option-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #d6d6dc;
+}
+
+.control-game-option-select {
+  background: #000000;
+  border: 1px solid #2f3136;
+  border-radius: 8px;
+  color: #f1f5ff;
+  font: inherit;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.control-game-option-select:focus-visible {
+  outline: 2px solid rgba(234, 255, 0, 0.6);
+  outline-offset: 2px;
+}
+
+.control-game-option-description {
+  font-size: 0.75rem;
+  color: #8b8d94;
+}
+
 .control-game-name {
   font-weight: 700;
   font-size: 1.1rem;
