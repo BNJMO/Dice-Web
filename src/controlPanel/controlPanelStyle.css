@@ -3,6 +3,7 @@
   display: flex;
   max-width: 27%;
   order: 1;
+  min-height: 0;
 }
 
 .control-panel {
@@ -10,13 +11,38 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: #1a191d;
+  background: #142733;
+  height: 100%;
+  max-height: calc(
+    100vh - var(--app-body-vertical-padding, 0px) -
+      var(--app-container-vertical-padding, 0px)
+  );
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.control-panel-scroll {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  max-height: 100%;
+  min-height: 0;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.control-panel-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .control-toggle {
   display: flex;
   gap: 8px;
-  background: #000000;
+  background: #091b26;
   padding: 6px;
   border-radius: 40px;
 }
@@ -35,12 +61,12 @@
 }
 
 .control-toggle-btn:not(.is-active):hover {
-  background: rgba(40, 42, 47, 0.6);
+  background: rgba(34, 56, 69, 0.6);
   color: #c3c5cc;
 }
 
 .control-toggle-btn.is-active {
-  background: #282a2f;
+  background: #223845;
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -50,6 +76,19 @@
   outline-offset: 2px;
 }
 
+.control-toggle-btn.is-non-clickable {
+  background: #091b26;
+  color: #3f5561;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+}
+
+.control-toggle-btn.is-non-clickable.is-active {
+  background: #1f343f;
+  color: #556d79;
+}
+
 .control-row {
   display: flex;
   align-items: center;
@@ -57,13 +96,13 @@
 }
 
 .control-row-label {
-  color: #999999;
+  color: #92aab7;
   font-size: 0.95rem;
   font-weight: 600;
 }
 
 .control-row-value {
-  color: #999999;
+  color: #92aab7;
   font-size: 1rem;
   font-weight: 400;
 }
@@ -72,10 +111,16 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: #282a2f;
+  background: #223845;
   border-radius: 8px;
   padding: 2px;
   min-width: 0;
+  box-shadow: var(--control-elevation-shadow);
+}
+
+.control-bet-box.is-non-clickable {
+  background: #0d1a23;
+  box-shadow: none;
 }
 
 .control-bet-input-field {
@@ -83,7 +128,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #000000;
+  background: #091b26;
   border-radius: 8px;
   border: 1px solid #2f3136;
   color: #f1f5ff;
@@ -91,133 +136,326 @@
   font-weight: 600;
   flex: 1 1 auto;
   min-width: 0;
-  --control-bet-padding-right: clamp(56px, 20%, 118px);
-  --control-bet-stepper-offset: clamp(28px, 14%, 72px);
-  --control-bet-icon-offset: clamp(10px, 6%, 18px);
-  padding: 14px var(--control-bet-padding-right) 14px 16px;
+}
+
+.control-bet-input-field.is-non-clickable {
+  background: #091b26;
+  border-color: #0d1b24;
+  color: #4c5d68;
+}
+
+.control-bet-input-field.is-non-clickable .control-bet-input {
+  color: #4c5d68;
 }
 
 .control-bet-input {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 1;
   border: none;
   background: transparent;
   color: inherit;
   font: inherit;
+  padding: 14px;
   outline: none;
+  min-width: 0;
+}
+
+.control-bet-input:disabled {
+  color: #4c5d68;
+  cursor: not-allowed;
 }
 
 .control-bet-input-icon {
-  position: absolute;
-  right: var(--control-bet-icon-offset);
-  width: 18px;
-  height: 18px;
-  opacity: 0.85;
+  width: 24px;
+  height: 24px;
+  opacity: 0.8;
   pointer-events: none;
 }
 
 .control-bet-action {
   border: none;
-  background: #282a2f;
-  color: #f5f6ff;
+  background: transparent;
+  color: #f1f5ff;
   font-weight: 700;
-  font-size: 0.95rem;
-  border-radius: 14px;
-  padding: 12px 18px;
-  flex: 0 0 auto;
+  font-size: 1rem;
+  padding: 12px 16px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
-.control-bet-action:hover {
-  background: #34363d;
+.control-bet-action.is-non-clickable {
+  color: #4c5d68;
+  cursor: not-allowed;
+}
+
+.control-bet-action:not(.is-non-clickable):hover {
+  background: rgba(34, 56, 69, 0.4);
   transform: translateY(-1px);
 }
 
 .control-bet-separator {
   width: 1px;
-  height: 36px;
-  background: #000000;
-  border-radius: 1px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .control-bet-btn {
   width: 100%;
   border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #eaff00 0%, #eaff00 100%);
-  color: #000000;
-  font-size: 1.05rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eaff00, #77ff8f);
+  color: #0d1b24;
   font-weight: 700;
+  font-size: 1.05rem;
   padding: 16px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--control-elevation-shadow-strong);
 }
 
 .control-bet-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(234, 255, 0, 0.2);
+  box-shadow: var(--control-elevation-shadow-hover);
+}
+
+.control-bet-btn.is-non-clickable {
+  background: #162a36;
+  color: #4c5d68;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .control-profit-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #282a2f;
-  border-radius: 8px;
-  padding: 14px 18px;
+  background: #223845;
+  padding: 18px 16px;
+  border-radius: 16px;
+  box-shadow: var(--control-elevation-shadow);
+  gap: 16px;
 }
 
 .control-profit-value {
+  font-family: "Figtree", sans-serif;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  color: #ffffff;
 }
 
 .control-profit-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.control-mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.control-section-label {
+  color: #92aab7;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.auto-number-field {
+  position: relative;
+}
+
+.auto-number-infinity {
+  position: absolute;
+  right: 48px;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.auto-number-infinity.is-active {
+  opacity: 0.8;
+}
+
+.auto-number-input {
+  padding-right: 80px;
+}
+
+.control-switch {
+  position: relative;
+  border: none;
+  width: 48px;
+  height: 26px;
+  background: #1f3541;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.control-switch.is-on {
+  background: #3de6a3;
+}
+
+.control-switch-handle {
+  position: absolute;
+  top: 3px;
+  left: 4px;
   width: 20px;
   height: 20px;
-  opacity: 0.85;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.control-switch.is-on .control-switch-handle {
+  transform: translateX(20px);
+}
+
+.control-switch.is-non-clickable {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.auto-advanced-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auto-advanced-label {
+  flex: 1;
+}
+
+.auto-advanced-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.auto-advanced-content.is-collapsed {
+  display: none;
+}
+
+.auto-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auto-mode-toggle-btn {
+  flex: 1;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #92aab7;
+  background: #10232f;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.auto-mode-toggle-btn.is-non-clickable {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.auto-mode-toggle-btn.is-active {
+  background: #223845;
+  color: #ffffff;
+}
+
+.auto-mode-toggle-btn.is-reset {
+  max-width: 120px;
+}
+
+.auto-advanced-input {
+  margin-top: 8px;
+}
+
+.auto-advanced-input.is-non-clickable {
+  background: #0d1a23;
+  border-color: #0d1b24;
+}
+
+.auto-percentage-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.auto-advanced-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #6f8592;
+  font-size: 0.85rem;
+}
+
+.auto-advanced-summary-value {
+  font-weight: 600;
+}
+
+.auto-currency-field.is-non-clickable {
+  background: #0d1a23;
+  border-color: #0d1b24;
+}
+
+.control-start-autobet-btn {
+  background: linear-gradient(135deg, #6ee7ff, #3de6a3);
+  color: #0d1b24;
+}
+
+.control-start-autobet-btn.is-non-clickable {
+  background: #162a36;
+  color: #4c5d68;
 }
 
 .control-game-name {
-  font-weight: 700;
-  font-size: 1.1rem;
-  padding-top: 48px;
-  padding-left: 16px;
-  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
   margin-top: auto;
-}
-
-.control-bet-input-field.has-stepper .game-panel-stepper {
-  right: var(--control-bet-stepper-offset);
 }
 
 @media (max-width: 1100px), (orientation: portrait) {
   .control-panel-mount {
     order: 2;
-    flex: 1 1 auto;
-    max-width: none;
-    width: 100%;
+    max-width: 100%;
   }
 
   .control-panel {
-    max-width: none;
+    flex: 1 1 auto;
+    max-height: none;
   }
 }
 
 @media (max-width: 768px) {
-  .control-bet-input-field {
-    --control-bet-padding-right: max(64px, 24%);
-    padding: 12px var(--control-bet-padding-right) 12px 14px;
-    border-radius: 12px;
+  .control-panel {
+    border-radius: 20px;
+    padding: 16px;
   }
+}
 
-  .control-bet-action {
-    padding: 10px 14px;
-    font-size: 0.9rem;
-  }
+.control-panel.is-compact .control-bet-box {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
 
-  .control-bet-box {
-    gap: 10px;
-  }
+.control-panel.is-compact .control-bet-action {
+  width: 100%;
+}
+
+.control-panel.is-compact .control-bet-separator {
+  display: none;
+}
+
+.control-panel.is-compact .control-mode-section {
+  gap: 18px;
 }
