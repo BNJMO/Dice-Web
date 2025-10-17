@@ -1636,6 +1636,15 @@ export async function createGame(mount, opts = {}) {
     winPopup.container.scale.set(0);
   }
 
+  function getSliderDetails() {
+    return {
+      value: sliderUi.getValue?.() ?? 0,
+      rollMode: sliderUi.getRollMode?.() ?? "over",
+      winChance: sliderUi.getWinChance?.() ?? 0,
+      multiplier: sliderUi.getMultiplier?.() ?? 0,
+    };
+  }
+
   function formatMultiplier(multiplierValue) {
     if (
       typeof multiplierValue === "number" &&
@@ -1828,5 +1837,6 @@ export async function createGame(mount, opts = {}) {
     hideWinPopup,
     playSoundEffect,
     revealDiceOutcome,
+    getSliderDetails,
   };
 }
