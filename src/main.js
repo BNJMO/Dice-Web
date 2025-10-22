@@ -236,6 +236,10 @@ function handleServerAutoBetStart() {
   awaitingServerAutoOutcome = true;
   lockBottomPanelControls("auto");
   const payload = buildServerBetPayload();
+  const numberOfBetsValue = controlPanel?.getNumberOfBetsValue?.();
+  payload.numberOfBets = Number.isFinite(numberOfBetsValue)
+    ? Math.max(0, Math.floor(numberOfBetsValue))
+    : null;
   sendRelayMessage("control:start-autobet", payload);
 }
 
