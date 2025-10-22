@@ -15,6 +15,7 @@ const serverRelay = new ServerRelay();
 let demoMode = serverRelay.demoMode;
 let serverDummy = null;
 let lastRollMode = "over";
+let awaitingServerBetOutcome = false;
 
 const opts = {
   // Window visuals
@@ -113,11 +114,14 @@ serverRelay.addEventListener("demomodechange", (event) => {
       if (demoMode) {
         handleBet();
       } else {
-        sendRelayMessage("control:bet");
+        handleServerBetRequest();
       }
     });
     controlPanel.addEventListener("startautobet", () => {
       if (demoMode) {
+        if (controlPanel?.getMode?.() === "auto") {
+          controlPanel?.setAutoStartButtonMode?.("stop");
+        }
         startAutoBet();
       } else {
         sendRelayMessage("control:start-autobet");
@@ -183,6 +187,20 @@ function handleBet() {
   controlPanel?.setProfitValue?.(potentialProfit);
 
   game?.revealDiceOutcome?.({ roll });
+}
+
+function handleServerBetRequest() {
+  if (demoMode) {
+    return;
+  }
+  if (awaitingServerBetOutcome) {
+    return;
+  }
+  if (controlPanel?.getMode?.() === "manual") {
+    lockManualBetControls();
+  }
+  awaitingServerBetOutcome = true;
+  sendRelayMessage("control:bet");
 }
 
 function startAutoBet() {
@@ -251,8 +269,10 @@ function stopAutoBetImmediately() {
 function applyDemoMode(enabled) {
   demoMode = Boolean(enabled);
   window.demoMode = demoMode;
+  awaitingServerBetOutcome = false;
   stopAutoBetImmediately();
   serverDummy?.setDemoMode?.(demoMode);
+  unlockManualBetControls();
 }
 
 function sendRelayMessage(type, payload = {}) {
@@ -267,6 +287,7 @@ function handleIncomingMessage(message) {
   const { type, payload } = message;
   switch (type) {
     case "game:bet-outcome":
+      onManualBetOutcomeReceived();
     case "game:auto-bet-outcome":
       processServerRoll(payload);
       break;
@@ -279,6 +300,14 @@ function handleIncomingMessage(message) {
     default:
       break;
   }
+}
+
+function onManualBetOutcomeReceived() {
+  if (!awaitingServerBetOutcome) {
+    return;
+  }
+  awaitingServerBetOutcome = false;
+  unlockManualBetControls();
 }
 
 function processServerRoll(payload = {}) {
@@ -344,6 +373,18 @@ function processServerRoll(payload = {}) {
     label: payload.label ?? payload.displayLabel,
     displayValue: payload.displayValue,
   });
+}
+
+function lockManualBetControls() {
+  controlPanel?.setModeToggleClickable?.(false);
+  controlPanel?.setBetControlsClickable?.(false);
+  controlPanel?.setBetButtonState?.("non-clickable");
+}
+
+function unlockManualBetControls() {
+  controlPanel?.setModeToggleClickable?.(true);
+  controlPanel?.setBetControlsClickable?.(true);
+  controlPanel?.setBetButtonState?.("clickable");
 }
 
 function applyServerProfitUpdate(payload = {}) {
