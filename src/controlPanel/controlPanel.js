@@ -1057,6 +1057,10 @@ export class ControlPanel extends EventTarget {
     this.autoStartButton.dataset.mode = normalized;
   }
 
+  getAutoStartButtonMode() {
+    return this.autoStartButtonMode ?? "start";
+  }
+
   setModeToggleClickable(isClickable) {
     const clickable = Boolean(isClickable);
     if (this.manualButton) {

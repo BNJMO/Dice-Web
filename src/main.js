@@ -23,6 +23,13 @@ const bottomPanelLocks = {
   auto: false,
 };
 
+const betControlLocks = {
+  manual: false,
+  auto: false,
+};
+
+let autoNumberOfBetsLocked = false;
+
 const opts = {
   // Window visuals
   backgroundColor: "#091B26",
@@ -138,6 +145,8 @@ serverRelay.addEventListener("demomodechange", (event) => {
       if (demoMode) {
         stopAutoBet();
       } else {
+        controlPanel?.setAutoStartButtonMode?.("finish");
+        controlPanel?.setAutoStartButtonState?.("non-clickable");
         sendRelayMessage("control:stop-autobet");
       }
     });
@@ -208,7 +217,7 @@ function handleServerBetRequest() {
   }
   awaitingServerBetOutcome = true;
   lockBottomPanelControls("manual");
-  const payload = buildServerBetPayload();
+  const payload = buildServerBetPayload({ includeWinChancePercent: false });
   sendRelayMessage("control:bet", payload);
 }
 
@@ -222,6 +231,8 @@ function handleServerAutoBetStart() {
   if (controlPanel?.getMode?.() === "auto") {
     controlPanel?.setAutoStartButtonMode?.("stop");
   }
+  lockBetControls("auto");
+  lockAutoNumberOfBets();
   awaitingServerAutoOutcome = true;
   lockBottomPanelControls("auto");
   const payload = buildServerBetPayload();
@@ -299,6 +310,8 @@ function applyDemoMode(enabled) {
   stopAutoBetImmediately();
   serverDummy?.setDemoMode?.(demoMode);
   unlockManualBetControls();
+  resetBetControlLocks();
+  unlockAutoNumberOfBets();
   resetBottomPanelLocks();
 }
 
@@ -327,6 +340,9 @@ function handleIncomingMessage(message) {
     case "profit:update-multiplier":
       applyServerMultiplierUpdate(payload);
       break;
+    case "stop-autobet":
+      onServerStopAutobetSignal();
+      break;
     default:
       break;
   }
@@ -347,6 +363,18 @@ function onServerAutoBetOutcomeReceived() {
   }
   awaitingServerAutoOutcome = false;
   unlockBottomPanelControls("auto");
+}
+
+function onServerStopAutobetSignal() {
+  const currentAutoMode = controlPanel?.getAutoStartButtonMode?.();
+  if (currentAutoMode && currentAutoMode !== "start") {
+    controlPanel.setAutoStartButtonMode("start");
+  }
+  controlPanel?.setAutoStartButtonState?.("clickable");
+  awaitingServerAutoOutcome = false;
+  unlockBottomPanelControls("auto");
+  unlockBetControls("auto");
+  unlockAutoNumberOfBets();
 }
 
 function processServerRoll(payload = {}) {
@@ -416,13 +444,13 @@ function processServerRoll(payload = {}) {
 
 function lockManualBetControls() {
   controlPanel?.setModeToggleClickable?.(false);
-  controlPanel?.setBetControlsClickable?.(false);
+  lockBetControls("manual");
   controlPanel?.setBetButtonState?.("non-clickable");
 }
 
 function unlockManualBetControls() {
   controlPanel?.setModeToggleClickable?.(true);
-  controlPanel?.setBetControlsClickable?.(true);
+  unlockBetControls("manual");
   controlPanel?.setBetButtonState?.("clickable");
 }
 
@@ -463,7 +491,8 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, numeric));
 }
 
-function buildServerBetPayload() {
+function buildServerBetPayload(options = {}) {
+  const { includeWinChancePercent = true } = options;
   const payload = {};
   const rollMode = typeof game?.getRollMode === "function"
     ? game.getRollMode()
@@ -484,10 +513,51 @@ function buildServerBetPayload() {
     return null;
   })();
   if (Number.isFinite(winChancePercent)) {
-    payload.winChancePercent = winChancePercent;
+    if (includeWinChancePercent) {
+      payload.winChancePercent = winChancePercent;
+    }
     payload.winChance = winChancePercent / 100;
   }
   return payload;
+}
+
+function lockBetControls(key) {
+  if (!betControlLocks[key]) {
+    betControlLocks[key] = true;
+    updateBetControlsClickableState();
+  }
+}
+
+function unlockBetControls(key) {
+  if (betControlLocks[key]) {
+    betControlLocks[key] = false;
+    updateBetControlsClickableState();
+  }
+}
+
+function resetBetControlLocks() {
+  betControlLocks.manual = false;
+  betControlLocks.auto = false;
+  updateBetControlsClickableState();
+}
+
+function updateBetControlsClickableState() {
+  const shouldLock = betControlLocks.manual || betControlLocks.auto;
+  controlPanel?.setBetControlsClickable?.(!shouldLock);
+}
+
+function lockAutoNumberOfBets() {
+  if (!autoNumberOfBetsLocked) {
+    autoNumberOfBetsLocked = true;
+    controlPanel?.setNumberOfBetsClickable?.(false);
+  }
+}
+
+function unlockAutoNumberOfBets() {
+  if (autoNumberOfBetsLocked) {
+    autoNumberOfBetsLocked = false;
+    controlPanel?.setNumberOfBetsClickable?.(true);
+  }
 }
 
 function lockBottomPanelControls(key) {

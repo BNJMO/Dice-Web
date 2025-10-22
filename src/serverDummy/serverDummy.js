@@ -271,6 +271,14 @@ export function createServerDummy(relay, options = {}) {
     },
   });
 
+  createButton(
+    "Stop Autobet",
+    () => {
+      serverRelay.deliver("stop-autobet");
+    },
+    autoControls
+  );
+
   mount.prepend(container);
 
   function setDemoMode(enabled) {
