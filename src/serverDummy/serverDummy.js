@@ -295,7 +295,7 @@ export function createServerDummy(relay, options = {}) {
   );
 
   createButton(
-    "On Bet Won",
+    "On Autobet Won",
     () => {
       const selections = state.lastAutoSelections ?? [];
       const results = selections.map((selection) => ({
@@ -309,7 +309,7 @@ export function createServerDummy(relay, options = {}) {
   );
 
   createButton(
-    "On Bet Lost",
+    "On Autobet Lost",
     () => {
       const selections = state.lastAutoSelections ?? [];
       const results = selections.map((selection, index) => ({
