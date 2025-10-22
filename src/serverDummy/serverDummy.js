@@ -41,9 +41,13 @@ export function createServerDummy(relay, options = {}) {
   const mount = options.mount ?? document.querySelector(".app-wrapper") ?? document.body;
   const onDemoModeToggle = options.onDemoModeToggle ?? (() => {});
   const initialDemoMode = Boolean(options.initialDemoMode ?? true);
+  const initialCollapsed = Boolean(options.initialCollapsed ?? true);
 
   const container = document.createElement("div");
   container.className = "server-dummy";
+  if (initialCollapsed) {
+    container.classList.add("server-dummy--collapsed");
+  }
 
   const header = document.createElement("div");
   header.className = "server-dummy__header";
@@ -76,7 +80,7 @@ export function createServerDummy(relay, options = {}) {
   minimizeButton.type = "button";
   minimizeButton.className = "server-dummy__minimize";
   minimizeButton.setAttribute("aria-label", "Toggle dummy server visibility");
-  minimizeButton.textContent = "−";
+  minimizeButton.textContent = initialCollapsed ? "+" : "−";
   minimizeButton.addEventListener("click", () => {
     const collapsed = container.classList.toggle("server-dummy--collapsed");
     minimizeButton.textContent = collapsed ? "+" : "−";
@@ -136,8 +140,47 @@ export function createServerDummy(relay, options = {}) {
 
   const manualControls = createControlsGroup("Manual Actions");
   const autoControls = createControlsGroup("Auto Actions");
+  const profitControls = createControlsGroup("PROFIT");
 
   const buttons = [];
+  const inputs = [];
+
+  createInputRow({
+    placeholder: "Profit multiplier",
+    type: "number",
+    step: "0.01",
+    inputMode: "decimal",
+    mountPoint: profitControls,
+    buttonLabel: "Update Multiplier",
+    onSubmit: ({ input }) => {
+      const raw = input.value.trim();
+      const payload = { value: raw === "" ? null : raw };
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        payload.numericValue = numeric;
+      }
+      serverRelay.deliver("profit:update-multiplier", payload);
+      input.value = "";
+    },
+  });
+
+  createInputRow({
+    placeholder: "Total profit",
+    type: "text",
+    inputMode: "decimal",
+    mountPoint: profitControls,
+    buttonLabel: "Update Profit",
+    onSubmit: ({ input }) => {
+      const raw = input.value.trim();
+      const payload = { value: raw === "" ? null : raw };
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        payload.numericValue = numeric;
+      }
+      serverRelay.deliver("profit:update-total", payload);
+      input.value = "";
+    },
+  });
 
   function appendLog(direction, type, payload) {
     const entry = createLogEntry(direction, type, payload);
@@ -160,23 +203,71 @@ export function createServerDummy(relay, options = {}) {
     return button;
   }
 
+  function createInputRow({
+    placeholder,
+    type = "text",
+    step,
+    inputMode,
+    onSubmit,
+    mountPoint,
+    buttonLabel,
+  }) {
+    const row = document.createElement("div");
+    row.className = "server-dummy__field-row";
+    (mountPoint ?? controlsSection).appendChild(row);
+
+    const input = document.createElement("input");
+    input.type = type;
+    input.placeholder = placeholder;
+    input.className = "server-dummy__input";
+    if (step !== undefined) {
+      input.step = step;
+    }
+    if (inputMode) {
+      input.inputMode = inputMode;
+    }
+    row.appendChild(input);
+    inputs.push(input);
+
+    const button = createButton(
+      buttonLabel ?? "Submit",
+      () => {
+        if (typeof onSubmit === "function") {
+          onSubmit({ input, button });
+        }
+      },
+      row
+    );
+
+    if (typeof onSubmit === "function") {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          button.click();
+        }
+      });
+    }
+
+    return { row, input, button };
+  }
+
   const state = {
     lastManualSelection: null,
     lastAutoSelections: [],
   };
 
   createButton(
-    "Start Round",
+    "Start Bet",
     () => {
-      serverRelay.deliver("start-round", {});
+      serverRelay.deliver("start-bet", {});
     },
     manualControls
   );
 
   createButton(
-    "On Round Won",
+    "On Bet Won",
     () => {
-      serverRelay.deliver("round-result", {
+      serverRelay.deliver("bet-result", {
         result: "win",
         selection: state.lastManualSelection,
       });
@@ -185,9 +276,9 @@ export function createServerDummy(relay, options = {}) {
   );
 
   createButton(
-    "On Round Lost",
+    "On Bet Lost",
     () => {
-      serverRelay.deliver("round-result", {
+      serverRelay.deliver("bet-result", {
         result: "lost",
         selection: state.lastManualSelection,
       });
@@ -204,7 +295,7 @@ export function createServerDummy(relay, options = {}) {
   );
 
   createButton(
-    "On Round Won",
+    "On Bet Won",
     () => {
       const selections = state.lastAutoSelections ?? [];
       const results = selections.map((selection) => ({
@@ -212,13 +303,13 @@ export function createServerDummy(relay, options = {}) {
         col: selection?.col,
         result: "win",
       }));
-      serverRelay.deliver("auto-round-result", { results });
+      serverRelay.deliver("auto-bet-result", { results });
     },
     autoControls
   );
 
   createButton(
-    "On Round Lost",
+    "On Bet Lost",
     () => {
       const selections = state.lastAutoSelections ?? [];
       const results = selections.map((selection, index) => ({
@@ -226,7 +317,7 @@ export function createServerDummy(relay, options = {}) {
         col: selection?.col,
         result: index === 0 ? "lost" : "win",
       }));
-      serverRelay.deliver("auto-round-result", { results });
+      serverRelay.deliver("auto-bet-result", { results });
     },
     autoControls
   );
@@ -248,6 +339,9 @@ export function createServerDummy(relay, options = {}) {
     }
     buttons.forEach((button) => {
       button.disabled = normalized;
+    });
+    inputs.forEach((input) => {
+      input.disabled = normalized;
     });
   }
 
