@@ -17,7 +17,7 @@ let serverDummy = null;
 let lastRollMode = "over";
 let awaitingServerBetOutcome = false;
 let awaitingServerAutoOutcome = false;
-let lastWinChancePercent = null;
+let lastWinChance = null;
 const bottomPanelLocks = {
   manual: false,
   auto: false,
@@ -27,6 +27,9 @@ const betControlLocks = {
   manual: false,
   auto: false,
 };
+
+let autoBetsRemaining = null;
+let serverAutoStopPending = false;
 
 let autoNumberOfBetsLocked = false;
 
@@ -57,24 +60,21 @@ const opts = {
   onSliderValueChange: (target) => {
     const sliderValue = Number(target);
     const normalizedTarget = Number.isFinite(sliderValue) ? sliderValue : 0;
-    const winChancePercent =
+    const winChance =
       lastRollMode === "under"
         ? clampPercent(normalizedTarget)
         : clampPercent(100 - normalizedTarget);
-    const winChanceRatio = winChancePercent / 100;
-    lastWinChancePercent = winChancePercent;
-    const multiplier =
-      winChancePercent > 0 ? 99 / winChancePercent : Infinity;
+    lastWinChance = winChance;
+    const multiplier = winChance > 0 ? 99 / winChance : Infinity;
 
     console.debug(
-      `Main calculated win chance: ${winChancePercent.toFixed(2)}%`
+      `Main calculated win chance: ${winChance.toFixed(2)}%`
     );
 
     sendRelayMessage("game:slider-change", {
       target: normalizedTarget,
       rollMode: lastRollMode,
-      winChancePercent,
-      winChance: winChanceRatio,
+      winChance,
       multiplier,
     });
   },
@@ -145,9 +145,7 @@ serverRelay.addEventListener("demomodechange", (event) => {
       if (demoMode) {
         stopAutoBet();
       } else {
-        controlPanel?.setAutoStartButtonMode?.("finish");
-        controlPanel?.setAutoStartButtonState?.("non-clickable");
-        sendRelayMessage("control:stop-autobet");
+        requestServerAutoBetStop();
       }
     });
     controlPanel.setBetAmountDisplay("$0.00");
@@ -228,6 +226,8 @@ function handleServerAutoBetStart() {
   if (awaitingServerAutoOutcome) {
     return;
   }
+  initializeAutoBetCounter();
+  serverAutoStopPending = false;
   if (controlPanel?.getMode?.() === "auto") {
     controlPanel?.setAutoStartButtonMode?.("stop");
   }
@@ -249,6 +249,7 @@ function startAutoBet() {
   isAutoBetRunning = true;
   autoBetStopRequested = false;
   clearTimeout(autoBetTimeoutId);
+  initializeAutoBetCounter();
   controlPanel?.setAutoStartButtonMode?.("stop");
   controlPanel?.setAutoStartButtonState?.("clickable");
   runAutoBetCycle();
@@ -259,6 +260,11 @@ function runAutoBetCycle() {
     return;
   }
   handleBet();
+  const shouldStop = decrementAutoBetsRemaining();
+  if (shouldStop) {
+    finalizeAutoBetStop();
+    return;
+  }
   scheduleNextAutoBet();
 }
 
@@ -300,6 +306,7 @@ function stopAutoBetImmediately() {
   autoBetStopRequested = false;
   controlPanel?.setAutoStartButtonMode?.("start");
   controlPanel?.setAutoStartButtonState?.("clickable");
+  resetAutoBetCounter();
 }
 
 function applyDemoMode(enabled) {
@@ -313,6 +320,7 @@ function applyDemoMode(enabled) {
   resetBetControlLocks();
   unlockAutoNumberOfBets();
   resetBottomPanelLocks();
+  serverAutoStopPending = false;
 }
 
 function sendRelayMessage(type, payload = {}) {
@@ -333,6 +341,7 @@ function handleIncomingMessage(message) {
     case "game:auto-bet-outcome":
       onServerAutoBetOutcomeReceived();
       processServerRoll(payload);
+      handleServerAutoBetProgress();
       break;
     case "profit:update-total":
       applyServerProfitUpdate(payload);
@@ -375,6 +384,8 @@ function onServerStopAutobetSignal() {
   unlockBottomPanelControls("auto");
   unlockBetControls("auto");
   unlockAutoNumberOfBets();
+  resetAutoBetCounter();
+  serverAutoStopPending = false;
 }
 
 function processServerRoll(payload = {}) {
@@ -497,20 +508,20 @@ function buildServerBetPayload() {
   if (rollMode) {
     payload.rollMode = rollMode;
   }
-  const winChancePercent = (() => {
+  const winChanceValue = (() => {
     if (typeof game?.getWinChance === "function") {
       const value = Number(game.getWinChance());
       if (Number.isFinite(value)) {
         return value;
       }
     }
-    if (Number.isFinite(lastWinChancePercent)) {
-      return lastWinChancePercent;
+    if (Number.isFinite(lastWinChance)) {
+      return lastWinChance;
     }
     return null;
   })();
-  if (Number.isFinite(winChancePercent)) {
-    payload.winChance = winChancePercent;
+  if (Number.isFinite(winChanceValue)) {
+    payload.winChance = winChanceValue;
   }
   return payload;
 }
@@ -578,4 +589,51 @@ function updateBottomPanelClickableState() {
   const shouldLock = bottomPanelLocks.manual || bottomPanelLocks.auto;
   const clickable = !shouldLock;
   game?.setBottomPanelControlsClickable?.(clickable);
+}
+
+function initializeAutoBetCounter() {
+  const rawValue = controlPanel?.getNumberOfBetsValue?.();
+  if (Number.isFinite(rawValue) && rawValue > 0) {
+    autoBetsRemaining = Math.floor(rawValue);
+  } else {
+    autoBetsRemaining = null;
+  }
+}
+
+function resetAutoBetCounter() {
+  autoBetsRemaining = null;
+}
+
+function decrementAutoBetsRemaining() {
+  if (!(Number.isFinite(autoBetsRemaining) && autoBetsRemaining > 0)) {
+    return false;
+  }
+  autoBetsRemaining = Math.max(0, autoBetsRemaining - 1);
+  controlPanel?.setNumberOfBetsValue?.(autoBetsRemaining);
+  sendRelayMessage("control:numberofbetschange", {
+    value: autoBetsRemaining,
+  });
+  return autoBetsRemaining <= 0;
+}
+
+function handleServerAutoBetProgress() {
+  if (demoMode) {
+    return;
+  }
+  const shouldStop = decrementAutoBetsRemaining();
+  if (shouldStop && !serverAutoStopPending) {
+    requestServerAutoBetStop();
+  }
+}
+
+function requestServerAutoBetStop() {
+  const currentMode = controlPanel?.getAutoStartButtonMode?.();
+  if (currentMode !== "finish") {
+    controlPanel?.setAutoStartButtonMode?.("finish");
+  }
+  controlPanel?.setAutoStartButtonState?.("non-clickable");
+  if (!serverAutoStopPending) {
+    sendRelayMessage("control:stop-autobet");
+    serverAutoStopPending = true;
+  }
 }

@@ -40,7 +40,7 @@ const SLIDER = {
   maxValue: 98,
   rangeMin: 0,
   rangeMax: 100,
-  step: 0.01,
+  step: 1,
   leftColor: 0xf40029,
   rightColor: 0xf0ff31,
   trackHeightRatio: 0.15,
@@ -443,6 +443,14 @@ export async function createGame(mount, opts = {}) {
     const panel = document.createElement("div");
     panel.className = "game-bottom-panel";
 
+    const notifySliderApplied = () => {
+      try {
+        onSliderValueChange(sliderUi.getValue());
+      } catch (err) {
+        console.warn("onSliderValueChange callback failed", err);
+      }
+    };
+
     function createEditableBox({
       label,
       icon,
@@ -450,6 +458,8 @@ export async function createGame(mount, opts = {}) {
       getValue = () => NaN,
       format = (value) => `${value ?? ""}`,
       onCommit = () => {},
+      afterCommit = () => {},
+      allowDecimalOnly = false,
     }) {
       const container = document.createElement("div");
       container.className = "game-panel-item";
@@ -485,12 +495,14 @@ export async function createGame(mount, opts = {}) {
           const current = Number(getValue());
           const next = Number.isFinite(current) ? current + step : step;
           onCommit(next);
+          afterCommit(next);
           refresh(true);
         },
         onStepDown: () => {
           const current = Number(getValue());
           const next = Number.isFinite(current) ? current - step : 0;
           onCommit(next);
+          afterCommit(next);
           refresh(true);
         },
       });
@@ -498,6 +510,22 @@ export async function createGame(mount, opts = {}) {
       valueWrapper.appendChild(stepper.element);
 
       const state = { editing: false };
+
+      function sanitizeDecimalString(rawValue) {
+        if (typeof rawValue !== "string") {
+          return "";
+        }
+        let sanitized = rawValue.replace(/[^0-9.]/g, "");
+        const dotIndex = sanitized.indexOf(".");
+        if (dotIndex !== -1) {
+          const before = sanitized.slice(0, dotIndex + 1);
+          const after = sanitized
+            .slice(dotIndex + 1)
+            .replace(/\./g, "");
+          sanitized = `${before}${after}`;
+        }
+        return sanitized;
+      }
 
       function refresh(force = false) {
         if (state.editing && !force) return;
@@ -518,6 +546,7 @@ export async function createGame(mount, opts = {}) {
         const numeric = Number(raw);
         if (Number.isFinite(numeric)) {
           onCommit(numeric);
+          afterCommit(numeric);
         }
         refresh(true);
       }
@@ -530,6 +559,21 @@ export async function createGame(mount, opts = {}) {
       input.addEventListener("blur", () => {
         state.editing = false;
         commit();
+      });
+
+      input.addEventListener("input", () => {
+        if (!allowDecimalOnly) return;
+        const raw = input.value;
+        const selection = input.selectionStart ?? raw.length;
+        const sanitized = sanitizeDecimalString(raw);
+        if (sanitized !== raw) {
+          const delta = raw.length - sanitized.length;
+          input.value = sanitized;
+          const newPos = Math.max(0, selection - delta);
+          try {
+            input.setSelectionRange(newPos, newPos);
+          } catch {}
+        }
       });
 
       input.addEventListener("keydown", (event) => {
@@ -551,6 +595,7 @@ export async function createGame(mount, opts = {}) {
             ? current + direction * step
             : direction * step;
           onCommit(next);
+          afterCommit(next);
           refresh(true);
         }
       });
@@ -598,6 +643,7 @@ export async function createGame(mount, opts = {}) {
       button.addEventListener("click", () => {
         sliderUi.toggleRollMode();
         refresh(true);
+        notifySliderApplied();
       });
 
       function refresh(force = false) {
@@ -632,6 +678,7 @@ export async function createGame(mount, opts = {}) {
       getValue: () => sliderUi.getMultiplier(),
       format: (value) => value.toFixed(4),
       onCommit: (value) => sliderUi.setMultiplier(value),
+      afterCommit: notifySliderApplied,
     });
 
     const rollModeBox = createRollModeBox();
@@ -643,6 +690,8 @@ export async function createGame(mount, opts = {}) {
       getValue: () => sliderUi.getWinChance(),
       format: (value) => value.toFixed(4),
       onCommit: (value) => sliderUi.setWinChance(value),
+      afterCommit: notifySliderApplied,
+      allowDecimalOnly: true,
     });
 
     panel.append(
@@ -1188,9 +1237,11 @@ export async function createGame(mount, opts = {}) {
       }
     }
 
-    function setSliderValue(value) {
+    function setSliderValue(value, options = {}) {
+      const { snap = true } = options ?? {};
       const previousPosition = lastHandlePosition;
-      const clamped = clampBounds(snapValue(value));
+      const baseValue = snap ? snapValue(value) : value;
+      const clamped = clampBounds(baseValue);
       const nextValue = Number.isFinite(clamped)
         ? Number(clamped.toFixed(2))
         : sliderValue;
@@ -1269,7 +1320,7 @@ export async function createGame(mount, opts = {}) {
       const clampedChance = Math.max(0, Math.min(SLIDER.rangeMax, numeric));
       const targetValue =
         rollMode === "over" ? SLIDER.rangeMax - clampedChance : clampedChance;
-      return setSliderValue(targetValue);
+      return setSliderValue(targetValue, { snap: false });
     }
 
     function getMultiplier() {
