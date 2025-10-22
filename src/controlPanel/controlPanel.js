@@ -666,8 +666,7 @@ export class ControlPanel extends EventTarget {
 
   updateTotalProfitLabel() {
     if (!this.profitOnWinLabel) return;
-    const formattedMultiplier = this.totalProfitMultiplier.toFixed(2);
-    this.profitOnWinLabel.textContent = `Total Profit(${formattedMultiplier}x)`;
+    this.profitOnWinLabel.textContent = "Total Profit";
   }
 
   setTotalProfitMultiplier(value) {
@@ -1056,6 +1055,10 @@ export class ControlPanel extends EventTarget {
         ? "Finishing Autobet"
         : "Start Autobet";
     this.autoStartButton.dataset.mode = normalized;
+  }
+
+  getAutoStartButtonMode() {
+    return this.autoStartButtonMode ?? "start";
   }
 
   setModeToggleClickable(isClickable) {

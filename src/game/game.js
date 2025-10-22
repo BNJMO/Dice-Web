@@ -443,6 +443,14 @@ export async function createGame(mount, opts = {}) {
     const panel = document.createElement("div");
     panel.className = "game-bottom-panel";
 
+    const notifySliderApplied = () => {
+      try {
+        onSliderValueChange(sliderUi.getValue());
+      } catch (err) {
+        console.warn("onSliderValueChange callback failed", err);
+      }
+    };
+
     function createEditableBox({
       label,
       icon,
@@ -450,6 +458,8 @@ export async function createGame(mount, opts = {}) {
       getValue = () => NaN,
       format = (value) => `${value ?? ""}`,
       onCommit = () => {},
+      afterCommit = () => {},
+      allowDecimalOnly = false,
     }) {
       const container = document.createElement("div");
       container.className = "game-panel-item";
@@ -485,12 +495,14 @@ export async function createGame(mount, opts = {}) {
           const current = Number(getValue());
           const next = Number.isFinite(current) ? current + step : step;
           onCommit(next);
+          afterCommit(next);
           refresh(true);
         },
         onStepDown: () => {
           const current = Number(getValue());
           const next = Number.isFinite(current) ? current - step : 0;
           onCommit(next);
+          afterCommit(next);
           refresh(true);
         },
       });
@@ -498,6 +510,22 @@ export async function createGame(mount, opts = {}) {
       valueWrapper.appendChild(stepper.element);
 
       const state = { editing: false };
+
+      function sanitizeDecimalString(rawValue) {
+        if (typeof rawValue !== "string") {
+          return "";
+        }
+        let sanitized = rawValue.replace(/[^0-9.]/g, "");
+        const dotIndex = sanitized.indexOf(".");
+        if (dotIndex !== -1) {
+          const before = sanitized.slice(0, dotIndex + 1);
+          const after = sanitized
+            .slice(dotIndex + 1)
+            .replace(/\./g, "");
+          sanitized = `${before}${after}`;
+        }
+        return sanitized;
+      }
 
       function refresh(force = false) {
         if (state.editing && !force) return;
@@ -518,6 +546,7 @@ export async function createGame(mount, opts = {}) {
         const numeric = Number(raw);
         if (Number.isFinite(numeric)) {
           onCommit(numeric);
+          afterCommit(numeric);
         }
         refresh(true);
       }
@@ -530,6 +559,21 @@ export async function createGame(mount, opts = {}) {
       input.addEventListener("blur", () => {
         state.editing = false;
         commit();
+      });
+
+      input.addEventListener("input", () => {
+        if (!allowDecimalOnly) return;
+        const raw = input.value;
+        const selection = input.selectionStart ?? raw.length;
+        const sanitized = sanitizeDecimalString(raw);
+        if (sanitized !== raw) {
+          const delta = raw.length - sanitized.length;
+          input.value = sanitized;
+          const newPos = Math.max(0, selection - delta);
+          try {
+            input.setSelectionRange(newPos, newPos);
+          } catch {}
+        }
       });
 
       input.addEventListener("keydown", (event) => {
@@ -551,15 +595,24 @@ export async function createGame(mount, opts = {}) {
             ? current + direction * step
             : direction * step;
           onCommit(next);
+          afterCommit(next);
           refresh(true);
         }
       });
 
       valueWrapper.addEventListener("click", () => input.focus());
 
+      function setClickable(isClickable) {
+        const clickable = Boolean(isClickable);
+        input.disabled = !clickable;
+        valueWrapper.classList.toggle("is-non-clickable", !clickable);
+        stepper?.setClickable?.(clickable);
+      }
+
       return {
         container,
         refresh,
+        setClickable,
       };
     }
 
@@ -590,6 +643,7 @@ export async function createGame(mount, opts = {}) {
       button.addEventListener("click", () => {
         sliderUi.toggleRollMode();
         refresh(true);
+        notifySliderApplied();
       });
 
       function refresh(force = false) {
@@ -604,9 +658,16 @@ export async function createGame(mount, opts = {}) {
         }
       }
 
+      function setClickable(isClickable) {
+        const clickable = Boolean(isClickable);
+        button.disabled = !clickable;
+        button.classList.toggle("is-non-clickable", !clickable);
+      }
+
       return {
         container,
         refresh,
+        setClickable,
       };
     }
 
@@ -617,6 +678,7 @@ export async function createGame(mount, opts = {}) {
       getValue: () => sliderUi.getMultiplier(),
       format: (value) => value.toFixed(4),
       onCommit: (value) => sliderUi.setMultiplier(value),
+      afterCommit: notifySliderApplied,
     });
 
     const rollModeBox = createRollModeBox();
@@ -628,6 +690,8 @@ export async function createGame(mount, opts = {}) {
       getValue: () => sliderUi.getWinChance(),
       format: (value) => value.toFixed(4),
       onCommit: (value) => sliderUi.setWinChance(value),
+      afterCommit: notifySliderApplied,
+      allowDecimalOnly: true,
     });
 
     panel.append(
@@ -730,11 +794,33 @@ export async function createGame(mount, opts = {}) {
     refresh(true);
     layout();
 
+    function setMultiplierClickable(isClickable) {
+      multiplierBox?.setClickable?.(isClickable);
+    }
+
+    function setRollModeClickable(isClickable) {
+      rollModeBox?.setClickable?.(isClickable);
+    }
+
+    function setWinChanceClickable(isClickable) {
+      winChanceBox?.setClickable?.(isClickable);
+    }
+
+    function setControlsClickable(isClickable) {
+      multiplierBox?.setClickable?.(isClickable);
+      rollModeBox?.setClickable?.(isClickable);
+      winChanceBox?.setClickable?.(isClickable);
+    }
+
     return {
       panel,
       refresh,
       layout,
       getScaledHeight,
+      setMultiplierClickable,
+      setRollModeClickable,
+      setWinChanceClickable,
+      setControlsClickable,
       destroy: () => {
         handleSliderChange = () => {};
         panel.style.removeProperty("--panel-scale");
@@ -1151,9 +1237,11 @@ export async function createGame(mount, opts = {}) {
       }
     }
 
-    function setSliderValue(value) {
+    function setSliderValue(value, options = {}) {
+      const { snap = true } = options ?? {};
       const previousPosition = lastHandlePosition;
-      const clamped = clampBounds(snapValue(value));
+      const baseValue = snap ? snapValue(value) : value;
+      const clamped = clampBounds(baseValue);
       const nextValue = Number.isFinite(clamped)
         ? Number(clamped.toFixed(2))
         : sliderValue;
@@ -1232,7 +1320,7 @@ export async function createGame(mount, opts = {}) {
       const clampedChance = Math.max(0, Math.min(SLIDER.rangeMax, numeric));
       const targetValue =
         rollMode === "over" ? SLIDER.rangeMax - clampedChance : clampedChance;
-      return setSliderValue(targetValue);
+      return setSliderValue(targetValue, { snap: false });
     }
 
     function getMultiplier() {
@@ -1819,6 +1907,18 @@ export async function createGame(mount, opts = {}) {
 
   playStartSoundIfNeeded();
 
+  function setBottomPanelControlsClickable(isClickable) {
+    bottomPanelUi?.setControlsClickable?.(isClickable);
+  }
+
+  function getCurrentRollMode() {
+    return sliderUi?.getRollMode?.();
+  }
+
+  function getCurrentWinChance() {
+    return sliderUi?.getWinChance?.();
+  }
+
   return {
     app,
     reset,
@@ -1828,5 +1928,8 @@ export async function createGame(mount, opts = {}) {
     hideWinPopup,
     playSoundEffect,
     revealDiceOutcome,
+    setBottomPanelControlsClickable,
+    getRollMode: getCurrentRollMode,
+    getWinChance: getCurrentWinChance,
   };
 }

@@ -86,6 +86,21 @@
   box-shadow: 0 0 0 1px rgba(234, 255, 0, 0.25);
 }
 
+.game-panel-value.is-non-clickable,
+button.game-panel-value.is-non-clickable {
+  background: #06111a;
+  border-color: #06111a;
+  color: rgba(241, 245, 255, 0.55);
+  cursor: default;
+  box-shadow: none;
+}
+
+.game-panel-value.is-non-clickable:hover,
+button.game-panel-value.is-non-clickable:hover {
+  border-color: #06111a;
+  box-shadow: none;
+}
+
 button.game-panel-value {
   font: inherit;
   color: inherit;
