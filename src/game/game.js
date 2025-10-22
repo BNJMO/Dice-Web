@@ -283,10 +283,10 @@ export async function createGame(mount, opts = {}) {
   root.style.position = root.style.position || "relative";
   root.style.aspectRatio = root.style.aspectRatio || "1 / 1";
   if (!root.style.width && !root.style.height) {
-    root.style.width = "100%";
+    root.style.width = "min(100%, 520px)";
   }
   if (!root.style.maxWidth) {
-    root.style.maxWidth = "100%";
+    root.style.maxWidth = "min(100%, 520px)";
   }
 
   function measureRootSize() {
