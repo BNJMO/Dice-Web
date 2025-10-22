@@ -40,7 +40,7 @@ const SLIDER = {
   maxValue: 98,
   rangeMin: 0,
   rangeMax: 100,
-  step: 1,
+  step: 0.01,
   leftColor: 0xf40029,
   rightColor: 0xf0ff31,
   trackHeightRatio: 0.15,

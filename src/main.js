@@ -217,7 +217,7 @@ function handleServerBetRequest() {
   }
   awaitingServerBetOutcome = true;
   lockBottomPanelControls("manual");
-  const payload = buildServerBetPayload({ includeWinChancePercent: false });
+  const payload = buildServerBetPayload();
   sendRelayMessage("control:bet", payload);
 }
 
@@ -378,9 +378,7 @@ function onServerStopAutobetSignal() {
 }
 
 function processServerRoll(payload = {}) {
-  const numericRoll = toFiniteNumber(
-    payload.roll ?? payload.value ?? payload.numericValue
-  );
+  const numericRoll = toFiniteNumber(payload.roll);
   if (numericRoll === null) {
     console.warn("Received invalid roll payload", payload);
     return;
@@ -491,8 +489,7 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, numeric));
 }
 
-function buildServerBetPayload(options = {}) {
-  const { includeWinChancePercent = true } = options;
+function buildServerBetPayload() {
   const payload = {};
   const rollMode = typeof game?.getRollMode === "function"
     ? game.getRollMode()
@@ -513,10 +510,7 @@ function buildServerBetPayload(options = {}) {
     return null;
   })();
   if (Number.isFinite(winChancePercent)) {
-    if (includeWinChancePercent) {
-      payload.winChancePercent = winChancePercent;
-    }
-    payload.winChance = winChancePercent / 100;
+    payload.winChance = winChancePercent;
   }
   return payload;
 }

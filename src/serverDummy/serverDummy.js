@@ -233,14 +233,11 @@ export function createServerDummy(relay, options = {}) {
   }
 
   function createRollPayload(rawValue) {
-    const raw = String(rawValue ?? "").trim();
-    const payload = { value: raw === "" ? null : raw };
-    const numeric = Number(raw);
+    const numeric = Number(rawValue);
     if (Number.isFinite(numeric)) {
-      payload.numericValue = numeric;
-      payload.roll = numeric;
+      return { roll: numeric };
     }
-    return payload;
+    return {};
   }
 
   createInputRow({
