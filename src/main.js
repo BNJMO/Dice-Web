@@ -6,6 +6,9 @@ import winSoundUrl from "../assets/sounds/Win.wav";
 
 let game;
 let controlPanel;
+let autoBetTimeoutId = null;
+let autoBetStopRequested = false;
+let isAutoBetRunning = false;
 const opts = {
   // Window visuals
   backgroundColor: "#091B26",
@@ -57,6 +60,8 @@ const opts = {
       console.debug(`Bet value updated to ${event.detail.value}`);
     });
     controlPanel.addEventListener("bet", () => handleBet());
+    controlPanel.addEventListener("startautobet", () => startAutoBet());
+    controlPanel.addEventListener("stopautobet", () => stopAutoBet());
     controlPanel.setBetAmountDisplay("$0.00");
     controlPanel.setProfitOnWinDisplay("$0.00");
     controlPanel.setProfitValue("0.00000000");
@@ -99,4 +104,53 @@ function handleBet() {
   controlPanel?.setProfitValue?.(potentialProfit);
 
   game?.revealDiceOutcome?.({ roll });
+}
+
+function startAutoBet() {
+  if (isAutoBetRunning || autoBetStopRequested) {
+    return;
+  }
+  isAutoBetRunning = true;
+  autoBetStopRequested = false;
+  clearTimeout(autoBetTimeoutId);
+  controlPanel?.setAutoStartButtonMode?.("stop");
+  controlPanel?.setAutoStartButtonState?.("clickable");
+  runAutoBetCycle();
+}
+
+function runAutoBetCycle() {
+  if (!isAutoBetRunning) {
+    return;
+  }
+  handleBet();
+  scheduleNextAutoBet();
+}
+
+function scheduleNextAutoBet() {
+  clearTimeout(autoBetTimeoutId);
+  autoBetTimeoutId = setTimeout(() => {
+    if (autoBetStopRequested) {
+      finalizeAutoBetStop();
+      return;
+    }
+    runAutoBetCycle();
+  }, 1000);
+}
+
+function stopAutoBet() {
+  if (!isAutoBetRunning || autoBetStopRequested) {
+    return;
+  }
+  autoBetStopRequested = true;
+  controlPanel?.setAutoStartButtonMode?.("finish");
+  controlPanel?.setAutoStartButtonState?.("non-clickable");
+}
+
+function finalizeAutoBetStop() {
+  clearTimeout(autoBetTimeoutId);
+  autoBetTimeoutId = null;
+  isAutoBetRunning = false;
+  autoBetStopRequested = false;
+  controlPanel?.setAutoStartButtonMode?.("start");
+  controlPanel?.setAutoStartButtonState?.("clickable");
 }
