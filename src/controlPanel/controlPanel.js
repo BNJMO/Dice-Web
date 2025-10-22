@@ -51,7 +51,7 @@ export class ControlPanel extends EventTarget {
     this.betButtonState = "clickable";
     this.randomPickButtonState = "clickable";
     this.minesSelectState = "clickable";
-    this.autoStartButtonState = "non-clickable";
+    this.autoStartButtonState = "clickable";
     this.autoStartButtonMode = "start";
 
     this.totalProfitMultiplier = 1;
@@ -402,7 +402,11 @@ export class ControlPanel extends EventTarget {
       "control-bet-btn control-start-autobet-btn";
     this.autoStartButton.textContent = "Start Autobet";
     this.autoStartButton.addEventListener("click", () => {
-      this.dispatchEvent(new CustomEvent("startautobet"));
+      if (this.autoStartButtonMode === "stop") {
+        this.dispatchEvent(new CustomEvent("stopautobet"));
+      } else if (this.autoStartButtonMode === "start") {
+        this.dispatchEvent(new CustomEvent("startautobet"));
+      }
     });
 
     this.container.appendChild(this.autoStartButton);
@@ -1049,7 +1053,7 @@ export class ControlPanel extends EventTarget {
       normalized === "stop"
         ? "Stop Autobet"
         : normalized === "finish"
-        ? "Finishin Bet"
+        ? "Finishing Autobet"
         : "Start Autobet";
     this.autoStartButton.dataset.mode = normalized;
   }
