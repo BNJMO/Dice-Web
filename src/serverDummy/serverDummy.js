@@ -146,25 +146,6 @@ export function createServerDummy(relay, options = {}) {
   const inputs = [];
 
   createInputRow({
-    placeholder: "Profit multiplier",
-    type: "number",
-    step: "0.01",
-    inputMode: "decimal",
-    mountPoint: profitControls,
-    buttonLabel: "Update Multiplier",
-    onSubmit: ({ input }) => {
-      const raw = input.value.trim();
-      const payload = { value: raw === "" ? null : raw };
-      const numeric = Number(raw);
-      if (Number.isFinite(numeric)) {
-        payload.numericValue = numeric;
-      }
-      serverRelay.deliver("profit:update-multiplier", payload);
-      input.value = "";
-    },
-  });
-
-  createInputRow({
     placeholder: "Total profit",
     type: "text",
     inputMode: "decimal",
@@ -251,84 +232,44 @@ export function createServerDummy(relay, options = {}) {
     return { row, input, button };
   }
 
-  const state = {
-    lastManualSelection: null,
-    lastAutoSelections: [],
-  };
+  function createRollPayload(rawValue) {
+    const raw = String(rawValue ?? "").trim();
+    const payload = { value: raw === "" ? null : raw };
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric)) {
+      payload.numericValue = numeric;
+      payload.roll = numeric;
+    }
+    return payload;
+  }
 
-  createButton(
-    "Start Bet",
-    () => {
-      serverRelay.deliver("start-bet", {});
+  createInputRow({
+    placeholder: "Dice roll (0-100)",
+    type: "number",
+    step: "0.01",
+    inputMode: "decimal",
+    mountPoint: manualControls,
+    buttonLabel: "On Bet Outcome",
+    onSubmit: ({ input }) => {
+      const payload = createRollPayload(input.value);
+      serverRelay.deliver("game:bet-outcome", payload);
+      input.value = "";
     },
-    manualControls
-  );
+  });
 
-  createButton(
-    "On Bet Won",
-    () => {
-      serverRelay.deliver("bet-result", {
-        result: "win",
-        selection: state.lastManualSelection,
-      });
+  createInputRow({
+    placeholder: "Dice roll (0-100)",
+    type: "number",
+    step: "0.01",
+    inputMode: "decimal",
+    mountPoint: autoControls,
+    buttonLabel: "On Autobet Outcome",
+    onSubmit: ({ input }) => {
+      const payload = createRollPayload(input.value);
+      serverRelay.deliver("game:auto-bet-outcome", payload);
+      input.value = "";
     },
-    manualControls
-  );
-
-  createButton(
-    "On Bet Lost",
-    () => {
-      serverRelay.deliver("bet-result", {
-        result: "lost",
-        selection: state.lastManualSelection,
-      });
-    },
-    manualControls
-  );
-
-  createButton(
-    "Cashout",
-    () => {
-      serverRelay.deliver("cashout", {});
-    },
-    manualControls
-  );
-
-  createButton(
-    "On Autobet Won",
-    () => {
-      const selections = state.lastAutoSelections ?? [];
-      const results = selections.map((selection) => ({
-        row: selection?.row,
-        col: selection?.col,
-        result: "win",
-      }));
-      serverRelay.deliver("auto-bet-result", { results });
-    },
-    autoControls
-  );
-
-  createButton(
-    "On Autobet Lost",
-    () => {
-      const selections = state.lastAutoSelections ?? [];
-      const results = selections.map((selection, index) => ({
-        row: selection?.row,
-        col: selection?.col,
-        result: index === 0 ? "lost" : "win",
-      }));
-      serverRelay.deliver("auto-bet-result", { results });
-    },
-    autoControls
-  );
-
-  createButton(
-    "Stop Autobet",
-    () => {
-      serverRelay.deliver("stop-autobet", { completed: false });
-    },
-    autoControls
-  );
+  });
 
   mount.prepend(container);
 
@@ -350,19 +291,6 @@ export function createServerDummy(relay, options = {}) {
   const outgoingHandler = (event) => {
     const { type, payload } = event.detail ?? {};
     appendLog("outgoing", type, payload);
-
-    switch (type) {
-      case "game:manual-selection":
-        state.lastManualSelection = payload ?? null;
-        break;
-      case "game:auto-selections":
-        state.lastAutoSelections = Array.isArray(payload?.selections)
-          ? payload.selections.map((selection) => ({ ...selection }))
-          : [];
-        break;
-      default:
-        break;
-    }
   };
 
   const incomingHandler = (event) => {
