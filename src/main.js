@@ -16,6 +16,12 @@ let demoMode = serverRelay.demoMode;
 let serverDummy = null;
 let lastRollMode = "over";
 let awaitingServerBetOutcome = false;
+let awaitingServerAutoOutcome = false;
+let lastWinChancePercent = null;
+const bottomPanelLocks = {
+  manual: false,
+  auto: false,
+};
 
 const opts = {
   // Window visuals
@@ -49,6 +55,7 @@ const opts = {
         ? clampPercent(normalizedTarget)
         : clampPercent(100 - normalizedTarget);
     const winChanceRatio = winChancePercent / 100;
+    lastWinChancePercent = winChancePercent;
     const multiplier =
       winChancePercent > 0 ? 99 / winChancePercent : Infinity;
 
@@ -124,7 +131,7 @@ serverRelay.addEventListener("demomodechange", (event) => {
         }
         startAutoBet();
       } else {
-        sendRelayMessage("control:start-autobet");
+        handleServerAutoBetStart();
       }
     });
     controlPanel.addEventListener("stopautobet", () => {
@@ -200,7 +207,25 @@ function handleServerBetRequest() {
     lockManualBetControls();
   }
   awaitingServerBetOutcome = true;
-  sendRelayMessage("control:bet");
+  lockBottomPanelControls("manual");
+  const payload = buildServerBetPayload();
+  sendRelayMessage("control:bet", payload);
+}
+
+function handleServerAutoBetStart() {
+  if (demoMode) {
+    return;
+  }
+  if (awaitingServerAutoOutcome) {
+    return;
+  }
+  if (controlPanel?.getMode?.() === "auto") {
+    controlPanel?.setAutoStartButtonMode?.("stop");
+  }
+  awaitingServerAutoOutcome = true;
+  lockBottomPanelControls("auto");
+  const payload = buildServerBetPayload();
+  sendRelayMessage("control:start-autobet", payload);
 }
 
 function startAutoBet() {
@@ -270,9 +295,11 @@ function applyDemoMode(enabled) {
   demoMode = Boolean(enabled);
   window.demoMode = demoMode;
   awaitingServerBetOutcome = false;
+  awaitingServerAutoOutcome = false;
   stopAutoBetImmediately();
   serverDummy?.setDemoMode?.(demoMode);
   unlockManualBetControls();
+  resetBottomPanelLocks();
 }
 
 function sendRelayMessage(type, payload = {}) {
@@ -288,7 +315,10 @@ function handleIncomingMessage(message) {
   switch (type) {
     case "game:bet-outcome":
       onManualBetOutcomeReceived();
+      processServerRoll(payload);
+      break;
     case "game:auto-bet-outcome":
+      onServerAutoBetOutcomeReceived();
       processServerRoll(payload);
       break;
     case "profit:update-total":
@@ -308,6 +338,15 @@ function onManualBetOutcomeReceived() {
   }
   awaitingServerBetOutcome = false;
   unlockManualBetControls();
+  unlockBottomPanelControls("manual");
+}
+
+function onServerAutoBetOutcomeReceived() {
+  if (!awaitingServerAutoOutcome) {
+    return;
+  }
+  awaitingServerAutoOutcome = false;
+  unlockBottomPanelControls("auto");
 }
 
 function processServerRoll(payload = {}) {
@@ -422,4 +461,57 @@ function clampPercent(value) {
     return 0;
   }
   return Math.max(0, Math.min(100, numeric));
+}
+
+function buildServerBetPayload() {
+  const payload = {};
+  const rollMode = typeof game?.getRollMode === "function"
+    ? game.getRollMode()
+    : lastRollMode;
+  if (rollMode) {
+    payload.rollMode = rollMode;
+  }
+  const winChancePercent = (() => {
+    if (typeof game?.getWinChance === "function") {
+      const value = Number(game.getWinChance());
+      if (Number.isFinite(value)) {
+        return value;
+      }
+    }
+    if (Number.isFinite(lastWinChancePercent)) {
+      return lastWinChancePercent;
+    }
+    return null;
+  })();
+  if (Number.isFinite(winChancePercent)) {
+    payload.winChancePercent = winChancePercent;
+    payload.winChance = winChancePercent / 100;
+  }
+  return payload;
+}
+
+function lockBottomPanelControls(key) {
+  if (!bottomPanelLocks[key]) {
+    bottomPanelLocks[key] = true;
+    updateBottomPanelClickableState();
+  }
+}
+
+function unlockBottomPanelControls(key) {
+  if (bottomPanelLocks[key]) {
+    bottomPanelLocks[key] = false;
+    updateBottomPanelClickableState();
+  }
+}
+
+function resetBottomPanelLocks() {
+  bottomPanelLocks.manual = false;
+  bottomPanelLocks.auto = false;
+  updateBottomPanelClickableState();
+}
+
+function updateBottomPanelClickableState() {
+  const shouldLock = bottomPanelLocks.manual || bottomPanelLocks.auto;
+  const clickable = !shouldLock;
+  game?.setBottomPanelControlsClickable?.(clickable);
 }

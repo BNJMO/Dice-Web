@@ -557,9 +557,17 @@ export async function createGame(mount, opts = {}) {
 
       valueWrapper.addEventListener("click", () => input.focus());
 
+      function setClickable(isClickable) {
+        const clickable = Boolean(isClickable);
+        input.disabled = !clickable;
+        valueWrapper.classList.toggle("is-non-clickable", !clickable);
+        stepper?.setClickable?.(clickable);
+      }
+
       return {
         container,
         refresh,
+        setClickable,
       };
     }
 
@@ -604,9 +612,16 @@ export async function createGame(mount, opts = {}) {
         }
       }
 
+      function setClickable(isClickable) {
+        const clickable = Boolean(isClickable);
+        button.disabled = !clickable;
+        button.classList.toggle("is-non-clickable", !clickable);
+      }
+
       return {
         container,
         refresh,
+        setClickable,
       };
     }
 
@@ -730,11 +745,33 @@ export async function createGame(mount, opts = {}) {
     refresh(true);
     layout();
 
+    function setMultiplierClickable(isClickable) {
+      multiplierBox?.setClickable?.(isClickable);
+    }
+
+    function setRollModeClickable(isClickable) {
+      rollModeBox?.setClickable?.(isClickable);
+    }
+
+    function setWinChanceClickable(isClickable) {
+      winChanceBox?.setClickable?.(isClickable);
+    }
+
+    function setControlsClickable(isClickable) {
+      multiplierBox?.setClickable?.(isClickable);
+      rollModeBox?.setClickable?.(isClickable);
+      winChanceBox?.setClickable?.(isClickable);
+    }
+
     return {
       panel,
       refresh,
       layout,
       getScaledHeight,
+      setMultiplierClickable,
+      setRollModeClickable,
+      setWinChanceClickable,
+      setControlsClickable,
       destroy: () => {
         handleSliderChange = () => {};
         panel.style.removeProperty("--panel-scale");
@@ -1819,6 +1856,18 @@ export async function createGame(mount, opts = {}) {
 
   playStartSoundIfNeeded();
 
+  function setBottomPanelControlsClickable(isClickable) {
+    bottomPanelUi?.setControlsClickable?.(isClickable);
+  }
+
+  function getCurrentRollMode() {
+    return sliderUi?.getRollMode?.();
+  }
+
+  function getCurrentWinChance() {
+    return sliderUi?.getWinChance?.();
+  }
+
   return {
     app,
     reset,
@@ -1828,5 +1877,8 @@ export async function createGame(mount, opts = {}) {
     hideWinPopup,
     playSoundEffect,
     revealDiceOutcome,
+    setBottomPanelControlsClickable,
+    getRollMode: getCurrentRollMode,
+    getWinChance: getCurrentWinChance,
   };
 }
