@@ -170,6 +170,9 @@ export async function createGame(mount, opts = {}) {
   try {
     const soundModule = await import("@pixi/sound");
     sound = soundModule.sound;
+    if (sound && "disableAutoPause" in sound) {
+      sound.disableAutoPause = true;
+    }
   } catch (e) {
     console.warn("Sounds disabled:", e.message);
     sound = {
@@ -519,9 +522,7 @@ export async function createGame(mount, opts = {}) {
         const dotIndex = sanitized.indexOf(".");
         if (dotIndex !== -1) {
           const before = sanitized.slice(0, dotIndex + 1);
-          const after = sanitized
-            .slice(dotIndex + 1)
-            .replace(/\./g, "");
+          const after = sanitized.slice(dotIndex + 1).replace(/\./g, "");
           sanitized = `${before}${after}`;
         }
         return sanitized;
