@@ -40,13 +40,18 @@ export function createServerDummy(relay, options = {}) {
   const serverRelay = ensureRelay(relay);
   const mount = options.mount ?? document.querySelector(".app-wrapper") ?? document.body;
   const onDemoModeToggle = options.onDemoModeToggle ?? (() => {});
+  const onVisibilityChange = options.onVisibilityChange ?? (() => {});
   const initialDemoMode = Boolean(options.initialDemoMode ?? true);
   const initialCollapsed = Boolean(options.initialCollapsed ?? true);
+  const initialHidden = Boolean(options.initialHidden ?? false);
 
   const container = document.createElement("div");
   container.className = "server-dummy";
   if (initialCollapsed) {
     container.classList.add("server-dummy--collapsed");
+  }
+  if (initialHidden) {
+    container.classList.add("server-dummy--hidden");
   }
 
   const header = document.createElement("div");
@@ -86,6 +91,13 @@ export function createServerDummy(relay, options = {}) {
     minimizeButton.textContent = collapsed ? "+" : "−";
   });
   headerControls.appendChild(minimizeButton);
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "server-dummy__close";
+  closeButton.setAttribute("aria-label", "Hide dummy server");
+  closeButton.textContent = "×";
+  headerControls.appendChild(closeButton);
 
   const body = document.createElement("div");
   body.className = "server-dummy__body";
@@ -278,6 +290,25 @@ export function createServerDummy(relay, options = {}) {
 
   mount.prepend(container);
 
+  let visible = !initialHidden;
+
+  function applyVisibility(next, { force = false } = {}) {
+    const normalized = Boolean(next);
+    if (!force && normalized === visible) {
+      return;
+    }
+    visible = normalized;
+    container.classList.toggle("server-dummy--hidden", !normalized);
+    onVisibilityChange(visible);
+  }
+
+  const show = () => applyVisibility(true);
+  const hide = () => applyVisibility(false);
+
+  closeButton.addEventListener("click", () => {
+    hide();
+  });
+
   function setDemoMode(enabled) {
     const normalized = Boolean(enabled);
     if (toggleInput.checked !== normalized) {
@@ -292,6 +323,7 @@ export function createServerDummy(relay, options = {}) {
   }
 
   setDemoMode(initialDemoMode);
+  applyVisibility(visible, { force: true });
 
   const outgoingHandler = (event) => {
     const { type, payload } = event.detail ?? {};
@@ -313,6 +345,11 @@ export function createServerDummy(relay, options = {}) {
   return {
     element: container,
     setDemoMode,
+    show,
+    hide,
+    isVisible() {
+      return Boolean(visible);
+    },
     destroy() {
       serverRelay.removeEventListener("outgoing", outgoingHandler);
       serverRelay.removeEventListener("incoming", incomingHandler);

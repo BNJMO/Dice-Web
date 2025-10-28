@@ -111,7 +111,7 @@
   gap: 2px;
   background: #223845;
   border-radius: 8px;
-  padding: 2px;
+  padding: 0px;
   min-width: 0;
   box-shadow: var(--control-elevation-shadow);
 }
@@ -127,12 +127,13 @@
   align-items: center;
   background: #091b26;
   border-radius: 8px;
-  border: 1px solid #2f3136;
+  border: 3px solid #223845;
   color: #f1f5ff;
   font-weight: 600;
   font-size: 1rem;
   min-width: 0;
   width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .control-select {
@@ -147,6 +148,13 @@
   padding: 14px 44px 14px 16px;
   cursor: pointer;
   outline: none;
+}
+
+.control-select-field:hover,
+.control-select-field:focus-within,
+.control-select:hover,
+.control-select:focus {
+  border-color: #325B73;
 }
 
 .control-select-field.is-non-clickable {
@@ -193,7 +201,7 @@
   gap: 10px;
   background: #091b26;
   border-radius: 8px;
-  border: 1px solid #2f3136;
+  border: 3px solid #223845;
   color: #f1f5ff;
   font-size: 1rem;
   font-weight: 600;
@@ -206,6 +214,11 @@
   --control-bet-icon-offset: clamp(10px, 6%, 18px);
   padding: 14px var(--control-bet-padding-right) 14px 16px;
   transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.control-bet-input-field:hover,
+.control-bet-input-field:focus-within {
+  border-color: #325B73;
 }
 
 .control-bet-input {
@@ -233,7 +246,7 @@
   color: #f5f6ff;
   font-weight: 700;
   font-size: 0.95rem;
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 12px 18px;
   flex: 0 0 auto;
   cursor: pointer;
@@ -241,7 +254,7 @@
 }
 
 .control-bet-action:hover {
-  background: #34363d;
+  background: #325B73;
   transform: translateY(-1px);
 }
 
@@ -261,8 +274,8 @@
 }
 
 .control-bet-separator {
-  width: 1px;
-  height: 36px;
+  width: 3px;
+  height: 26px;
   background: #091b26;
   border-radius: 1px;
 }
@@ -363,13 +376,65 @@
   opacity: 0.85;
 }
 
+.control-panel-footer {
+  margin-top: auto;
+  padding: 48px 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.control-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .control-game-name {
   font-weight: 700;
   font-size: 1.1rem;
-  padding-top: 48px;
-  padding-left: 16px;
   color: #ffffff;
-  margin-top: auto;
+}
+
+.control-animations-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #9a9da6;
+  font-weight: 600;
+}
+
+.control-animations-label {
+  font-size: 0.95rem;
+}
+
+.control-animations-switch {
+  flex: 0 0 auto;
+}
+
+.control-show-dummy-server {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(68, 112, 134, 0.8);
+  background: rgba(34, 56, 69, 0.85);
+  color: #d9e6ef;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.control-show-dummy-server:hover:not(.is-disabled) {
+  background: rgba(52, 94, 118, 0.95);
+  transform: translateY(-1px);
+}
+
+.control-show-dummy-server.is-disabled {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
 }
 
 .control-mode-section {
@@ -653,7 +718,7 @@
   right: var(--control-bet-stepper-offset);
 }
 
-@media (max-width: 1100px), (orientation: portrait) {
+@media (max-width: 768px), (orientation: portrait) {
   .control-panel-mount {
     order: 2;
     flex: 1 1 auto;
@@ -675,10 +740,8 @@
 
   .control-random-btn {
     order: -1;
-  }
 }
 
-@media (max-width: 768px) {
   .control-bet-input-field {
     --control-bet-padding-right: max(64px, 24%);
     padding: 12px var(--control-bet-padding-right) 12px 14px;

@@ -67,9 +67,7 @@ const opts = {
     lastWinChance = winChance;
     const multiplier = winChance > 0 ? 99 / winChance : Infinity;
 
-    console.debug(
-      `Main calculated win chance: ${winChance.toFixed(2)}%`
-    );
+    console.debug(`Main calculated win chance: ${winChance.toFixed(2)}%`);
 
     sendRelayMessage("game:slider-change", {
       target: normalizedTarget,
@@ -98,6 +96,14 @@ serverRelay.addEventListener("demomodechange", (event) => {
   try {
     controlPanel = new ControlPanel("#control-panel", {
       gameName: "Dice",
+    });
+    controlPanel.addEventListener("animationschange", (event) => {
+      const enabled = Boolean(event.detail?.enabled);
+      opts.disableAnimations = !enabled;
+      game?.setAnimationsEnabled?.(enabled);
+    });
+    controlPanel.addEventListener("showdummyserver", () => {
+      serverDummy?.show?.();
     });
     controlPanel.addEventListener("modechange", (event) => {
       const mode = event?.detail?.mode;
@@ -176,6 +182,11 @@ serverRelay.addEventListener("demomodechange", (event) => {
   serverDummy = createServerDummy(serverRelay, {
     initialDemoMode: demoMode,
     onDemoModeToggle: (value) => serverRelay.setDemoMode(value),
+    initialDemoMode: demoMode,
+    initialHidden: true,
+    onVisibilityChange: (isVisible) => {
+      controlPanel?.setDummyServerPanelVisibility?.(isVisible);
+    },
   });
 
   applyDemoMode(demoMode);
@@ -189,9 +200,9 @@ function handleBet() {
   const roll = Math.random() * 100;
   const winChance = Math.max(0, (100 - roll) / 100);
   console.debug(
-    `Bet placed. Revealing roll ${roll.toFixed(1)} with ${(winChance * 100).toFixed(
-      2
-    )}% win chance.`
+    `Bet placed. Revealing roll ${roll.toFixed(1)} with ${(
+      winChance * 100
+    ).toFixed(2)}% win chance.`
   );
 
   const betValue = controlPanel?.getBetValue?.() ?? 0;
@@ -418,7 +429,9 @@ function processServerRoll(payload = {}) {
       payload.winChance ?? payload.winChanceRatio
     );
     if (ratioCandidate !== null) {
-      return ratioCandidate > 1 ? ratioCandidate / 100 : Math.max(0, ratioCandidate);
+      return ratioCandidate > 1
+        ? ratioCandidate / 100
+        : Math.max(0, ratioCandidate);
     }
     const percentCandidate = toFiniteNumber(payload.winChancePercent);
     if (percentCandidate !== null) {
@@ -438,9 +451,11 @@ function processServerRoll(payload = {}) {
     `$${(Number.isFinite(potentialProfit) ? potentialProfit : 0).toFixed(2)}`;
   controlPanel?.setProfitOnWinDisplay?.(profitOnWinDisplay);
 
-  if (payload.totalProfit !== undefined || payload.totalProfitValue !== undefined) {
-    const totalProfit =
-      payload.totalProfit ?? payload.totalProfitValue;
+  if (
+    payload.totalProfit !== undefined ||
+    payload.totalProfitValue !== undefined
+  ) {
+    const totalProfit = payload.totalProfit ?? payload.totalProfitValue;
     controlPanel?.setProfitValue?.(totalProfit);
   } else if (payload.totalProfitDisplay !== undefined) {
     controlPanel?.setProfitValue?.(payload.totalProfitDisplay);
@@ -506,9 +521,8 @@ function clampPercent(value) {
 
 function buildServerBetPayload() {
   const payload = {};
-  const rollMode = typeof game?.getRollMode === "function"
-    ? game.getRollMode()
-    : lastRollMode;
+  const rollMode =
+    typeof game?.getRollMode === "function" ? game.getRollMode() : lastRollMode;
   if (rollMode) {
     payload.rollMode = rollMode;
   }
