@@ -731,6 +731,28 @@ export async function createGame(mount, opts = {}) {
         desiredScale = Math.min(1, maxPanelHeight / panelHeight);
       }
 
+      const panelContentWidth = Number(panel.scrollWidth);
+      const parentWidth = Number(
+        panel.parentElement?.clientWidth ??
+          panel.parentElement?.offsetWidth ??
+          app?.renderer?.width ??
+          0
+      );
+      const horizontalPadding = 40;
+      const maxPanelWidth =
+        Number.isFinite(parentWidth) && parentWidth > 0
+          ? Math.max(0, parentWidth - horizontalPadding)
+          : 0;
+
+      if (
+        Number.isFinite(panelContentWidth) &&
+        panelContentWidth > 0 &&
+        maxPanelWidth > 0
+      ) {
+        const widthScale = Math.min(1, maxPanelWidth / panelContentWidth);
+        desiredScale = Math.min(desiredScale, widthScale);
+      }
+
       if (!Number.isFinite(desiredScale) || desiredScale <= 0) {
         desiredScale = 1;
       }
@@ -755,17 +777,16 @@ export async function createGame(mount, opts = {}) {
       if (!scaleIsDefault && appliedScale > 0) {
         const widthFactor = 1 / appliedScale;
         if (Number.isFinite(widthFactor) && widthFactor > 0) {
-          const widthPercent = `${(widthFactor * 100).toFixed(4)}%`;
-          if (panel.style.width !== widthPercent) {
-            panel.style.width = widthPercent;
+          if (Math.abs(widthFactor - lastWidthFactor) > SCALE_EPSILON) {
+            panel.style.setProperty("--panel-width-factor", `${widthFactor}`);
+            lastWidthFactor = widthFactor;
           }
-          lastWidthFactor = widthFactor;
         } else if (lastWidthFactor !== 1) {
-          panel.style.removeProperty("width");
+          panel.style.removeProperty("--panel-width-factor");
           lastWidthFactor = 1;
         }
-      } else if (lastWidthFactor !== 1 || panel.style.width) {
-        panel.style.removeProperty("width");
+      } else if (lastWidthFactor !== 1) {
+        panel.style.removeProperty("--panel-width-factor");
         lastWidthFactor = 1;
       }
 
@@ -833,7 +854,7 @@ export async function createGame(mount, opts = {}) {
       destroy: () => {
         handleSliderChange = () => {};
         panel.style.removeProperty("--panel-scale");
-        panel.style.removeProperty("width");
+        panel.style.removeProperty("--panel-width-factor");
         appliedScale = 1;
         lastScaledHeight = 0;
         lastWidthFactor = 1;
