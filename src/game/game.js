@@ -712,25 +712,66 @@ export async function createGame(mount, opts = {}) {
     root.appendChild(panel);
 
     const SCALE_EPSILON = 0.0001;
+    const PANEL_BASE_PADDING_X = 20;
+    const PANEL_BASE_PADDING_Y = 16;
     let appliedScale = 1;
     let lastScaledHeight = 0;
-    let lastWidthFactor = 1;
+    let lastWidthValue = null;
 
     function layout() {
       const panelHeight = Number(panel.offsetHeight);
+      const panelWidth = Number(panel.scrollWidth || panel.offsetWidth);
       const gameHeight = Number(app?.renderer?.height ?? 0);
       const maxPanelHeight =
         Number.isFinite(gameHeight) && gameHeight > 0 ? gameHeight * 0.4 : 0;
 
-      let desiredScale = 1;
+      let scaleFromHeight = 1;
       if (
         Number.isFinite(panelHeight) &&
         panelHeight > 0 &&
         maxPanelHeight > 0
       ) {
-        desiredScale = Math.min(1, maxPanelHeight / panelHeight);
+        scaleFromHeight = Math.min(1, maxPanelHeight / panelHeight);
       }
 
+      let availableWidth = 0;
+      const parentWidth = Number(
+        panel.parentElement?.clientWidth ??
+          root?.clientWidth ??
+          app?.renderer?.width ??
+          0
+      );
+      if (Number.isFinite(parentWidth) && parentWidth > 0) {
+        let horizontalGap = 40;
+        try {
+          const computedStyle =
+            typeof window !== "undefined"
+              ? window.getComputedStyle?.(panel)
+              : null;
+          if (computedStyle) {
+            const gapValue = parseFloat(
+              computedStyle.getPropertyValue(
+                "--game-bottom-panel-horizontal-gap"
+              )
+            );
+            if (Number.isFinite(gapValue) && gapValue >= 0) {
+              horizontalGap = gapValue;
+            }
+          }
+        } catch {}
+        availableWidth = Math.max(0, parentWidth - horizontalGap);
+      }
+
+      let scaleFromWidth = 1;
+      if (
+        Number.isFinite(panelWidth) &&
+        panelWidth > 0 &&
+        availableWidth > 0
+      ) {
+        scaleFromWidth = Math.min(1, availableWidth / panelWidth);
+      }
+
+      let desiredScale = Math.min(scaleFromHeight, scaleFromWidth);
       if (!Number.isFinite(desiredScale) || desiredScale <= 0) {
         desiredScale = 1;
       }
@@ -741,32 +782,55 @@ export async function createGame(mount, opts = {}) {
         Math.abs(appliedScale - previousScale) > SCALE_EPSILON;
 
       const scaleIsDefault = Math.abs(appliedScale - 1) < SCALE_EPSILON;
+      const normalizedScale = Math.max(appliedScale, SCALE_EPSILON);
 
-      if (scaleChanged) {
-        if (scaleIsDefault) {
-          panel.style.removeProperty("--panel-scale");
-        } else {
-          panel.style.setProperty("--panel-scale", `${appliedScale}`);
-        }
-      } else if (scaleIsDefault) {
+      if (scaleIsDefault) {
         panel.style.removeProperty("--panel-scale");
+        panel.style.removeProperty("--panel-padding-x");
+        panel.style.removeProperty("--panel-padding-y");
+      } else {
+        panel.style.setProperty("--panel-scale", `${appliedScale}`);
+        panel.style.setProperty(
+          "--panel-padding-x",
+          `${PANEL_BASE_PADDING_X / normalizedScale}px`
+        );
+        panel.style.setProperty(
+          "--panel-padding-y",
+          `${PANEL_BASE_PADDING_Y / normalizedScale}px`
+        );
       }
 
-      if (!scaleIsDefault && appliedScale > 0) {
-        const widthFactor = 1 / appliedScale;
-        if (Number.isFinite(widthFactor) && widthFactor > 0) {
-          const widthPercent = `${(widthFactor * 100).toFixed(4)}%`;
-          if (panel.style.width !== widthPercent) {
-            panel.style.width = widthPercent;
+      let widthChanged = false;
+      if (!scaleIsDefault && appliedScale > 0 && availableWidth > 0) {
+        const paddedAvailableWidth = Math.max(
+          0,
+          availableWidth - PANEL_BASE_PADDING_X * 2
+        );
+        const desiredWidth = paddedAvailableWidth / normalizedScale;
+        if (Number.isFinite(desiredWidth) && desiredWidth >= 0) {
+          const clampedWidth = Math.max(0, desiredWidth);
+          const widthPx = `${clampedWidth.toFixed(4)}px`;
+          if (panel.style.width !== widthPx) {
+            panel.style.width = widthPx;
+            widthChanged = true;
+          } else if (
+            lastWidthValue === null ||
+            Math.abs(clampedWidth - lastWidthValue) > 0.5
+          ) {
+            widthChanged = true;
           }
-          lastWidthFactor = widthFactor;
-        } else if (lastWidthFactor !== 1) {
+          lastWidthValue = clampedWidth;
+        } else if (lastWidthValue !== null || panel.style.width) {
           panel.style.removeProperty("width");
-          lastWidthFactor = 1;
+          lastWidthValue = null;
+          widthChanged = true;
         }
-      } else if (lastWidthFactor !== 1 || panel.style.width) {
+      } else if (lastWidthValue !== null || panel.style.width) {
         panel.style.removeProperty("width");
-        lastWidthFactor = 1;
+        lastWidthValue = null;
+        widthChanged = true;
+      } else {
+        lastWidthValue = null;
       }
 
       const scaledHeight =
@@ -776,7 +840,7 @@ export async function createGame(mount, opts = {}) {
       const heightChanged = Math.abs(scaledHeight - lastScaledHeight) > 0.5;
       lastScaledHeight = scaledHeight;
 
-      return scaleChanged || heightChanged;
+      return scaleChanged || heightChanged || widthChanged;
     }
 
     function getScaledHeight() {
@@ -833,10 +897,12 @@ export async function createGame(mount, opts = {}) {
       destroy: () => {
         handleSliderChange = () => {};
         panel.style.removeProperty("--panel-scale");
+        panel.style.removeProperty("--panel-padding-x");
+        panel.style.removeProperty("--panel-padding-y");
         panel.style.removeProperty("width");
         appliedScale = 1;
         lastScaledHeight = 0;
-        lastWidthFactor = 1;
+        lastWidthValue = null;
         panel.remove();
       },
     };

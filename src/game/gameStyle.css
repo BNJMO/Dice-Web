@@ -32,18 +32,23 @@
 }
 
 .game-bottom-panel {
+  --game-bottom-panel-horizontal-gap: 40px;
+  --panel-scale: 1;
+  --panel-padding-x: 20px;
+  --panel-padding-y: 16px;
+  --panel-gap: 16px;
   position: absolute;
   left: 50%;
   bottom: 32px;
-  transform: translate(-50%, 0) scale(var(--panel-scale, 1));
+  transform: translate(-50%, 0) scale(var(--panel-scale));
   transform-origin: bottom center;
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-wrap: nowrap;
+  gap: var(--panel-gap);
   justify-content: center;
-  padding: 16px 20px;
-  width: calc(100% - 40px);
-  max-width: calc(100% - 40px);
+  padding: var(--panel-padding-y) var(--panel-padding-x);
+  width: calc(100% - var(--game-bottom-panel-horizontal-gap));
+  max-width: none;
   background: #273744;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
@@ -145,6 +150,7 @@ button.game-panel-value:focus-visible {
   font: inherit;
   outline: none;
   padding: 0;
+  overflow: visible;
 }
 
 .game-panel-input::placeholder {
@@ -234,8 +240,7 @@ button.game-panel-value:focus-visible {
     gap: 12px;
     padding: 14px 20px;
     bottom: 12px;
-    width: calc(100% - 40px);
-    max-width: calc(120% - 15px);
+    width: calc(100% - var(--game-bottom-panel-horizontal-gap));
   }
 
   .game-panel-item {
