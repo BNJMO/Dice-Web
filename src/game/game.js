@@ -712,6 +712,8 @@ export async function createGame(mount, opts = {}) {
     root.appendChild(panel);
 
     const SCALE_EPSILON = 0.0001;
+    const PANEL_BASE_PADDING_X = 20;
+    const PANEL_BASE_PADDING_Y = 16;
     let appliedScale = 1;
     let lastScaledHeight = 0;
     let lastWidthValue = null;
@@ -780,32 +782,44 @@ export async function createGame(mount, opts = {}) {
         Math.abs(appliedScale - previousScale) > SCALE_EPSILON;
 
       const scaleIsDefault = Math.abs(appliedScale - 1) < SCALE_EPSILON;
+      const normalizedScale = Math.max(appliedScale, SCALE_EPSILON);
 
-      if (scaleChanged) {
-        if (scaleIsDefault) {
-          panel.style.removeProperty("--panel-scale");
-        } else {
-          panel.style.setProperty("--panel-scale", `${appliedScale}`);
-        }
-      } else if (scaleIsDefault) {
+      if (scaleIsDefault) {
         panel.style.removeProperty("--panel-scale");
+        panel.style.removeProperty("--panel-padding-x");
+        panel.style.removeProperty("--panel-padding-y");
+      } else {
+        panel.style.setProperty("--panel-scale", `${appliedScale}`);
+        panel.style.setProperty(
+          "--panel-padding-x",
+          `${PANEL_BASE_PADDING_X / normalizedScale}px`
+        );
+        panel.style.setProperty(
+          "--panel-padding-y",
+          `${PANEL_BASE_PADDING_Y / normalizedScale}px`
+        );
       }
 
       let widthChanged = false;
       if (!scaleIsDefault && appliedScale > 0 && availableWidth > 0) {
-        const desiredWidth = availableWidth / appliedScale;
-        if (Number.isFinite(desiredWidth) && desiredWidth > 0) {
-          const widthPx = `${desiredWidth.toFixed(4)}px`;
+        const paddedAvailableWidth = Math.max(
+          0,
+          availableWidth - PANEL_BASE_PADDING_X * 2
+        );
+        const desiredWidth = paddedAvailableWidth / normalizedScale;
+        if (Number.isFinite(desiredWidth) && desiredWidth >= 0) {
+          const clampedWidth = Math.max(0, desiredWidth);
+          const widthPx = `${clampedWidth.toFixed(4)}px`;
           if (panel.style.width !== widthPx) {
             panel.style.width = widthPx;
             widthChanged = true;
           } else if (
             lastWidthValue === null ||
-            Math.abs(desiredWidth - lastWidthValue) > 0.5
+            Math.abs(clampedWidth - lastWidthValue) > 0.5
           ) {
             widthChanged = true;
           }
-          lastWidthValue = desiredWidth;
+          lastWidthValue = clampedWidth;
         } else if (lastWidthValue !== null || panel.style.width) {
           panel.style.removeProperty("width");
           lastWidthValue = null;
@@ -883,6 +897,8 @@ export async function createGame(mount, opts = {}) {
       destroy: () => {
         handleSliderChange = () => {};
         panel.style.removeProperty("--panel-scale");
+        panel.style.removeProperty("--panel-padding-x");
+        panel.style.removeProperty("--panel-padding-y");
         panel.style.removeProperty("width");
         appliedScale = 1;
         lastScaledHeight = 0;
