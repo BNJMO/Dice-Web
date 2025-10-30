@@ -221,6 +221,8 @@ export async function createGame(mount, opts = {}) {
     dragCooldownMs: sliderDragCooldownMs,
   };
 
+  let animationsEnabled = !(opts.disableAnimations ?? false);
+
   const diceFadeInDuration = Math.max(
     0,
     opts.diceFadeInDuration ?? DICE_ANIMATION.fadeInDuration
@@ -382,7 +384,12 @@ export async function createGame(mount, opts = {}) {
 
   let shouldPlayStartSound = true;
 
-  const betHistory = createBetHistory({ app, fontFamily, tween });
+  const betHistory = createBetHistory({
+    app,
+    fontFamily,
+    tween,
+    animationsEnabled,
+  });
   ui.addChild(betHistory.container);
 
   // API callbacks
@@ -423,6 +430,7 @@ export async function createGame(mount, opts = {}) {
         console.warn("onRollModeChange callback failed", err);
       }
     },
+    animationsEnabled,
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -952,6 +960,7 @@ export async function createGame(mount, opts = {}) {
     onChange = () => {},
     getBottomPanelHeight = () => 0,
     onRollModeChange = () => {},
+    animationsEnabled: initialAnimationsEnabled = true,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -964,6 +973,8 @@ export async function createGame(mount, opts = {}) {
     sliderContainer.eventMode = "static";
     sliderContainer.cursor = "pointer";
     sliderContainer.zIndex = 100;
+
+    let animationsEnabled = Boolean(initialAnimationsEnabled);
 
     const fallbackWidth = 560;
     const fallbackHeight = 140;
@@ -1142,6 +1153,7 @@ export async function createGame(mount, opts = {}) {
     let diceBumpCancel = null;
     let diceLabelColorCancel = null;
     let diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
+    let diceLastOutcome = null;
     let lastHandlePosition = valueToPosition(sliderValue);
     let lastHandleUpdateTime = performance.now();
     let lastSliderDragSoundTime = -Infinity;
@@ -1390,6 +1402,31 @@ export async function createGame(mount, opts = {}) {
       diceContainer.scale.set(safeScale, safeScale);
     }
 
+    function hideDiceInstant() {
+      diceContainer.visible = false;
+      diceContainer.alpha = 0;
+      setDiceScale(diceFadeInScaleStart);
+    }
+
+    function applyDiceOutcomeInstant(outcome = diceLastOutcome) {
+      const target = outcome ?? diceLastOutcome;
+      if (!target) {
+        return;
+      }
+      diceContainer.visible = true;
+      diceContainer.position.x = target.positionX;
+      diceContainer.alpha = 1;
+      setDiceScale(1);
+      diceLabel.text = target.label;
+      diceLabel.style.fill = target.targetColor;
+      diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.target;
+      if (diceLabel.style.dropShadow) {
+        diceLabel.style.dropShadow.color = numberToHexColorString(
+          diceLabelShadowColor
+        );
+      }
+    }
+
     function cancelDiceAnimations() {
       if (diceAnimationCancel) {
         diceAnimationCancel();
@@ -1414,11 +1451,18 @@ export async function createGame(mount, opts = {}) {
     }
 
     function scheduleDiceFadeOut() {
+      if (diceFadeTimeoutId) {
+        clearTimeout(diceFadeTimeoutId);
+      }
       diceFadeTimeoutId = setTimeout(() => {
         diceFadeTimeoutId = null;
         if (diceBumpCancel) {
           diceBumpCancel();
           diceBumpCancel = null;
+        }
+        if (!animationsEnabled) {
+          hideDiceInstant();
+          return;
         }
         const startScale = diceContainer.scale.x;
         diceFadeOutCancel = tween(app, {
@@ -1432,15 +1476,22 @@ export async function createGame(mount, opts = {}) {
           },
           complete: () => {
             diceFadeOutCancel = null;
-            diceContainer.visible = false;
-            diceContainer.alpha = 0;
-            setDiceScale(diceFadeInScaleStart);
+            hideDiceInstant();
           },
         });
       }, diceFadeOutDelay);
     }
 
     function playDiceBump() {
+      if (!animationsEnabled) {
+        if (diceBumpCancel) {
+          diceBumpCancel();
+          diceBumpCancel = null;
+        }
+        setDiceScale(1);
+        return;
+      }
+
       if (diceBumpCancel) {
         diceBumpCancel();
         diceBumpCancel = null;
@@ -1546,24 +1597,53 @@ export async function createGame(mount, opts = {}) {
 
       const diceWasVisible =
         diceHasShown && diceContainer.visible && diceContainer.alpha > 0;
+      const skipAnimations = !animationsEnabled;
+
+      const targetColor = isWin
+        ? DICE_LABEL_COLORS.win
+        : DICE_LABEL_COLORS.loss;
+
+      diceLastOutcome = {
+        label: displayLabel,
+        isWin,
+        positionX: endX,
+        targetColor,
+      };
 
       cancelDiceAnimations();
 
-      diceLabel.style.fill = DICE_LABEL_COLORS.default;
-      diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
+      diceLabelShadowColor = skipAnimations
+        ? DICE_LABEL_SHADOW_COLORS.target
+        : DICE_LABEL_SHADOW_COLORS.default;
+      diceLabel.style.fill = skipAnimations
+        ? targetColor
+        : DICE_LABEL_COLORS.default;
       if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color =
-          numberToHexColorString(diceLabelShadowColor);
+        diceLabel.style.dropShadow.color = numberToHexColorString(
+          diceLabelShadowColor
+        );
       }
 
       diceContainer.visible = true;
-      diceContainer.position.x = startX;
+      diceContainer.position.x = skipAnimations ? endX : startX;
 
       const revealStartAlpha = diceWasVisible ? 1 : 0;
       const revealStartScale = diceWasVisible ? 1 : diceFadeInScaleStart;
 
-      diceContainer.alpha = revealStartAlpha;
-      setDiceScale(revealStartScale);
+      diceContainer.alpha = skipAnimations ? 1 : revealStartAlpha;
+      setDiceScale(skipAnimations ? 1 : revealStartScale);
+
+      if (skipAnimations) {
+        diceHasShown = true;
+        scheduleDiceFadeOut();
+        playSoundEffect(isWin ? "win" : "lose");
+        return {
+          label: displayLabel,
+          isWin,
+          roll: clampedRoll,
+          target: sliderValue,
+        };
+      }
 
       diceAnimationCancel = tween(app, {
         duration: diceFadeInDuration,
@@ -1583,9 +1663,6 @@ export async function createGame(mount, opts = {}) {
           scheduleDiceFadeOut();
           playDiceBump();
           playSoundEffect(isWin ? "win" : "lose");
-          const targetColor = isWin
-            ? DICE_LABEL_COLORS.win
-            : DICE_LABEL_COLORS.loss;
           const startColor =
             typeof diceLabel.style.fill === "number"
               ? diceLabel.style.fill
@@ -1635,8 +1712,8 @@ export async function createGame(mount, opts = {}) {
     function resetDice() {
       cancelDiceAnimations();
       diceHasShown = false;
-      diceContainer.visible = false;
-      diceContainer.alpha = 0;
+      diceLastOutcome = null;
+      hideDiceInstant();
       diceLabel.text = "";
       diceLabel.style.fill = DICE_LABEL_COLORS.default;
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
@@ -1646,6 +1723,28 @@ export async function createGame(mount, opts = {}) {
       }
       diceContainer.position.x = valueToPosition(SLIDER.rangeMin);
       setDiceScale(diceFadeInScaleStart);
+    }
+
+    function setDiceAnimationsEnabled(value) {
+      const normalized = Boolean(value);
+      if (animationsEnabled === normalized) {
+        return animationsEnabled;
+      }
+      const wasVisible = diceContainer.visible && diceContainer.alpha > 0;
+      const wasFadingOut = Boolean(diceFadeOutCancel);
+      animationsEnabled = normalized;
+      if (!animationsEnabled) {
+        cancelDiceAnimations();
+        if (wasFadingOut) {
+          hideDiceInstant();
+        } else if (wasVisible && diceLastOutcome) {
+          applyDiceOutcomeInstant();
+          scheduleDiceFadeOut();
+        } else {
+          hideDiceInstant();
+        }
+      }
+      return animationsEnabled;
     }
 
     function layout() {
@@ -1710,6 +1809,7 @@ export async function createGame(mount, opts = {}) {
         app.stage.off("pointerupoutside", stagePointerUp);
         cancelDiceAnimations();
       },
+      setAnimationsEnabled: (value) => setDiceAnimationsEnabled(value),
     };
   }
 
@@ -1920,6 +2020,18 @@ export async function createGame(mount, opts = {}) {
     return sliderUi?.getWinChance?.();
   }
 
+  function setAnimationsEnabled(value) {
+    const normalized = Boolean(value);
+    if (animationsEnabled === normalized) {
+      return animationsEnabled;
+    }
+    animationsEnabled = normalized;
+    opts.disableAnimations = !normalized;
+    sliderUi?.setAnimationsEnabled?.(normalized);
+    betHistory.setAnimationsEnabled?.(normalized);
+    return animationsEnabled;
+  }
+
   return {
     app,
     reset,
@@ -1932,5 +2044,6 @@ export async function createGame(mount, opts = {}) {
     setBottomPanelControlsClickable,
     getRollMode: getCurrentRollMode,
     getWinChance: getCurrentWinChance,
+    setAnimationsEnabled,
   };
 }

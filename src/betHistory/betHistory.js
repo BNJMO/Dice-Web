@@ -96,6 +96,7 @@ export function createBetHistory({
   historyConfig = {},
   colorOverrides = {},
   cssRoot,
+  animationsEnabled: initialAnimationsEnabled = true,
 } = {}) {
   if (!app) {
     throw new Error("createBetHistory requires a PIXI application instance.");
@@ -122,6 +123,7 @@ export function createBetHistory({
   let bubbleSpacing = Math.max(8, bubbleWidth * config.spacingRatio);
   let maxVisible = 1;
   const activeEntries = new Set();
+  let animationsEnabled = Boolean(initialAnimationsEnabled);
 
   function computeMetrics() {
     const width = app.renderer.width;
@@ -210,7 +212,9 @@ export function createBetHistory({
     const startAlpha = container.alpha;
     container.position.y = 0;
 
-    if (!animate) {
+    const shouldAnimate = Boolean(animate && animationsEnabled);
+
+    if (!shouldAnimate) {
       container.position.set(targetX, 0);
       container.alpha = targetAlpha;
       return;
@@ -242,7 +246,9 @@ export function createBetHistory({
       maxVisible * (bubbleWidth + bubbleSpacing) + bubbleWidth + bubbleSpacing
     );
 
-    if (!animate) {
+    const shouldAnimate = Boolean(animate && animationsEnabled);
+
+    if (!shouldAnimate) {
       container.position.set(offscreenX, 0);
       container.alpha = 0;
       historyContainer.removeChild(container);
@@ -275,12 +281,15 @@ export function createBetHistory({
     kept.forEach((entry, index) => {
       entry.applySize({ width: bubbleWidth, height: bubbleHeight });
       const targetX = -index * (bubbleWidth + bubbleSpacing);
-      moveEntry(entry, targetX, { animate, targetAlpha: 1 });
+      moveEntry(entry, targetX, {
+        animate: Boolean(animate && animationsEnabled),
+        targetAlpha: 1,
+      });
     });
 
     overflow.forEach((entry) => {
       entry.applySize({ width: bubbleWidth, height: bubbleHeight });
-      removeEntry(entry, { animate });
+      removeEntry(entry, { animate: Boolean(animate && animationsEnabled) });
     });
 
     entries = kept;
@@ -299,13 +308,19 @@ export function createBetHistory({
     historyContainer.addChild(entry.container);
     entries = [entry, ...entries];
 
-    moveEntry(entry, 0, { animate: true, targetAlpha: 1 });
+    moveEntry(entry, 0, {
+      animate: animationsEnabled,
+      targetAlpha: 1,
+    });
 
     for (let i = 1; i < entries.length; i += 1) {
       const existing = entries[i];
       existing.applySize({ width: bubbleWidth, height: bubbleHeight });
       const targetX = -i * (bubbleWidth + bubbleSpacing);
-      moveEntry(existing, targetX, { animate: true, targetAlpha: 1 });
+      moveEntry(existing, targetX, {
+        animate: animationsEnabled,
+        targetAlpha: 1,
+      });
     }
 
     if (entries.length > maxVisible) {
@@ -313,7 +328,7 @@ export function createBetHistory({
       entries = entries.slice(0, maxVisible);
       overflow.forEach((item) => {
         item.applySize({ width: bubbleWidth, height: bubbleHeight });
-        removeEntry(item, { animate: true });
+        removeEntry(item, { animate: animationsEnabled });
       });
     }
   }
@@ -327,6 +342,21 @@ export function createBetHistory({
     activeEntries.clear();
   }
 
+  function setAnimationsEnabled(value) {
+    const normalized = Boolean(value);
+    if (animationsEnabled === normalized) {
+      return animationsEnabled;
+    }
+    animationsEnabled = normalized;
+    if (!animationsEnabled) {
+      activeEntries.forEach((entry) => {
+        entry.stopTween();
+      });
+      layout({ animate: false });
+    }
+    return animationsEnabled;
+  }
+
   function destroy() {
     clear();
   }
@@ -337,5 +367,6 @@ export function createBetHistory({
     layout,
     clear,
     destroy,
+    setAnimationsEnabled,
   };
 }
