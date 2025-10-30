@@ -714,23 +714,62 @@ export async function createGame(mount, opts = {}) {
     const SCALE_EPSILON = 0.0001;
     let appliedScale = 1;
     let lastScaledHeight = 0;
-    let lastWidthFactor = 1;
+    let lastWidthValue = null;
 
     function layout() {
       const panelHeight = Number(panel.offsetHeight);
+      const panelWidth = Number(panel.scrollWidth || panel.offsetWidth);
       const gameHeight = Number(app?.renderer?.height ?? 0);
       const maxPanelHeight =
         Number.isFinite(gameHeight) && gameHeight > 0 ? gameHeight * 0.4 : 0;
 
-      let desiredScale = 1;
+      let scaleFromHeight = 1;
       if (
         Number.isFinite(panelHeight) &&
         panelHeight > 0 &&
         maxPanelHeight > 0
       ) {
-        desiredScale = Math.min(1, maxPanelHeight / panelHeight);
+        scaleFromHeight = Math.min(1, maxPanelHeight / panelHeight);
       }
 
+      let availableWidth = 0;
+      const parentWidth = Number(
+        panel.parentElement?.clientWidth ??
+          root?.clientWidth ??
+          app?.renderer?.width ??
+          0
+      );
+      if (Number.isFinite(parentWidth) && parentWidth > 0) {
+        let horizontalGap = 40;
+        try {
+          const computedStyle =
+            typeof window !== "undefined"
+              ? window.getComputedStyle?.(panel)
+              : null;
+          if (computedStyle) {
+            const gapValue = parseFloat(
+              computedStyle.getPropertyValue(
+                "--game-bottom-panel-horizontal-gap"
+              )
+            );
+            if (Number.isFinite(gapValue) && gapValue >= 0) {
+              horizontalGap = gapValue;
+            }
+          }
+        } catch {}
+        availableWidth = Math.max(0, parentWidth - horizontalGap);
+      }
+
+      let scaleFromWidth = 1;
+      if (
+        Number.isFinite(panelWidth) &&
+        panelWidth > 0 &&
+        availableWidth > 0
+      ) {
+        scaleFromWidth = Math.min(1, availableWidth / panelWidth);
+      }
+
+      let desiredScale = Math.min(scaleFromHeight, scaleFromWidth);
       if (!Number.isFinite(desiredScale) || desiredScale <= 0) {
         desiredScale = 1;
       }
@@ -752,21 +791,32 @@ export async function createGame(mount, opts = {}) {
         panel.style.removeProperty("--panel-scale");
       }
 
-      if (!scaleIsDefault && appliedScale > 0) {
-        const widthFactor = 1 / appliedScale;
-        if (Number.isFinite(widthFactor) && widthFactor > 0) {
-          const widthPercent = `${(widthFactor * 100).toFixed(4)}%`;
-          if (panel.style.width !== widthPercent) {
-            panel.style.width = widthPercent;
+      let widthChanged = false;
+      if (!scaleIsDefault && appliedScale > 0 && availableWidth > 0) {
+        const desiredWidth = availableWidth / appliedScale;
+        if (Number.isFinite(desiredWidth) && desiredWidth > 0) {
+          const widthPx = `${desiredWidth.toFixed(4)}px`;
+          if (panel.style.width !== widthPx) {
+            panel.style.width = widthPx;
+            widthChanged = true;
+          } else if (
+            lastWidthValue === null ||
+            Math.abs(desiredWidth - lastWidthValue) > 0.5
+          ) {
+            widthChanged = true;
           }
-          lastWidthFactor = widthFactor;
-        } else if (lastWidthFactor !== 1) {
+          lastWidthValue = desiredWidth;
+        } else if (lastWidthValue !== null || panel.style.width) {
           panel.style.removeProperty("width");
-          lastWidthFactor = 1;
+          lastWidthValue = null;
+          widthChanged = true;
         }
-      } else if (lastWidthFactor !== 1 || panel.style.width) {
+      } else if (lastWidthValue !== null || panel.style.width) {
         panel.style.removeProperty("width");
-        lastWidthFactor = 1;
+        lastWidthValue = null;
+        widthChanged = true;
+      } else {
+        lastWidthValue = null;
       }
 
       const scaledHeight =
@@ -776,7 +826,7 @@ export async function createGame(mount, opts = {}) {
       const heightChanged = Math.abs(scaledHeight - lastScaledHeight) > 0.5;
       lastScaledHeight = scaledHeight;
 
-      return scaleChanged || heightChanged;
+      return scaleChanged || heightChanged || widthChanged;
     }
 
     function getScaledHeight() {
@@ -836,7 +886,7 @@ export async function createGame(mount, opts = {}) {
         panel.style.removeProperty("width");
         appliedScale = 1;
         lastScaledHeight = 0;
-        lastWidthFactor = 1;
+        lastWidthValue = null;
         panel.remove();
       },
     };
