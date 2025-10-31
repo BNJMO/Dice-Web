@@ -234,12 +234,11 @@ button.game-panel-value:focus-visible {
     gap: 12px;
     padding: 14px 20px;
     bottom: 12px;
-    width: calc(100% - 40px);
     max-width: calc(120% - 15px);
   }
 
   .game-panel-item {
-    min-width: 120px;
+    min-width: 100px;
   }
 }
 
