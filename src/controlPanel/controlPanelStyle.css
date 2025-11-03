@@ -115,11 +115,52 @@
   padding: 0px;
   min-width: 0;
   box-shadow: var(--control-elevation-shadow);
+  position: relative;
 }
 
 .control-bet-box.is-non-clickable {
   background: #0d1a23;
   box-shadow: none;
+}
+
+.control-bet-tooltip {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, calc(-100% - 6px));
+  background: #f1f5ff;
+  color: #091b26;
+  padding: 14px 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 8px 18px rgba(9, 27, 38, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.control-bet-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #f1f5ff;
+}
+
+.control-bet-tooltip.is-visible {
+  opacity: 1;
+  transform: translate(-50%, calc(-100% - 14px));
 }
 
 .control-select-field {
@@ -224,7 +265,6 @@
 
 .control-bet-input {
   flex: 1 1 auto;
-  min-width: 0;
   border: none;
   background: transparent;
   color: inherit;
@@ -589,7 +629,7 @@
   color: #9a9da6;
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 12px 14px;
+  padding: 12px 2px;
   margin: 2px;
   border-radius: 4px;
   cursor: pointer;
