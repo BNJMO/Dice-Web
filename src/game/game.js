@@ -45,7 +45,7 @@ const SLIDER = {
   rightColor: 0xf0ff31,
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
-  trackOffsetRatio: 0.04,
+  trackOffsetRatio: 0.05,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
