@@ -12,7 +12,7 @@ const DEFAULT_HISTORY_CONFIG = {
   spacingRatio: 0.13,
   fontSizeRatio: 0.4,
   fadeInDuration: 320,
-  fadeOutDuration: 260,
+  fadeOutDuration: 260, 
 };
 
 const DEFAULT_HISTORY_COLORS = {
