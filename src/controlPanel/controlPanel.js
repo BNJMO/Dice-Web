@@ -1,7 +1,7 @@
 import { Stepper } from "../stepper/stepper.js";
-import bitcoinIconUrl from "../../assets/sprites/controlPanel/BitCoin.png";
-import infinityIconUrl from "../../assets/sprites/controlPanel/Infinity.png";
-import percentageIconUrl from "../../assets/sprites/controlPanel/Percentage.png";
+import bitcoinIconUrl from "../../assets/sprites/controlPanel/BitCoin.svg";
+import infinityIconUrl from "../../assets/sprites/controlPanel/Infinity.svg";
+import percentageIconUrl from "../../assets/sprites/controlPanel/Percentage.svg";
 
 function resolveMount(mount) {
   if (!mount) {

@@ -21,12 +21,12 @@ import sliderDownSoundUrl from "../../assets/sounds/SliderDown.wav";
 import sliderUpSoundUrl from "../../assets/sounds/SliderUp.wav";
 import sliderDragSoundUrl from "../../assets/sounds/SliderDrag.wav";
 import toggleRollModeSoundUrl from "../../assets/sounds/ToggleRollMode.wav";
-import sliderBackgroundUrl from "../../assets/sprites/SliderBackground.png";
-import sliderHandleUrl from "../../assets/sprites/SliderHandle.png";
-import diceSpriteUrl from "../../assets/sprites/Dice.png";
-import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.png";
-import rollModeIconUrl from "../../assets/sprites/RollOverIcon.png";
-import winChanceIconUrl from "../../assets/sprites/WinChanceIcon.png";
+import sliderBackgroundUrl from "../../assets/sprites/SliderBackground.svg";
+import sliderHandleUrl from "../../assets/sprites/SliderHandle.svg";
+import diceSpriteUrl from "../../assets/sprites/Dice.svg";
+import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.svg";
+import rollModeIconUrl from "../../assets/sprites/RollOverIcon.svg";
+import winChanceIconUrl from "../../assets/sprites/WinChanceIcon.svg";
 
 const PALETTE = {
   appBg: 0x020401,
