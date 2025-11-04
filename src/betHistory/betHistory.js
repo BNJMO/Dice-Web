@@ -97,6 +97,7 @@ export function createBetHistory({
   colorOverrides = {},
   cssRoot,
   animationsEnabled: initialAnimationsEnabled = true,
+  createText,
 } = {}) {
   if (!app) {
     throw new Error("createBetHistory requires a PIXI application instance.");
@@ -150,6 +151,11 @@ export function createBetHistory({
     );
   }
 
+  const makeText =
+    typeof createText === "function"
+      ? (options) => createText(options)
+      : (options) => new Text(options);
+
   function createEntry(label, isWin) {
     const container = new Container();
     container.eventMode = "none";
@@ -158,7 +164,7 @@ export function createBetHistory({
     const background = new Graphics();
     container.addChild(background);
 
-    const text = new Text({
+    const text = makeText({
       text: label,
       style: {
         fill: isWin ? colors.winText : colors.lossText,
@@ -197,6 +203,13 @@ export function createBetHistory({
           entry.cancelTween();
           entry.cancelTween = null;
         }
+      },
+      destroy() {
+        entry.stopTween();
+        if (container.parent) {
+          container.parent.removeChild(container);
+        }
+        container.destroy({ children: true });
       },
     };
 
@@ -253,6 +266,7 @@ export function createBetHistory({
       container.alpha = 0;
       historyContainer.removeChild(container);
       activeEntries.delete(entry);
+      entry.destroy();
       return;
     }
 
@@ -268,6 +282,7 @@ export function createBetHistory({
         historyContainer.removeChild(container);
         activeEntries.delete(entry);
         entry.cancelTween = null;
+        entry.destroy();
       },
     });
   }
@@ -335,8 +350,7 @@ export function createBetHistory({
 
   function clear() {
     activeEntries.forEach((entry) => {
-      entry.stopTween();
-      historyContainer.removeChild(entry.container);
+      entry.destroy();
     });
     entries = [];
     activeEntries.clear();
@@ -359,6 +373,7 @@ export function createBetHistory({
 
   function destroy() {
     clear();
+    historyContainer.destroy({ children: true });
   }
 
   return {
