@@ -157,8 +157,33 @@ function lerpColor(from, to, t) {
   return (r << 16) | (g << 8) | b;
 }
 
-export async function loadTexture(path) {
+const VECTOR_TEXTURE_PATTERN = /\.svg(?:[#?].*)?$/i;
+
+function normalizeTextureResolution(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return undefined;
+  }
+
+  return Math.max(1, Math.min(value, MAX_RENDERER_RESOLUTION));
+}
+
+export async function loadTexture(path, { resolution } = {}) {
   if (!path) return null;
+
+  const isVectorTexture =
+    typeof path === "string" && VECTOR_TEXTURE_PATTERN.test(path);
+
+  const desiredResolution = normalizeTextureResolution(
+    isVectorTexture ? resolution ?? MAX_RENDERER_RESOLUTION : resolution
+  );
+
+  if (desiredResolution) {
+    return Assets.load({
+      src: path,
+      data: { resolution: desiredResolution },
+    });
+  }
+
   return Assets.load(path);
 }
 
