@@ -949,6 +949,16 @@ export class ControlPanel extends EventTarget {
     const decimals = this.getStrategyDecimalPlacesFromString(value);
     const formatted = this.formatStrategyValue(numeric, decimals);
 
+    if (
+      !enforceMinimum &&
+      decimals > 0 &&
+      numeric === 0 &&
+      /^0(\.0*)?$/.test(value)
+    ) {
+      input.value = value;
+      return value;
+    }
+
     input.value = formatted;
     return formatted;
   }
@@ -1166,6 +1176,9 @@ export class ControlPanel extends EventTarget {
   formatStrategyValue(value, decimals = 0) {
     const safeDecimals = Math.max(0, Math.min(2, decimals ?? 0));
     const clamped = Math.max(0, Number.isFinite(value) ? value : 0);
+    if (clamped === 0) {
+      return "0";
+    }
     return clamped.toFixed(safeDecimals);
   }
 
