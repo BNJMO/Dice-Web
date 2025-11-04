@@ -346,7 +346,8 @@ export async function createGame(mount, opts = {}) {
       width: startWidth,
       height: startHeight,
       antialias: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      autoDensity: true,
+      resolution: window.devicePixelRatio ?? 1,
     });
 
     root.innerHTML = "";
