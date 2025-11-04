@@ -75,8 +75,8 @@ const SOUND_ALIASES = {
 
 const DICE_LABEL_COLORS = {
   default: 0x0b212b,
-  win: 0x2ecc71,
-  loss: 0xdd2e25,
+  win: 0xf0ff31,
+  loss: 0xf40029,
 };
 
 const DICE_LABEL_SHADOW_COLORS = {
