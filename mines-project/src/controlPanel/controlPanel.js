@@ -490,7 +490,7 @@ export class ControlPanel extends EventTarget {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.className = "control-bet-input";
-    input.value = "0.0";
+    input.value = "0";
     field.appendChild(input);
 
     const icon = document.createElement("img");
@@ -840,8 +840,8 @@ export class ControlPanel extends EventTarget {
 
     if (!value) {
       if (enforceMinimum) {
-        input.value = "0.0";
-        return "0.0";
+        input.value = "0";
+        return "0";
       }
       input.value = "";
       return "";
@@ -1032,15 +1032,15 @@ export class ControlPanel extends EventTarget {
   }
 
   getStrategyDecimalPlacesFromString(value) {
-    if (!value) return 1;
+    if (!value) return 0;
     const [, decimals = ""] = String(value).split(".");
     const length = decimals.replace(/[^0-9]/g, "").length;
-    if (length <= 0) return 1;
-    return Math.max(1, Math.min(2, length));
+    if (length <= 0) return 0;
+    return Math.max(0, Math.min(2, length));
   }
 
-  formatStrategyValue(value, decimals = 1) {
-    const safeDecimals = Math.max(1, Math.min(2, decimals || 1));
+  formatStrategyValue(value, decimals = 0) {
+    const safeDecimals = Math.max(0, Math.min(2, decimals ?? 0));
     const clamped = Math.max(0, Number.isFinite(value) ? value : 0);
     return clamped.toFixed(safeDecimals);
   }
