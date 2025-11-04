@@ -628,13 +628,17 @@
   border: none;
   background: #091b26;
   color: #9a9da6;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 600;
   padding: 12px 2px;
   margin: 2px;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
+}
+
+.auto-mode-toggle-btn.is-reset {
+  flex: 0 0 35%;
 }
 
 .auto-mode-toggle-btn.is-active {
