@@ -279,7 +279,7 @@
   height: 22px;
   opacity: 0.85;
   pointer-events: none;
-  opacity: 1.0;
+  opacity: 1;
 }
 
 .control-bet-action {
@@ -483,6 +483,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding-bottom: 8px;
 }
 
 .control-mode-section[hidden] {
@@ -499,7 +500,7 @@
 .auto-number-field {
   --control-bet-padding-right: 92px;
   --control-bet-stepper-offset: 65px;
-    --control-bet-infinity-offset: 10px;
+  --control-bet-infinity-offset: 10px;
   --control-bet-icon-offset: 54px;
   padding: 14px var(--control-bet-padding-right) 14px 16px;
 }
@@ -628,7 +629,7 @@
   border: none;
   background: #091b26;
   color: #9a9da6;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 600;
   padding: 12px 2px;
   margin: 2px;
@@ -638,7 +639,7 @@
 }
 
 .auto-mode-toggle-btn.is-reset {
-  flex: 0 0 25%;
+  flex: 0 0 35%;
 }
 
 .auto-mode-toggle-btn.is-active {
@@ -699,7 +700,9 @@
 }
 
 .auto-currency-field {
-  --control-bet-padding-right: 56px;
+  --control-bet-padding-right: clamp(76px, 28%, 116px);
+  --control-bet-stepper-offset: clamp(44px, 18%, 68px);
+  --control-bet-icon-offset: clamp(18px, 8%, 28px);
   padding: 14px var(--control-bet-padding-right) 14px 16px;
 }
 
@@ -792,7 +795,7 @@
 
   .control-random-btn {
     order: -1;
-}
+  }
 
   .control-bet-input-field {
     --control-bet-padding-right: max(64px, 24%);

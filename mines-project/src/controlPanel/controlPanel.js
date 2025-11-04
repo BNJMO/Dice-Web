@@ -372,13 +372,20 @@ export class ControlPanel extends EventTarget {
     profitRow.append(profitLabel, profitValue);
     this.autoAdvancedContent.appendChild(profitRow);
 
-    this.autoStopOnProfitField = this.createCurrencyField();
+    this.autoStopOnProfitField = this.createCurrencyField({
+      onChange: (value) => this.dispatchStopOnProfitChange(value),
+      increaseAriaLabel: "Increase stop on profit amount",
+      decreaseAriaLabel: "Decrease stop on profit amount",
+    });
     this.autoAdvancedContent.appendChild(this.autoStopOnProfitField.wrapper);
     this.autoStopOnProfitField.input.addEventListener("input", () => {
       this.dispatchStopOnProfitChange(this.autoStopOnProfitField.input.value);
     });
     this.autoStopOnProfitField.input.addEventListener("blur", () => {
-      this.dispatchStopOnProfitChange(this.autoStopOnProfitField.input.value);
+      const normalized = this.normalizeCurrencyInputValue(
+        this.autoStopOnProfitField.input
+      );
+      this.dispatchStopOnProfitChange(normalized);
     });
 
     const lossRow = document.createElement("div");
@@ -392,13 +399,20 @@ export class ControlPanel extends EventTarget {
     lossRow.append(lossLabel, lossValue);
     this.autoAdvancedContent.appendChild(lossRow);
 
-    this.autoStopOnLossField = this.createCurrencyField();
+    this.autoStopOnLossField = this.createCurrencyField({
+      onChange: (value) => this.dispatchStopOnLossChange(value),
+      increaseAriaLabel: "Increase stop on loss amount",
+      decreaseAriaLabel: "Decrease stop on loss amount",
+    });
     this.autoAdvancedContent.appendChild(this.autoStopOnLossField.wrapper);
     this.autoStopOnLossField.input.addEventListener("input", () => {
       this.dispatchStopOnLossChange(this.autoStopOnLossField.input.value);
     });
     this.autoStopOnLossField.input.addEventListener("blur", () => {
-      this.dispatchStopOnLossChange(this.autoStopOnLossField.input.value);
+      const normalized = this.normalizeCurrencyInputValue(
+        this.autoStopOnLossField.input
+      );
+      this.dispatchStopOnLossChange(normalized);
     });
 
     this.autoStartButton = document.createElement("button");
@@ -514,9 +528,15 @@ export class ControlPanel extends EventTarget {
     return row;
   }
 
-  createCurrencyField() {
+  createCurrencyField({
+    onChange,
+    increaseAriaLabel = "Increase amount",
+    decreaseAriaLabel = "Decrease amount",
+    step = 1e-8,
+  } = {}) {
     const wrapper = document.createElement("div");
-    wrapper.className = "control-bet-input-field auto-currency-field";
+    wrapper.className =
+      "control-bet-input-field auto-currency-field has-stepper";
 
     const input = document.createElement("input");
     input.type = "text";
@@ -533,7 +553,21 @@ export class ControlPanel extends EventTarget {
     icon.className = "control-bet-input-icon";
     wrapper.appendChild(icon);
 
-    return { wrapper, input, icon };
+    const stepper = new Stepper({
+      onStepUp: () => {
+        const value = this.adjustCurrencyInputValue(input, step);
+        onChange?.(value);
+      },
+      onStepDown: () => {
+        const value = this.adjustCurrencyInputValue(input, -step);
+        onChange?.(value);
+      },
+      upAriaLabel: increaseAriaLabel,
+      downAriaLabel: decreaseAriaLabel,
+    });
+    wrapper.appendChild(stepper.element);
+
+    return { wrapper, input, icon, stepper };
   }
 
   buildBetButton() {
@@ -868,6 +902,24 @@ export class ControlPanel extends EventTarget {
     this.setBetInputValue(next);
   }
 
+  adjustCurrencyInputValue(input, delta) {
+    if (!input) return "0.00000000";
+    const current = Number(this.parseBetValue(input.value));
+    const next = clampToZero(
+      (Number.isFinite(current) ? current : 0) + Number(delta || 0)
+    );
+    const formatted = this.formatBetValue(next);
+    input.value = formatted;
+    return formatted;
+  }
+
+  normalizeCurrencyInputValue(input) {
+    if (!input) return "0.00000000";
+    const formatted = this.formatBetValue(input.value);
+    input.value = formatted;
+    return formatted;
+  }
+
   scaleBetValue(factor) {
     const current = this.getBetValue();
     const next = clampToZero(current * factor);
@@ -1145,6 +1197,9 @@ export class ControlPanel extends EventTarget {
         !clickable
       );
     }
+    if (this.autoStopOnProfitField?.stepper?.setClickable) {
+      this.autoStopOnProfitField.stepper.setClickable(clickable);
+    }
   }
 
   setStopOnLossClickable(isClickable) {
@@ -1155,6 +1210,9 @@ export class ControlPanel extends EventTarget {
         "is-non-clickable",
         !clickable
       );
+    }
+    if (this.autoStopOnLossField?.stepper?.setClickable) {
+      this.autoStopOnLossField.stepper.setClickable(clickable);
     }
   }
 
