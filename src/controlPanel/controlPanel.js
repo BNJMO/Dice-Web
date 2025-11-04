@@ -170,13 +170,18 @@ export class ControlPanel extends EventTarget {
     this.betInput.setAttribute("aria-label", this.options.betAmountLabel);
     this.betInput.className = "control-bet-input";
     this.betInput.addEventListener("input", () => {
-      const numericValue = this.parseBetValue(this.betInput.value);
-      if (numericValue < 0) {
+      const rawValue = this.betInput.value;
+      const attemptedNegative = rawValue.includes("-");
+      if (attemptedNegative) {
         const formatted = this.formatBetValue(0);
         this.betInput.value = formatted;
         this.showBetAmountTooltip();
         this.dispatchBetValueChange(formatted);
         return;
+      }
+      const sanitized = this.sanitizeDecimalInputValue(rawValue);
+      if (sanitized !== rawValue) {
+        this.betInput.value = sanitized;
       }
       this.dispatchBetValueChange();
     });
@@ -590,6 +595,12 @@ export class ControlPanel extends EventTarget {
     input.spellcheck = false;
     input.className = "control-bet-input";
     input.value = "0.00000000";
+    input.addEventListener("input", () => {
+      const sanitized = this.sanitizeDecimalInputValue(input.value);
+      if (sanitized !== input.value) {
+        input.value = sanitized;
+      }
+    });
     wrapper.appendChild(input);
 
     const icon = document.createElement("img");
@@ -1080,14 +1091,54 @@ export class ControlPanel extends EventTarget {
 
   parseBetValue(value) {
     if (typeof value === "number") {
-      return value;
+      return clampToZero(value);
     }
     if (typeof value !== "string") {
       return 0;
     }
-    const sanitized = value.replace(/[^0-9.\-]+/g, "");
-    const numeric = Number(sanitized);
-    return Number.isFinite(numeric) ? numeric : 0;
+    const sanitized = this.sanitizeDecimalInputValue(value);
+    if (!sanitized) {
+      return 0;
+    }
+    const numeric = Number.parseFloat(sanitized);
+    return Number.isFinite(numeric) ? clampToZero(numeric) : 0;
+  }
+
+  sanitizeDecimalInputValue(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+
+    let sanitized = "";
+    let hasDecimal = false;
+
+    for (const char of value) {
+      if (char >= "0" && char <= "9") {
+        sanitized += char;
+        continue;
+      }
+      if (char === "." && !hasDecimal) {
+        hasDecimal = true;
+        sanitized += ".";
+      }
+    }
+
+    if (!sanitized) {
+      return "";
+    }
+
+    if (sanitized.startsWith(".")) {
+      sanitized = `0${sanitized}`;
+    }
+
+    if (hasDecimal) {
+      const [integerPart, fractionalPart = ""] = sanitized.split(".");
+      sanitized = `${integerPart}.${fractionalPart.slice(0, 8)}`;
+    } else {
+      sanitized = sanitized.replace(/^0+(?=\d)/, "") || "0";
+    }
+
+    return sanitized;
   }
 
   dispatchBetValueChange(value = this.betInput.value) {
