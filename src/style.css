@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap");
 @import "./game/gameStyle.css";
 @import "./controlPanel/controlPanelStyle.css";
 @import "./stepper/stepperStyle.css";
@@ -20,8 +20,8 @@
 }
 
 body {
-  font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Arial,
-    sans-serif;
+  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI",
+    Arial, sans-serif;
   background: #091b26;
   color: #ffffff;
   --app-body-vertical-padding: clamp(16px, 6vh, 80px);
