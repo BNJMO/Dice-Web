@@ -46,6 +46,7 @@ const SLIDER = {
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
   trackOffsetRatio: 0.05,
+  handleOffsetRatio: 0,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
@@ -1005,6 +1006,9 @@ export async function createGame(mount, opts = {}) {
     const trackOffsetRatio = Number.isFinite(SLIDER.trackOffsetRatio)
       ? SLIDER.trackOffsetRatio
       : 0;
+    const handleOffsetRatio = Number.isFinite(SLIDER.handleOffsetRatio)
+      ? SLIDER.handleOffsetRatio
+      : 0;
     const trackPaddingRatio = Number.isFinite(SLIDER.trackPaddingRatio)
       ? SLIDER.trackPaddingRatio
       : 0;
@@ -1038,6 +1042,7 @@ export async function createGame(mount, opts = {}) {
     sliderContainer.addChild(background);
 
     const trackCenterY = baseHeight * trackOffsetRatio;
+    const handleOffsetY = baseHeight * handleOffsetRatio;
     const trackPadding = Math.max(12, baseWidth * trackPaddingRatio);
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
     const trackStart = -trackLength / 2;
@@ -1236,7 +1241,7 @@ export async function createGame(mount, opts = {}) {
 
     function updateSliderVisuals() {
       const position = valueToPosition(sliderValue);
-      handle.position.set(position, trackCenterY);
+      handle.position.set(position, trackCenterY + handleOffsetY);
 
       leftBar.clear();
       rightBar.clear();
