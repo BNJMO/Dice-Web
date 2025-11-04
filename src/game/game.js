@@ -27,6 +27,11 @@ import diceSpriteUrl from "../../assets/sprites/Dice.png";
 import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.png";
 import rollModeIconUrl from "../../assets/sprites/RollOverIcon.png";
 import winChanceIconUrl from "../../assets/sprites/WinChanceIcon.png";
+import {
+  createSvgOverlay,
+  updateSvgOverlaySize,
+  createSvgText,
+} from "../utils/svgText.js";
 
 const PALETTE = {
   appBg: 0x020401,
@@ -339,6 +344,7 @@ export async function createGame(mount, opts = {}) {
   }
 
   const app = new Application();
+  let svgOverlay = null;
   try {
     const { width: startWidth, height: startHeight } = measureRootSize();
     await app.init({
@@ -351,6 +357,8 @@ export async function createGame(mount, opts = {}) {
 
     root.innerHTML = "";
     root.appendChild(app.canvas);
+    svgOverlay = createSvgOverlay(root);
+    updateSvgOverlaySize(svgOverlay, app.renderer.width, app.renderer.height);
   } catch (e) {
     console.error("PIXI init failed", e);
     throw e;
@@ -390,6 +398,7 @@ export async function createGame(mount, opts = {}) {
     fontFamily,
     tween,
     animationsEnabled,
+    svgOverlay,
   });
   ui.addChild(betHistory.container);
 
@@ -432,6 +441,7 @@ export async function createGame(mount, opts = {}) {
       }
     },
     animationsEnabled,
+    svgOverlay,
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -983,6 +993,7 @@ export async function createGame(mount, opts = {}) {
     getBottomPanelHeight = () => 0,
     onRollModeChange = () => {},
     animationsEnabled: initialAnimationsEnabled = true,
+    svgOverlay,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -990,6 +1001,9 @@ export async function createGame(mount, opts = {}) {
       dragMaxSpeed = 0.8,
       dragCooldownMs = 200,
     } = soundConfig ?? {};
+    if (!svgOverlay) {
+      throw new Error("createSliderUi requires an SVG overlay element.");
+    }
     const sliderContainer = new Container();
     sliderContainer.sortableChildren = true;
     sliderContainer.eventMode = "static";
@@ -1064,26 +1078,23 @@ export async function createGame(mount, opts = {}) {
     sliderContainer.addChild(tickContainer);
 
     const tickValues = [0, 25, 50, 75, 100];
+    const baseTickFontSize = Math.max(14, baseHeight * SLIDER.tickTextSizeRatio);
     const tickItems = tickValues.map((value) => {
       const item = new Container();
       item.eventMode = "none";
-      const label = new Text({
+      const label = createSvgText(svgOverlay, {
         text: `${value}`,
-        style: {
-          fill: 0xffffff,
-          fontFamily,
-          fontSize: Math.max(14, baseHeight * SLIDER.tickTextSizeRatio),
-          fontWeight: "600",
-          align: "center",
-        },
+        fill: "#ffffff",
+        fontFamily,
+        fontWeight: "600",
+        fontSize: baseTickFontSize,
+        anchor: "middle",
+        baseline: "text-after-edge",
+        localY: SLIDER.tickPadding,
       });
-      label.anchor.set(0.5, 1);
-      label.position.set(0, SLIDER.tickPadding);
-
-      item.addChild(label);
       tickContainer.addChild(item);
 
-      return { container: item, label, value };
+      return { container: item, label, value, baseFontSize: baseTickFontSize };
     });
 
     let handle;
@@ -1230,12 +1241,13 @@ export async function createGame(mount, opts = {}) {
 
     function updateTickLayout() {
       const labelOffset = Math.max(12, barHeight * 0.45);
-      tickItems.forEach(({ container, value }) => {
+      tickItems.forEach(({ container, value, label }) => {
         const ratio = (clampRange(value) - SLIDER.rangeMin) / sliderRange;
         const tickTrackStart = trackStart - tickEdgePadding;
         const tickTrackLength = sliderTrackLength + tickEdgePadding * 2;
         const x = tickTrackStart + ratio * tickTrackLength;
         container.position.set(x, trackCenterY - barHeight / 2 - labelOffset);
+        label.sync(container);
       });
     }
 
@@ -1779,6 +1791,11 @@ export async function createGame(mount, opts = {}) {
       const scale = base > 0 ? Math.min(1, availableWidth / base) : 1;
       sliderContainer.scale.set(scale);
 
+      tickItems.forEach(({ label, baseFontSize, container }) => {
+        const fontSize = (baseFontSize ?? baseTickFontSize) * scale;
+        label.setFontSize(fontSize);
+      });
+
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
       const bottomPaddingRatio = 0.5;
@@ -1799,6 +1816,9 @@ export async function createGame(mount, opts = {}) {
         app.renderer.height - bottomPaddingCandidate
       );
       sliderContainer.position.set(app.renderer.width / 2, sliderY);
+      tickItems.forEach(({ label, container }) => {
+        label.sync(container);
+      });
     }
 
     updateTickLayout();
@@ -1834,6 +1854,7 @@ export async function createGame(mount, opts = {}) {
         app.stage.off("pointerup", stagePointerUp);
         app.stage.off("pointerupoutside", stagePointerUp);
         cancelDiceAnimations();
+        tickItems.forEach(({ label }) => label.destroy());
       },
       setAnimationsEnabled: (value) => setDiceAnimationsEnabled(value),
     };
@@ -1988,6 +2009,7 @@ export async function createGame(mount, opts = {}) {
     sliderUi.destroy();
     betHistory.destroy();
     app.destroy(true);
+    svgOverlay?.remove?.();
     if (app.canvas?.parentNode === root) root.removeChild(app.canvas);
   }
 
@@ -2013,6 +2035,7 @@ export async function createGame(mount, opts = {}) {
     const resizedWidth = Math.max(1, Math.floor(width));
     const resizedHeight = Math.max(1, Math.floor(height));
     app.renderer.resize(resizedWidth, resizedHeight);
+    updateSvgOverlaySize(svgOverlay, app.renderer.width, app.renderer.height);
     app.stage.hitArea = new Rectangle(
       0,
       0,

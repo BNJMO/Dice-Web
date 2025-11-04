@@ -1,5 +1,6 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import Ease from "../ease.js";
+import { createSvgText } from "../utils/svgText.js";
 
 const DEFAULT_HISTORY_CONFIG = {
   topPadding: 25,
@@ -97,9 +98,14 @@ export function createBetHistory({
   colorOverrides = {},
   cssRoot,
   animationsEnabled: initialAnimationsEnabled = true,
+  svgOverlay,
 } = {}) {
   if (!app) {
     throw new Error("createBetHistory requires a PIXI application instance.");
+  }
+
+  if (!svgOverlay) {
+    throw new Error("createBetHistory requires an SVG overlay element.");
   }
 
   const config = { ...DEFAULT_HISTORY_CONFIG, ...(historyConfig ?? {}) };
@@ -158,18 +164,14 @@ export function createBetHistory({
     const background = new Graphics();
     container.addChild(background);
 
-    const text = new Text({
+    const text = createSvgText(svgOverlay, {
       text: label,
-      style: {
-        fill: isWin ? colors.winText : colors.lossText,
-        fontFamily,
-        fontSize: 20,
-        fontWeight: "700",
-        align: "center",
-      },
+      fill: isWin ? colors.winText : colors.lossText,
+      fontFamily,
+      fontWeight: "700",
+      anchor: "middle",
+      baseline: "middle",
     });
-    text.anchor.set(0.5);
-    container.addChild(text);
 
     const entry = {
       container,
@@ -184,19 +186,28 @@ export function createBetHistory({
           .roundRect(-width / 2, -height / 2, width, height, radius)
           .fill(isWin ? colors.winFill : colors.lossFill);
         const fontSize = Math.round(Math.max(12, height * config.fontSizeRatio));
-        if (text.style.fontSize !== fontSize) {
-          text.style.fontSize = fontSize;
-        }
-        text.style.fill = isWin ? colors.winText : colors.lossText;
+        text.setFontSize(fontSize);
+        text.setFill(isWin ? colors.winText : colors.lossText);
+        text.setFontFamily(fontFamily);
+        text.setFontWeight("700");
       },
       setLabel(value) {
-        text.text = value;
+        text.setText(value);
       },
       stopTween() {
         if (entry.cancelTween) {
           entry.cancelTween();
           entry.cancelTween = null;
         }
+      },
+      syncLabel() {
+        text.sync(container);
+      },
+      setOpacity(value) {
+        text.setOpacity(value);
+      },
+      destroy() {
+        text.destroy();
       },
     };
 
@@ -217,6 +228,8 @@ export function createBetHistory({
     if (!shouldAnimate) {
       container.position.set(targetX, 0);
       container.alpha = targetAlpha;
+      entry.syncLabel();
+      entry.setOpacity(targetAlpha);
       return;
     }
 
@@ -227,10 +240,14 @@ export function createBetHistory({
         container.position.x = startX + (targetX - startX) * p;
         container.position.y = 0;
         container.alpha = startAlpha + (targetAlpha - startAlpha) * p;
+        entry.syncLabel();
+        entry.setOpacity(container.alpha);
       },
       complete: () => {
         container.position.set(targetX, 0);
         container.alpha = targetAlpha;
+        entry.syncLabel();
+        entry.setOpacity(targetAlpha);
         entry.cancelTween = null;
       },
     });
@@ -253,6 +270,8 @@ export function createBetHistory({
       container.alpha = 0;
       historyContainer.removeChild(container);
       activeEntries.delete(entry);
+      entry.setOpacity(0);
+      entry.destroy();
       return;
     }
 
@@ -262,11 +281,15 @@ export function createBetHistory({
       update: (p) => {
         container.position.x = startX + (offscreenX - startX) * p;
         container.alpha = startAlpha * (1 - p);
+        entry.syncLabel();
+        entry.setOpacity(container.alpha);
       },
       complete: () => {
         container.alpha = 0;
         historyContainer.removeChild(container);
         activeEntries.delete(entry);
+        entry.setOpacity(0);
+        entry.destroy();
         entry.cancelTween = null;
       },
     });
@@ -304,8 +327,10 @@ export function createBetHistory({
     entry.applySize({ width: bubbleWidth, height: bubbleHeight });
     entry.container.position.set(bubbleWidth + bubbleSpacing, 0);
     entry.container.alpha = 0;
+    entry.setOpacity(0);
 
     historyContainer.addChild(entry.container);
+    entry.syncLabel();
     entries = [entry, ...entries];
 
     moveEntry(entry, 0, {
@@ -337,6 +362,7 @@ export function createBetHistory({
     activeEntries.forEach((entry) => {
       entry.stopTween();
       historyContainer.removeChild(entry.container);
+      entry.destroy();
     });
     entries = [];
     activeEntries.clear();
