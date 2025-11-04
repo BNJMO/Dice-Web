@@ -44,6 +44,7 @@
   background: #091b26;
   padding: 6px;
   border-radius: 40px;
+  margin-bottom: 4px;
 }
 
 .control-toggle-btn {
@@ -116,6 +117,7 @@
   min-width: 0;
   box-shadow: var(--control-elevation-shadow);
   position: relative;
+  margin-bottom: 4px;
 }
 
 .control-bet-box.is-non-clickable {
@@ -502,7 +504,7 @@
   --control-bet-stepper-offset: 65px;
   --control-bet-infinity-offset: 10px;
   --control-bet-icon-offset: 54px;
-  padding: 14px var(--control-bet-padding-right) 14px 16px;
+  padding: 14px var(--control-bet-padding-right) 14px 8px;
 }
 
 .auto-number-input {
@@ -670,7 +672,7 @@
   min-width: 0;
   --control-bet-padding-right: clamp(68px, 26%, 96px);
   --control-bet-stepper-offset: clamp(42px, 16%, 56px);
-  padding: 12px var(--control-bet-padding-right) 12px 14px;
+  padding: 12px var(--control-bet-padding-right) 12px 8px;
 }
 
 .auto-advanced-summary-row {
@@ -703,7 +705,7 @@
   --control-bet-padding-right: clamp(76px, 28%, 116px);
   --control-bet-stepper-offset: clamp(44px, 18%, 68px);
   --control-bet-icon-offset: clamp(18px, 8%, 28px);
-  padding: 14px var(--control-bet-padding-right) 14px 16px;
+  padding: 14px var(--control-bet-padding-right) 14px 8px;
 }
 
 .auto-advanced-input.is-non-clickable,
