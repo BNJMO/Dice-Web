@@ -54,7 +54,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   border-radius: 40px;
-  padding: 10px 0;
+  padding: 14px 0;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
@@ -97,13 +97,13 @@
 .control-row-label {
   color: #92aab7;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 900;
 }
 
 .control-row-value {
   color: #92aab7;
   font-size: 1rem;
-  font-weight: 400;
+  font-weight: 900;
 }
 
 .control-bet-box {
@@ -254,7 +254,7 @@
   --control-bet-padding-right: clamp(56px, 20%, 118px);
   --control-bet-stepper-offset: clamp(30px, 16%, 56px);
   --control-bet-icon-offset: clamp(10px, 6%, 18px);
-  padding: 14px var(--control-bet-padding-right) 14px 16px;
+  padding: 14px var(--control-bet-padding-right) 14px 8px;
   transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -275,10 +275,11 @@
 .control-bet-input-icon {
   position: absolute;
   right: var(--control-bet-icon-offset);
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   opacity: 0.85;
   pointer-events: none;
+  opacity: 1.0;
 }
 
 .control-bet-action {
@@ -286,9 +287,9 @@
   background: #223845;
   color: #f5f6ff;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1.2rem;
   border-radius: 8px;
-  padding: 12px 18px;
+  padding: 12px 16px;
   flex: 0 0 auto;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
@@ -327,9 +328,9 @@
   border-radius: 8px;
   background: linear-gradient(135deg, #eaff00 0%, #eaff00 100%);
   color: #091b26;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  padding: 16px;
+  padding: 14px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: var(--control-elevation-shadow-strong);
@@ -387,7 +388,7 @@
   justify-content: space-between;
   background: #223845;
   border-radius: 8px;
-  padding: 14px 18px;
+  padding: 14px 8px;
   box-shadow: var(--control-elevation-shadow);
 }
 
@@ -605,7 +606,7 @@
 .auto-advanced-strategy-row {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   background: #142733;
   border-radius: 10px;
   padding: 0;
@@ -736,7 +737,7 @@
 
 .control-bet-input-field.is-non-clickable {
   background: #091b26;
-  border-color: #0d1b24;
+  border-color: #223845;
   box-shadow: none;
   color: #4c5d68;
   cursor: not-allowed;
@@ -791,7 +792,7 @@
 
   .control-bet-input-field {
     --control-bet-padding-right: max(64px, 24%);
-    padding: 12px var(--control-bet-padding-right) 12px 14px;
+    padding: 12px var(--control-bet-padding-right) 12px 12px;
     border-radius: 12px;
   }
 
