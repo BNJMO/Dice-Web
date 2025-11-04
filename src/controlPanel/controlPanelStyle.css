@@ -417,7 +417,7 @@
 .control-profit-icon {
   width: 20px;
   height: 20px;
-  opacity: 1.0;
+  opacity: 1;
 }
 
 .control-panel-footer {
@@ -452,6 +452,7 @@
 
 .control-animations-label {
   font-size: 0.95rem;
+  color: #92aab7;
 }
 
 .control-animations-switch {
@@ -493,9 +494,9 @@
 }
 
 .control-section-label {
-  color: #9a9da6;
+  color: #92aab7;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 900;
   padding-left: 4px;
 }
 
