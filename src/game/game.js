@@ -84,6 +84,8 @@ const DICE_LABEL_SHADOW_COLORS = {
   target: 0x000000,
 };
 
+const MAX_RENDERER_RESOLUTION = 3;
+
 function numberToHexColorString(value) {
   const normalized = ((value ?? 0) >>> 0) & 0xffffff;
   return `#${normalized.toString(16).padStart(6, "0")}`;
@@ -101,6 +103,44 @@ function tween(app, { duration = 300, update, complete, ease = (t) => t }) {
   };
   app.ticker.add(step);
   return () => app.ticker.remove(step);
+}
+
+function getRendererResolution() {
+  if (typeof window === "undefined") {
+    return 1;
+  }
+
+  const dpr = window.devicePixelRatio ?? 1;
+  return Math.max(1, Math.min(dpr, MAX_RENDERER_RESOLUTION));
+}
+
+function createDevicePixelRatioWatcher(callback) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => {};
+  }
+
+  let mediaQuery = null;
+
+  const handleChange = () => {
+    callback();
+    setupWatcher();
+  };
+
+  const setupWatcher = () => {
+    if (mediaQuery) {
+      mediaQuery.removeEventListener("change", handleChange);
+    }
+
+    const dpr = window.devicePixelRatio ?? 1;
+    mediaQuery = window.matchMedia(`(resolution: ${dpr}dppx)`);
+    mediaQuery.addEventListener("change", handleChange);
+  };
+
+  setupWatcher();
+
+  return () => {
+    mediaQuery?.removeEventListener("change", handleChange);
+  };
 }
 
 function lerpColor(from, to, t) {
@@ -302,6 +342,9 @@ export async function createGame(mount, opts = {}) {
     return { width, height };
   }
 
+  let removeWindowResizeListener = () => {};
+  let stopDevicePixelRatioWatcher = () => {};
+
   let backgroundTexture = null;
   if (backgroundTexturePath) {
     try {
@@ -338,6 +381,7 @@ export async function createGame(mount, opts = {}) {
     console.warn("loadSoundEffects failed (non-fatal)", e);
   }
 
+  let rendererResolution = getRendererResolution();
   const app = new Application();
   try {
     const { width: startWidth, height: startHeight } = measureRootSize();
@@ -346,7 +390,7 @@ export async function createGame(mount, opts = {}) {
       width: startWidth,
       height: startHeight,
       antialias: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      resolution: rendererResolution,
     });
 
     root.innerHTML = "";
@@ -1984,6 +2028,12 @@ export async function createGame(mount, opts = {}) {
     try {
       panelResizeObserver?.disconnect?.();
     } catch {}
+    try {
+      removeWindowResizeListener?.();
+    } catch {}
+    try {
+      stopDevicePixelRatioWatcher?.();
+    } catch {}
     bottomPanelUi?.destroy?.();
     sliderUi.destroy();
     betHistory.destroy();
@@ -2012,7 +2062,16 @@ export async function createGame(mount, opts = {}) {
     const { width, height } = measureRootSize();
     const resizedWidth = Math.max(1, Math.floor(width));
     const resizedHeight = Math.max(1, Math.floor(height));
-    app.renderer.resize(resizedWidth, resizedHeight);
+    const desiredResolution = getRendererResolution();
+    const resolutionChanged = desiredResolution !== rendererResolution;
+    rendererResolution = desiredResolution;
+
+    app.renderer.resize(resizedWidth, resizedHeight, rendererResolution);
+    if (resolutionChanged) {
+      try {
+        app.renderer.events?.resolutionChange?.(rendererResolution);
+      } catch {}
+    }
     app.stage.hitArea = new Rectangle(
       0,
       0,
@@ -2025,6 +2084,16 @@ export async function createGame(mount, opts = {}) {
     bottomPanelUi?.layout?.();
     sliderUi.layout();
   }
+
+  if (typeof window !== "undefined") {
+    const handleWindowResize = () => resizeToContainer();
+    window.addEventListener("resize", handleWindowResize);
+    removeWindowResizeListener = () => {
+      window.removeEventListener("resize", handleWindowResize);
+    };
+  }
+
+  stopDevicePixelRatioWatcher = createDevicePixelRatioWatcher(() => resizeToContainer());
 
   resizeToContainer();
   setTimeout(resizeToContainer, 0);
