@@ -11,12 +11,12 @@
 }
 
 :root {
-  --control-elevation-shadow: 0 4px 6px rgba(7, 23, 33, 1),
-    0 0 0 1px rgba(34, 56, 69, 0.4);
+  --control-elevation-shadow: 0 4px 4px rgba(7, 23, 33, 0.7),
+    0 0 0 0px rgba(34, 56, 69, 0.4);
   --control-elevation-shadow-strong: 0 4px 10px rgba(7, 23, 33, 1),
-    0 0 0 1px rgba(34, 56, 69, 0.45);
+    0 0 0 0px rgba(34, 56, 69, 0.45);
   --control-elevation-shadow-hover: 0 4px 14px rgba(7, 23, 33, 1),
-    0 0 0 1px rgba(34, 56, 69, 0.5);
+    0 0 0 0px rgba(34, 56, 69, 0.5);
 }
 
 body {
