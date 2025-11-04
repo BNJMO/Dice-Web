@@ -830,7 +830,8 @@ export class ControlPanel extends EventTarget {
 
     if (decimalIndex !== -1) {
       const whole = value.slice(0, decimalIndex);
-      const fractional = value.slice(decimalIndex + 1).replace(/\./g, "");
+      let fractional = value.slice(decimalIndex + 1).replace(/\./g, "");
+      fractional = fractional.slice(0, 2);
       value = `${whole}.${fractional}`;
     }
 
@@ -845,6 +846,16 @@ export class ControlPanel extends EventTarget {
       }
       input.value = "";
       return "";
+    }
+
+    const hasTrailingDecimal = value.endsWith(".");
+    if (hasTrailingDecimal) {
+      if (enforceMinimum) {
+        value = value.slice(0, -1) || "0";
+      } else {
+        input.value = value;
+        return value;
+      }
     }
 
     let numeric = Number.parseFloat(value);
