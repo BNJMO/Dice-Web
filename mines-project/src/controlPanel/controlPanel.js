@@ -490,7 +490,7 @@ export class ControlPanel extends EventTarget {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.className = "control-bet-input";
-    input.value = "0";
+    input.value = "0.0";
     field.appendChild(input);
 
     const icon = document.createElement("img");
@@ -519,11 +519,15 @@ export class ControlPanel extends EventTarget {
     });
 
     input.addEventListener("input", () => {
-      this.dispatchStrategyValueChange(key, input.value);
+      const value = this.sanitizeStrategyInput(input);
+      this.dispatchStrategyValueChange(key, value);
     });
     input.addEventListener("blur", () => {
-      this.dispatchStrategyValueChange(key, input.value);
+      const value = this.sanitizeStrategyInput(input, { enforceMinimum: true });
+      this.dispatchStrategyValueChange(key, value);
     });
+
+    this.sanitizeStrategyInput(input);
 
     return row;
   }
@@ -818,6 +822,45 @@ export class ControlPanel extends EventTarget {
     this.autoNumberOfBetsInput.value = String(numeric);
   }
 
+  sanitizeStrategyInput(input, { enforceMinimum = false } = {}) {
+    if (!input) return "";
+
+    let value = input.value.replace(/[^\d.]/g, "");
+    const decimalIndex = value.indexOf(".");
+
+    if (decimalIndex !== -1) {
+      const whole = value.slice(0, decimalIndex);
+      const fractional = value.slice(decimalIndex + 1).replace(/\./g, "");
+      value = `${whole}.${fractional}`;
+    }
+
+    if (value.startsWith(".")) {
+      value = `0${value}`;
+    }
+
+    if (!value) {
+      if (enforceMinimum) {
+        input.value = "0.0";
+        return "0.0";
+      }
+      input.value = "";
+      return "";
+    }
+
+    let numeric = Number.parseFloat(value);
+    if (!Number.isFinite(numeric)) {
+      numeric = 0;
+    }
+
+    numeric = Math.max(0, numeric);
+
+    const decimals = this.getStrategyDecimalPlacesFromString(value);
+    const formatted = this.formatStrategyValue(numeric, decimals);
+
+    input.value = formatted;
+    return formatted;
+  }
+
   incrementNumberOfBets(delta) {
     if (!this.autoNumberOfBetsInput) return;
     const current = Number(this.autoNumberOfBetsInput.value) || 0;
@@ -986,6 +1029,20 @@ export class ControlPanel extends EventTarget {
         detail: { key: key === "win" ? "win" : "loss", value },
       })
     );
+  }
+
+  getStrategyDecimalPlacesFromString(value) {
+    if (!value) return 1;
+    const [, decimals = ""] = String(value).split(".");
+    const length = decimals.replace(/[^0-9]/g, "").length;
+    if (length <= 0) return 1;
+    return Math.max(1, Math.min(2, length));
+  }
+
+  formatStrategyValue(value, decimals = 1) {
+    const safeDecimals = Math.max(1, Math.min(2, decimals || 1));
+    const clamped = Math.max(0, Number.isFinite(value) ? value : 0);
+    return clamped.toFixed(safeDecimals);
   }
 
   dispatchStopOnProfitChange(value) {

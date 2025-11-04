@@ -511,11 +511,11 @@ export class ControlPanel extends EventTarget {
 
     const input = document.createElement("input");
     input.type = "text";
-    input.inputMode = "numeric";
+    input.inputMode = "decimal";
     input.autocomplete = "off";
     input.spellcheck = false;
     input.className = "control-bet-input";
-    input.value = "0";
+    input.value = "0.0";
     field.appendChild(input);
 
     const icon = document.createElement("img");
@@ -906,29 +906,50 @@ export class ControlPanel extends EventTarget {
   sanitizeStrategyInput(input, { enforceMinimum = false } = {}) {
     if (!input) return "";
 
-    const digits = input.value.replace(/\D+/g, "");
-    const trimmed = digits.replace(/^0+/, "");
+    let value = input.value.replace(/[^\d.]/g, "");
+    const decimalIndex = value.indexOf(".");
 
-    let sanitized = trimmed;
-
-    if (!sanitized) {
-      sanitized = enforceMinimum ? "1" : digits ? "0" : "";
+    if (decimalIndex !== -1) {
+      const whole = value.slice(0, decimalIndex);
+      const fractional = value.slice(decimalIndex + 1).replace(/\./g, "");
+      value = `${whole}.${fractional}`;
     }
 
-    if (enforceMinimum && sanitized) {
-      sanitized = String(Math.max(1, Number.parseInt(sanitized, 10) || 0));
+    if (value.startsWith(".")) {
+      value = `0${value}`;
     }
 
-    input.value = sanitized;
-    return sanitized;
+    if (!value) {
+      if (enforceMinimum) {
+        input.value = "0.0";
+        return "0.0";
+      }
+      input.value = "";
+      return "";
+    }
+
+    let numeric = Number.parseFloat(value);
+    if (!Number.isFinite(numeric)) {
+      numeric = 0;
+    }
+
+    numeric = Math.max(0, numeric);
+
+    const decimals = this.getStrategyDecimalPlacesFromString(value);
+    const formatted = this.formatStrategyValue(numeric, decimals);
+
+    input.value = formatted;
+    return formatted;
   }
 
   adjustStrategyValue(key, delta) {
     const input = key === "win" ? this.onWinInput : this.onLossInput;
     if (!input) return;
-    const current = Number.parseInt(input.value.replace(/\D+/g, ""), 10) || 0;
-    const next = Math.max(1, current + delta);
-    input.value = String(next);
+    const current = Number.parseFloat(input.value) || 0;
+    const decimals = this.getStrategyDecimalPlacesFromString(input.value);
+    const step = 0.1;
+    const next = Math.max(0, current + delta * step);
+    input.value = this.formatStrategyValue(next, decimals);
     this.dispatchStrategyValueChange(key, input.value);
   }
 
@@ -1121,6 +1142,20 @@ export class ControlPanel extends EventTarget {
         detail: { key: key === "win" ? "win" : "loss", value },
       })
     );
+  }
+
+  getStrategyDecimalPlacesFromString(value) {
+    if (!value) return 1;
+    const [, decimals = ""] = String(value).split(".");
+    const length = decimals.replace(/[^0-9]/g, "").length;
+    if (length <= 0) return 1;
+    return Math.max(1, Math.min(2, length));
+  }
+
+  formatStrategyValue(value, decimals = 1) {
+    const safeDecimals = Math.max(1, Math.min(2, decimals || 1));
+    const clamped = Math.max(0, Number.isFinite(value) ? value : 0);
+    return clamped.toFixed(safeDecimals);
   }
 
   dispatchStopOnProfitChange(value) {
