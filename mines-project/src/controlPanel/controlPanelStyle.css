@@ -589,7 +589,9 @@
 }
 
 .auto-currency-field {
-  --control-bet-padding-right: 56px;
+  --control-bet-padding-right: clamp(76px, 28%, 116px);
+  --control-bet-stepper-offset: clamp(44px, 18%, 68px);
+  --control-bet-icon-offset: clamp(18px, 8%, 28px);
   padding: 14px var(--control-bet-padding-right) 14px 16px;
 }
 
