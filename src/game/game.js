@@ -89,6 +89,19 @@ function numberToHexColorString(value) {
   return `#${normalized.toString(16).padStart(6, "0")}`;
 }
 
+function getDevicePixelRatio() {
+  if (typeof window === "undefined") {
+    return 1;
+  }
+
+  const ratio = window.devicePixelRatio;
+  if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio <= 0) {
+    return 1;
+  }
+
+  return ratio;
+}
+
 function tween(app, { duration = 300, update, complete, ease = (t) => t }) {
   const start = performance.now();
   const step = () => {
@@ -295,6 +308,47 @@ export async function createGame(mount, opts = {}) {
     root.style.maxWidth = "100%";
   }
 
+  const managedTexts = new Set();
+  const resolutionWatchers = [];
+
+  function syncTextResolutionFor(text, resolution = getDevicePixelRatio()) {
+    if (!text) {
+      return;
+    }
+
+    if (text.destroyed) {
+      managedTexts.delete(text);
+      return;
+    }
+
+    if (text.resolution !== resolution) {
+      text.resolution = resolution;
+      text.updateText?.();
+    }
+  }
+
+  function registerTextInstance(text) {
+    if (!text) {
+      return text;
+    }
+
+    if (typeof text.once === "function") {
+      text.once("destroyed", () => managedTexts.delete(text));
+    }
+
+    managedTexts.add(text);
+    syncTextResolutionFor(text);
+    return text;
+  }
+
+  function createManagedText(options) {
+    return registerTextInstance(new Text(options));
+  }
+
+  function syncAllManagedTextResolutions(resolution = getDevicePixelRatio()) {
+    managedTexts.forEach((text) => syncTextResolutionFor(text, resolution));
+  }
+
   function measureRootSize() {
     const rect = root.getBoundingClientRect();
     const width = Math.max(1, rect.width || root.clientWidth || initialSize);
@@ -346,7 +400,8 @@ export async function createGame(mount, opts = {}) {
       width: startWidth,
       height: startHeight,
       antialias: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      autoDensity: true,
+      resolution: getDevicePixelRatio(),
     });
 
     root.innerHTML = "";
@@ -355,6 +410,10 @@ export async function createGame(mount, opts = {}) {
     console.error("PIXI init failed", e);
     throw e;
   }
+
+  const initialResolution = getDevicePixelRatio();
+  Text.defaultResolution = initialResolution;
+  syncAllManagedTextResolutions(initialResolution);
 
   const scene = new Container();
   const ui = new Container();
@@ -390,6 +449,7 @@ export async function createGame(mount, opts = {}) {
     fontFamily,
     tween,
     animationsEnabled,
+    createText: createManagedText,
   });
   ui.addChild(betHistory.container);
 
@@ -432,6 +492,7 @@ export async function createGame(mount, opts = {}) {
       }
     },
     animationsEnabled,
+    createText: createManagedText,
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -906,7 +967,7 @@ export async function createGame(mount, opts = {}) {
       )
       .fill(0x323232);
 
-    const multiplierText = new Text({
+    const multiplierText = createManagedText({
       text: "1.00×",
       style: {
         fill: PALETTE.winPopupMultiplierText,
@@ -921,7 +982,7 @@ export async function createGame(mount, opts = {}) {
 
     const amountRow = new Container();
 
-    const amountText = new Text({
+    const amountText = createManagedText({
       text: "0.0",
       style: {
         fill: 0xffffff,
@@ -938,7 +999,7 @@ export async function createGame(mount, opts = {}) {
     const coinRadius = 16;
     const coinBg = new Graphics();
     coinBg.circle(0, 0, coinRadius).fill(0xf6a821);
-    const coinText = new Text({
+    const coinText = createManagedText({
       text: "₿",
       style: {
         fill: 0xffffff,
@@ -982,8 +1043,13 @@ export async function createGame(mount, opts = {}) {
     onChange = () => {},
     getBottomPanelHeight = () => 0,
     onRollModeChange = () => {},
+    createText,
     animationsEnabled: initialAnimationsEnabled = true,
   } = {}) {
+    const makeText =
+      typeof createText === "function"
+        ? (options) => createText(options)
+        : (options) => new Text(options);
     const {
       dragMinPitch = 0.9,
       dragMaxPitch = 1.4,
@@ -1067,7 +1133,7 @@ export async function createGame(mount, opts = {}) {
     const tickItems = tickValues.map((value) => {
       const item = new Container();
       item.eventMode = "none";
-      const label = new Text({
+      const label = makeText({
         text: `${value}`,
         style: {
           fill: 0xffffff,
@@ -1136,7 +1202,7 @@ export async function createGame(mount, opts = {}) {
     diceSprite.eventMode = "none";
     diceContainer.addChild(diceSprite);
 
-    const diceLabel = new Text({
+    const diceLabel = makeText({
       text: "",
       style: {
         fill: DICE_LABEL_COLORS.default,
@@ -1834,6 +1900,7 @@ export async function createGame(mount, opts = {}) {
         app.stage.off("pointerup", stagePointerUp);
         app.stage.off("pointerupoutside", stagePointerUp);
         cancelDiceAnimations();
+        sliderContainer.destroy({ children: true });
       },
       setAnimationsEnabled: (value) => setDiceAnimationsEnabled(value),
     };
@@ -1984,10 +2051,26 @@ export async function createGame(mount, opts = {}) {
     try {
       panelResizeObserver?.disconnect?.();
     } catch {}
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", windowResizeHandler);
+      window.removeEventListener("orientationchange", windowResizeHandler);
+    }
+    resolutionWatchers.forEach(({ media, listener, modern }) => {
+      if (!media) {
+        return;
+      }
+      if (modern && typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", listener);
+      } else if (typeof media.removeListener === "function") {
+        media.removeListener(listener);
+      }
+    });
+    resolutionWatchers.length = 0;
     bottomPanelUi?.destroy?.();
     sliderUi.destroy();
     betHistory.destroy();
     app.destroy(true);
+    managedTexts.clear();
     if (app.canvas?.parentNode === root) root.removeChild(app.canvas);
   }
 
@@ -2012,7 +2095,15 @@ export async function createGame(mount, opts = {}) {
     const { width, height } = measureRootSize();
     const resizedWidth = Math.max(1, Math.floor(width));
     const resizedHeight = Math.max(1, Math.floor(height));
+    const resolution = getDevicePixelRatio();
+    if (app.renderer.resolution !== resolution) {
+      app.renderer.resolution = resolution;
+    }
+    if (Text.defaultResolution !== resolution) {
+      Text.defaultResolution = resolution;
+    }
     app.renderer.resize(resizedWidth, resizedHeight);
+    syncAllManagedTextResolutions(resolution);
     app.stage.hitArea = new Rectangle(
       0,
       0,
@@ -2028,6 +2119,52 @@ export async function createGame(mount, opts = {}) {
 
   resizeToContainer();
   setTimeout(resizeToContainer, 0);
+
+  const windowResizeHandler = () => resizeToContainer();
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", windowResizeHandler, { passive: true });
+    window.addEventListener("orientationchange", windowResizeHandler, {
+      passive: true,
+    });
+
+    if (typeof window.matchMedia === "function") {
+      const resolutionBreakpoints = [
+        0.5,
+        0.75,
+        1,
+        1.25,
+        1.5,
+        1.75,
+        2,
+        2.5,
+        3,
+        4,
+        5,
+      ];
+      resolutionBreakpoints.forEach((value) => {
+        const media = window.matchMedia(`(resolution: ${value}dppx)`);
+        if (!media) {
+          return;
+        }
+        const listener = () => resizeToContainer();
+        if (typeof media.addEventListener === "function") {
+          media.addEventListener("change", listener);
+          resolutionWatchers.push({
+            media,
+            listener,
+            modern: true,
+          });
+        } else if (typeof media.addListener === "function") {
+          media.addListener(listener);
+          resolutionWatchers.push({
+            media,
+            listener,
+            modern: false,
+          });
+        }
+      });
+    }
+  }
 
   const ro = new ResizeObserver(() => resizeToContainer());
   ro.observe(root);
