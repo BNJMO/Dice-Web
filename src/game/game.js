@@ -22,7 +22,9 @@ import sliderUpSoundUrl from "../../assets/sounds/SliderUp.wav";
 import sliderDragSoundUrl from "../../assets/sounds/SliderDrag.wav";
 import toggleRollModeSoundUrl from "../../assets/sounds/ToggleRollMode.wav";
 import sliderBackgroundUrl from "../../assets/sprites/SliderBackground.svg";
+import sliderBackgroundPortraitUrl from "../../assets/sprites/SliderBackground_Portrait.svg";
 import sliderHandleUrl from "../../assets/sprites/SliderHandle.svg";
+import sliderHandlePortraitUrl from "../../assets/sprites/SliderHandle_Portrait.svg";
 import diceSpriteUrl from "../../assets/sprites/Dice.svg";
 import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.svg";
 import rollModeIconUrl from "../../assets/sprites/RollOverIcon.svg";
@@ -380,7 +382,9 @@ export async function createGame(mount, opts = {}) {
   }
 
   let sliderBackgroundTexture = null;
+  let sliderBackgroundPortraitTexture = null;
   let sliderHandleTexture = null;
+  let sliderHandlePortraitTexture = null;
   let diceTexture = null;
   try {
     sliderBackgroundTexture = await loadTexture(sliderBackgroundUrl);
@@ -389,9 +393,23 @@ export async function createGame(mount, opts = {}) {
   }
 
   try {
+    sliderBackgroundPortraitTexture = await loadTexture(
+      sliderBackgroundPortraitUrl
+    );
+  } catch (e) {
+    console.warn("Failed to load portrait slider background", e);
+  }
+
+  try {
     sliderHandleTexture = await loadTexture(sliderHandleUrl);
   } catch (e) {
     console.warn("Failed to load slider handle", e);
+  }
+
+  try {
+    sliderHandlePortraitTexture = await loadTexture(sliderHandlePortraitUrl);
+  } catch (e) {
+    console.warn("Failed to load portrait slider handle", e);
   }
 
   try {
@@ -474,35 +492,120 @@ export async function createGame(mount, opts = {}) {
   let panelResizeObserver = null;
   let bottomPanelUi = null;
 
-  const sliderUi = createSliderUi({
-    textures: {
-      background: sliderBackgroundTexture,
-      handle: sliderHandleTexture,
+  let orientationMediaQuery = null;
+  let removeOrientationListener = () => {};
+  let isPortraitLayout = false;
+
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    orientationMediaQuery = window.matchMedia("(orientation: portrait)");
+  }
+
+  function shouldUsePortraitLayout(dimensions = {}) {
+    if (orientationMediaQuery) {
+      return orientationMediaQuery.matches;
+    }
+
+    const { width, height } = dimensions;
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return height >= width;
+    }
+
+    if (typeof window !== "undefined") {
+      const { innerWidth, innerHeight } = window;
+      if (Number.isFinite(innerWidth) && Number.isFinite(innerHeight) && innerWidth > 0 && innerHeight > 0) {
+        return innerHeight >= innerWidth;
+      }
+    }
+
+    return false;
+  }
+
+  function getSliderTexturesForOrientation(usePortrait) {
+    const shouldUsePortrait = Boolean(usePortrait);
+    return {
+      background: shouldUsePortrait
+        ? sliderBackgroundPortraitTexture ?? sliderBackgroundTexture
+        : sliderBackgroundTexture,
+      handle: shouldUsePortrait
+        ? sliderHandlePortraitTexture ?? sliderHandleTexture
+        : sliderHandleTexture,
       dice: diceTexture,
-    },
-    soundConfig: sliderSoundConfig,
-    onRelease: (value) => {
-      try {
-        onSliderValueChange(value);
-      } catch (err) {
-        console.warn("onSliderValueChange callback failed", err);
-      }
-    },
-    onChange: (details) => handleSliderChange(details),
-    getBottomPanelHeight: () =>
-      bottomPanelUi?.getScaledHeight?.() ??
-      bottomPanelUi?.panel?.offsetHeight ??
-      0,
-    onRollModeChange: (mode) => {
-      try {
-        onRollModeChangeCallback(mode);
-      } catch (err) {
-        console.warn("onRollModeChange callback failed", err);
-      }
-    },
-    animationsEnabled,
-  });
+    };
+  }
+
+  function instantiateSlider(usePortrait) {
+    return createSliderUi({
+      textures: getSliderTexturesForOrientation(usePortrait),
+      soundConfig: sliderSoundConfig,
+      onRelease: (value) => {
+        try {
+          onSliderValueChange(value);
+        } catch (err) {
+          console.warn("onSliderValueChange callback failed", err);
+        }
+      },
+      onChange: (details) => handleSliderChange(details),
+      getBottomPanelHeight: () =>
+        bottomPanelUi?.getScaledHeight?.() ??
+        bottomPanelUi?.panel?.offsetHeight ??
+        0,
+      onRollModeChange: (mode) => {
+        try {
+          onRollModeChangeCallback(mode);
+        } catch (err) {
+          console.warn("onRollModeChange callback failed", err);
+        }
+      },
+      animationsEnabled,
+    });
+  }
+
+  isPortraitLayout = shouldUsePortraitLayout(measureRootSize());
+  let sliderUi = instantiateSlider(isPortraitLayout);
   ui.addChild(sliderUi.container);
+
+  function updateSliderOrientation(usePortrait) {
+    const normalized = Boolean(usePortrait);
+    if (!sliderUi) {
+      isPortraitLayout = normalized;
+      return false;
+    }
+
+    if (normalized === isPortraitLayout) {
+      return false;
+    }
+
+    const previousValue = sliderUi.getValue?.();
+    const previousRollMode = sliderUi.getRollMode?.();
+
+    ui.removeChild(sliderUi.container);
+    sliderUi.destroy();
+
+    sliderUi = instantiateSlider(normalized);
+    ui.addChild(sliderUi.container);
+
+    if (typeof previousRollMode !== "undefined") {
+      sliderUi.setRollMode?.(previousRollMode);
+    }
+
+    if (typeof previousValue !== "undefined") {
+      sliderUi.setValue?.(previousValue);
+    }
+
+    sliderUi.setAnimationsEnabled?.(animationsEnabled);
+    sliderUi.resetDice?.();
+    sliderUi.layout();
+
+    isPortraitLayout = normalized;
+
+    try {
+      handleSliderChange();
+    } catch (err) {
+      console.warn("handleSliderChange failed during orientation swap", err);
+    }
+
+    return true;
+  }
   betHistory.layout({ animate: false });
 
   bottomPanelUi = setupBottomPanel();
@@ -519,6 +622,36 @@ export async function createGame(mount, opts = {}) {
   }
   bottomPanelUi?.layout?.();
   sliderUi.layout();
+
+  if (orientationMediaQuery) {
+    const handleOrientationQueryChange = (event) => {
+      const nextIsPortrait = Boolean(
+        event?.matches ?? orientationMediaQuery.matches
+      );
+      updateSliderOrientation(nextIsPortrait);
+      betHistory.layout({ animate: false });
+      bottomPanelUi?.layout?.();
+      sliderUi.layout();
+    };
+
+    if (typeof orientationMediaQuery.addEventListener === "function") {
+      orientationMediaQuery.addEventListener(
+        "change",
+        handleOrientationQueryChange
+      );
+      removeOrientationListener = () => {
+        orientationMediaQuery.removeEventListener(
+          "change",
+          handleOrientationQueryChange
+        );
+      };
+    } else if (typeof orientationMediaQuery.addListener === "function") {
+      orientationMediaQuery.addListener(handleOrientationQueryChange);
+      removeOrientationListener = () => {
+        orientationMediaQuery.removeListener(handleOrientationQueryChange);
+      };
+    }
+  }
 
   function setupBottomPanel() {
     const panel = document.createElement("div");
@@ -2057,6 +2190,9 @@ export async function createGame(mount, opts = {}) {
       removeWindowResizeListener?.();
     } catch {}
     try {
+      removeOrientationListener?.();
+    } catch {}
+    try {
       stopDevicePixelRatioWatcher?.();
     } catch {}
     bottomPanelUi?.destroy?.();
@@ -2105,6 +2241,11 @@ export async function createGame(mount, opts = {}) {
     );
     updateBackground();
     positionWinPopup();
+    const resizedOrientationPortrait = shouldUsePortraitLayout({
+      width: resizedWidth,
+      height: resizedHeight,
+    });
+    updateSliderOrientation(resizedOrientationPortrait);
     betHistory.layout({ animate: false });
     bottomPanelUi?.layout?.();
     sliderUi.layout();
