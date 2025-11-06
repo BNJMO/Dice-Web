@@ -22,7 +22,9 @@ import sliderUpSoundUrl from "../../assets/sounds/SliderUp.wav";
 import sliderDragSoundUrl from "../../assets/sounds/SliderDrag.wav";
 import toggleRollModeSoundUrl from "../../assets/sounds/ToggleRollMode.wav";
 import sliderBackgroundUrl from "../../assets/sprites/SliderBackground.svg";
+import sliderBackgroundPortraitUrl from "../../assets/sprites/SliderBackground_Portrait.svg";
 import sliderHandleUrl from "../../assets/sprites/SliderHandle.svg";
+import sliderHandlePortraitUrl from "../../assets/sprites/SliderHandle_Portrait.svg";
 import diceSpriteUrl from "../../assets/sprites/Dice.svg";
 import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.svg";
 import rollModeIconUrl from "../../assets/sprites/RollOverIcon.svg";
@@ -45,12 +47,21 @@ const SLIDER = {
   rightColor: 0xf0ff31,
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
+  portraitTrackPadding: 12,
   trackOffsetRatio: 0.05,
   handleOffsetRatio: 0.06,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
+  portraitDiceScaleMultiplier: 0.75,
 };
+
+const SLIDER_LAYOUT = {
+  horizontalPadding: 40,
+  portraitMaxWidth: 320,
+};
+
+const PORTRAIT_SLIDER_TEXTURE_WIDTH_THRESHOLD = 550;
 
 const DICE_ANIMATION = {
   fadeInDuration: 400,
@@ -380,7 +391,9 @@ export async function createGame(mount, opts = {}) {
   }
 
   let sliderBackgroundTexture = null;
+  let sliderBackgroundPortraitTexture = null;
   let sliderHandleTexture = null;
+  let sliderHandlePortraitTexture = null;
   let diceTexture = null;
   try {
     sliderBackgroundTexture = await loadTexture(sliderBackgroundUrl);
@@ -389,9 +402,23 @@ export async function createGame(mount, opts = {}) {
   }
 
   try {
+    sliderBackgroundPortraitTexture = await loadTexture(
+      sliderBackgroundPortraitUrl
+    );
+  } catch (e) {
+    console.warn("Failed to load portrait slider background", e);
+  }
+
+  try {
     sliderHandleTexture = await loadTexture(sliderHandleUrl);
   } catch (e) {
     console.warn("Failed to load slider handle", e);
+  }
+
+  try {
+    sliderHandlePortraitTexture = await loadTexture(sliderHandlePortraitUrl);
+  } catch (e) {
+    console.warn("Failed to load portrait slider handle", e);
   }
 
   try {
@@ -474,35 +501,158 @@ export async function createGame(mount, opts = {}) {
   let panelResizeObserver = null;
   let bottomPanelUi = null;
 
-  const sliderUi = createSliderUi({
-    textures: {
-      background: sliderBackgroundTexture,
-      handle: sliderHandleTexture,
+  let orientationMediaQuery = null;
+  let removeOrientationListener = () => {};
+  let isPortraitLayout = false;
+  let isUsingPortraitSliderTextures = false;
+
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    orientationMediaQuery = window.matchMedia("(orientation: portrait)");
+  }
+
+  function shouldUsePortraitLayout(dimensions = {}) {
+    if (orientationMediaQuery) {
+      return orientationMediaQuery.matches;
+    }
+
+    const { width, height } = dimensions;
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return height >= width;
+    }
+
+    if (typeof window !== "undefined") {
+      const { innerWidth, innerHeight } = window;
+      if (Number.isFinite(innerWidth) && Number.isFinite(innerHeight) && innerWidth > 0 && innerHeight > 0) {
+        return innerHeight >= innerWidth;
+      }
+    }
+
+    return false;
+  }
+
+  function shouldUsePortraitSliderTextures({
+    usePortraitLayout,
+    rendererWidth,
+  } = {}) {
+    const normalizedWidth = Number(rendererWidth);
+    return (
+      Boolean(usePortraitLayout) &&
+      Number.isFinite(normalizedWidth) &&
+      normalizedWidth > 0 &&
+      normalizedWidth < PORTRAIT_SLIDER_TEXTURE_WIDTH_THRESHOLD
+    );
+  }
+
+  function getSliderTexturesForOrientation(usePortraitTextures) {
+    const shouldUsePortrait = Boolean(usePortraitTextures);
+    return {
+      background: shouldUsePortrait
+        ? sliderBackgroundPortraitTexture ?? sliderBackgroundTexture
+        : sliderBackgroundTexture,
+      handle: shouldUsePortrait
+        ? sliderHandlePortraitTexture ?? sliderHandleTexture
+        : sliderHandleTexture,
       dice: diceTexture,
-    },
-    soundConfig: sliderSoundConfig,
-    onRelease: (value) => {
-      try {
-        onSliderValueChange(value);
-      } catch (err) {
-        console.warn("onSliderValueChange callback failed", err);
-      }
-    },
-    onChange: (details) => handleSliderChange(details),
-    getBottomPanelHeight: () =>
-      bottomPanelUi?.getScaledHeight?.() ??
-      bottomPanelUi?.panel?.offsetHeight ??
-      0,
-    onRollModeChange: (mode) => {
-      try {
-        onRollModeChangeCallback(mode);
-      } catch (err) {
-        console.warn("onRollModeChange callback failed", err);
-      }
-    },
-    animationsEnabled,
-  });
+    };
+  }
+
+  function instantiateSlider(usePortrait) {
+    const usePortraitTextures = shouldUsePortraitSliderTextures({
+      usePortraitLayout: usePortrait,
+      rendererWidth: app?.renderer?.width,
+    });
+    isUsingPortraitSliderTextures = usePortraitTextures;
+    const portraitDiceScaleMultiplier =
+      Number.isFinite(SLIDER.portraitDiceScaleMultiplier) &&
+      SLIDER.portraitDiceScaleMultiplier >= 0
+        ? SLIDER.portraitDiceScaleMultiplier
+        : 1;
+    return createSliderUi({
+      textures: getSliderTexturesForOrientation(usePortraitTextures),
+      soundConfig: sliderSoundConfig,
+      onRelease: (value) => {
+        try {
+          onSliderValueChange(value);
+        } catch (err) {
+          console.warn("onSliderValueChange callback failed", err);
+        }
+      },
+      onChange: (details) => handleSliderChange(details),
+      getBottomPanelHeight: () =>
+        bottomPanelUi?.getScaledHeight?.() ??
+        bottomPanelUi?.panel?.offsetHeight ??
+        0,
+      onRollModeChange: (mode) => {
+        try {
+          onRollModeChangeCallback(mode);
+        } catch (err) {
+          console.warn("onRollModeChange callback failed", err);
+        }
+      },
+      animationsEnabled,
+      usePortraitLayout: Boolean(usePortrait),
+      usePortraitTrackPadding: usePortraitTextures,
+      limitPortraitWidth: usePortraitTextures,
+      diceScaleMultiplier: usePortraitTextures
+        ? portraitDiceScaleMultiplier
+        : 1,
+    });
+  }
+
+  isPortraitLayout = shouldUsePortraitLayout(measureRootSize());
+  let sliderUi = instantiateSlider(isPortraitLayout);
   ui.addChild(sliderUi.container);
+
+  function updateSliderOrientation(usePortrait) {
+    const normalized = Boolean(usePortrait);
+    const nextUsePortraitTextures = shouldUsePortraitSliderTextures({
+      usePortraitLayout: normalized,
+      rendererWidth: app?.renderer?.width,
+    });
+    const layoutChanged = normalized !== isPortraitLayout;
+    const texturesChanged =
+      nextUsePortraitTextures !== isUsingPortraitSliderTextures;
+    if (!sliderUi) {
+      isPortraitLayout = normalized;
+      isUsingPortraitSliderTextures = nextUsePortraitTextures;
+      return false;
+    }
+
+    if (!layoutChanged && !texturesChanged) {
+      return false;
+    }
+
+    const previousValue = sliderUi.getValue?.();
+    const previousRollMode = sliderUi.getRollMode?.();
+
+    ui.removeChild(sliderUi.container);
+    sliderUi.destroy();
+
+    sliderUi = instantiateSlider(normalized);
+    ui.addChild(sliderUi.container);
+
+    if (typeof previousRollMode !== "undefined") {
+      sliderUi.setRollMode?.(previousRollMode);
+    }
+
+    if (typeof previousValue !== "undefined") {
+      sliderUi.setValue?.(previousValue);
+    }
+
+    sliderUi.setAnimationsEnabled?.(animationsEnabled);
+    sliderUi.resetDice?.();
+    sliderUi.layout();
+
+    isPortraitLayout = normalized;
+
+    try {
+      handleSliderChange();
+    } catch (err) {
+      console.warn("handleSliderChange failed during orientation swap", err);
+    }
+
+    return true;
+  }
   betHistory.layout({ animate: false });
 
   bottomPanelUi = setupBottomPanel();
@@ -519,6 +669,36 @@ export async function createGame(mount, opts = {}) {
   }
   bottomPanelUi?.layout?.();
   sliderUi.layout();
+
+  if (orientationMediaQuery) {
+    const handleOrientationQueryChange = (event) => {
+      const nextIsPortrait = Boolean(
+        event?.matches ?? orientationMediaQuery.matches
+      );
+      updateSliderOrientation(nextIsPortrait);
+      betHistory.layout({ animate: false });
+      bottomPanelUi?.layout?.();
+      sliderUi.layout();
+    };
+
+    if (typeof orientationMediaQuery.addEventListener === "function") {
+      orientationMediaQuery.addEventListener(
+        "change",
+        handleOrientationQueryChange
+      );
+      removeOrientationListener = () => {
+        orientationMediaQuery.removeEventListener(
+          "change",
+          handleOrientationQueryChange
+        );
+      };
+    } else if (typeof orientationMediaQuery.addListener === "function") {
+      orientationMediaQuery.addListener(handleOrientationQueryChange);
+      removeOrientationListener = () => {
+        orientationMediaQuery.removeListener(handleOrientationQueryChange);
+      };
+    }
+  }
 
   function setupBottomPanel() {
     const panel = document.createElement("div");
@@ -1052,6 +1232,10 @@ export async function createGame(mount, opts = {}) {
     getBottomPanelHeight = () => 0,
     onRollModeChange = () => {},
     animationsEnabled: initialAnimationsEnabled = true,
+    usePortraitLayout = false,
+    usePortraitTrackPadding = false,
+    limitPortraitWidth = false,
+    diceScaleMultiplier = 1,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1059,6 +1243,11 @@ export async function createGame(mount, opts = {}) {
       dragMaxSpeed = 0.8,
       dragCooldownMs = 200,
     } = soundConfig ?? {};
+    const safeDiceScaleMultiplier =
+      Number.isFinite(diceScaleMultiplier) && diceScaleMultiplier >= 0
+        ? diceScaleMultiplier
+        : 1;
+
     const sliderContainer = new Container();
     sliderContainer.sortableChildren = true;
     sliderContainer.eventMode = "static";
@@ -1112,7 +1301,15 @@ export async function createGame(mount, opts = {}) {
 
     const trackCenterY = baseHeight * trackOffsetRatio;
     const handleOffsetY = baseHeight * handleOffsetRatio;
-    const trackPadding = Math.max(12, baseWidth * trackPaddingRatio);
+    const baseTrackPadding = Math.max(12, baseWidth * trackPaddingRatio);
+    const portraitTrackPadding = Number.isFinite(SLIDER.portraitTrackPadding)
+      ? Math.max(0, SLIDER.portraitTrackPadding)
+      : 0;
+    const maxTrackPadding = (baseWidth - 1) / 2;
+    const trackPadding = Math.min(
+      baseTrackPadding + (usePortraitTrackPadding ? portraitTrackPadding : 0),
+      maxTrackPadding
+    );
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
     const trackStart = -trackLength / 2;
     const trackEnd = trackLength / 2;
@@ -1492,9 +1689,17 @@ export async function createGame(mount, opts = {}) {
     app.stage.on("pointerup", stagePointerUp);
     app.stage.on("pointerupoutside", stagePointerUp);
 
+    let diceBaseScale = 1;
+
+    function getDiceScale() {
+      return diceBaseScale;
+    }
+
     function setDiceScale(scale) {
       const safeScale = Number.isFinite(scale) ? Math.max(0, scale) : 1;
-      diceContainer.scale.set(safeScale, safeScale);
+      diceBaseScale = safeScale;
+      const appliedScale = safeScale * safeDiceScaleMultiplier;
+      diceContainer.scale.set(appliedScale, appliedScale);
     }
 
     function hideDiceInstant() {
@@ -1559,7 +1764,7 @@ export async function createGame(mount, opts = {}) {
           hideDiceInstant();
           return;
         }
-        const startScale = diceContainer.scale.x;
+        const startScale = getDiceScale();
         diceFadeOutCancel = tween(app, {
           duration: diceFadeOutDuration,
           ease: (t) => Ease.easeOutQuad(t),
@@ -1619,7 +1824,7 @@ export async function createGame(mount, opts = {}) {
       diceBumpCancel = finish;
 
       const startDownPhase = () => {
-        const downStart = diceContainer.scale.x;
+        const downStart = getDiceScale();
         if (downDuration <= 0) {
           finish();
           return;
@@ -1638,7 +1843,7 @@ export async function createGame(mount, opts = {}) {
         });
       };
 
-      const upStart = diceContainer.scale.x;
+      const upStart = getDiceScale();
       if (upDuration <= 0) {
         setDiceScale(peakScale);
         startDownPhase();
@@ -1844,8 +2049,30 @@ export async function createGame(mount, opts = {}) {
 
     function layout() {
       const base = baseWidth || fallbackWidth;
-      const availableWidth = app.renderer.width * 0.9;
-      const scale = base > 0 ? Math.min(1, availableWidth / base) : 1;
+      const availableWidth = (() => {
+        const rendererWidth = Number(app?.renderer?.width ?? 0);
+        if (!Number.isFinite(rendererWidth) || rendererWidth <= 0) {
+          return 0;
+        }
+
+        if (usePortraitLayout) {
+          const horizontalPadding = SLIDER_LAYOUT.horizontalPadding; // match bottom panel padding
+          const paddedWidth = Math.max(0, rendererWidth - horizontalPadding);
+          if (limitPortraitWidth) {
+            const portraitMaxWidth = SLIDER_LAYOUT.portraitMaxWidth;
+            return Math.min(paddedWidth, portraitMaxWidth);
+          }
+          return paddedWidth;
+        }
+
+        const horizontalPadding = SLIDER_LAYOUT.horizontalPadding; // match bottom panel padding
+        return Math.max(0, rendererWidth - horizontalPadding);
+      })();
+      let scale = 1;
+      if (base > 0) {
+        const ratio = Math.max(0, availableWidth / base);
+        scale = usePortraitLayout ? ratio : Math.min(1, ratio);
+      }
       sliderContainer.scale.set(scale);
 
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
@@ -2057,6 +2284,9 @@ export async function createGame(mount, opts = {}) {
       removeWindowResizeListener?.();
     } catch {}
     try {
+      removeOrientationListener?.();
+    } catch {}
+    try {
       stopDevicePixelRatioWatcher?.();
     } catch {}
     bottomPanelUi?.destroy?.();
@@ -2105,6 +2335,11 @@ export async function createGame(mount, opts = {}) {
     );
     updateBackground();
     positionWinPopup();
+    const resizedOrientationPortrait = shouldUsePortraitLayout({
+      width: resizedWidth,
+      height: resizedHeight,
+    });
+    updateSliderOrientation(resizedOrientationPortrait);
     betHistory.layout({ animate: false });
     bottomPanelUi?.layout?.();
     sliderUi.layout();
