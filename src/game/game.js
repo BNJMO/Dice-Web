@@ -1986,7 +1986,8 @@ export async function createGame(mount, opts = {}) {
         }
 
         if (usePortraitLayout) {
-          return Math.max(0, rendererWidth);
+          const portraitHorizontalPadding = 40; // match bottom panel padding
+          return Math.max(0, rendererWidth - portraitHorizontalPadding);
         }
 
         return rendererWidth * 0.9;
