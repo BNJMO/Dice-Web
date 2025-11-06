@@ -1986,13 +1986,16 @@ export async function createGame(mount, opts = {}) {
         }
 
         if (usePortraitLayout) {
-          const portraitPadding = 32;
-          return Math.max(0, rendererWidth - portraitPadding);
+          return Math.max(0, rendererWidth);
         }
 
         return rendererWidth * 0.9;
       })();
-      const scale = base > 0 ? Math.min(1, availableWidth / base) : 1;
+      let scale = 1;
+      if (base > 0) {
+        const ratio = Math.max(0, availableWidth / base);
+        scale = usePortraitLayout ? ratio : Math.min(1, ratio);
+      }
       sliderContainer.scale.set(scale);
 
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
