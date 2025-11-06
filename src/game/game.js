@@ -59,6 +59,8 @@ const SLIDER_LAYOUT = {
   portraitMaxWidth: 720,
 };
 
+const PORTRAIT_SLIDER_TEXTURE_WIDTH_THRESHOLD = 600;
+
 const DICE_ANIMATION = {
   fadeInDuration: 400,
   fadeOutDuration: 400,
@@ -500,6 +502,7 @@ export async function createGame(mount, opts = {}) {
   let orientationMediaQuery = null;
   let removeOrientationListener = () => {};
   let isPortraitLayout = false;
+  let isUsingPortraitSliderTextures = false;
 
   if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
     orientationMediaQuery = window.matchMedia("(orientation: portrait)");
@@ -525,8 +528,21 @@ export async function createGame(mount, opts = {}) {
     return false;
   }
 
-  function getSliderTexturesForOrientation(usePortrait) {
-    const shouldUsePortrait = Boolean(usePortrait);
+  function shouldUsePortraitSliderTextures({
+    usePortraitLayout,
+    rendererWidth,
+  } = {}) {
+    const normalizedWidth = Number(rendererWidth);
+    return (
+      Boolean(usePortraitLayout) &&
+      Number.isFinite(normalizedWidth) &&
+      normalizedWidth > 0 &&
+      normalizedWidth < PORTRAIT_SLIDER_TEXTURE_WIDTH_THRESHOLD
+    );
+  }
+
+  function getSliderTexturesForOrientation(usePortraitTextures) {
+    const shouldUsePortrait = Boolean(usePortraitTextures);
     return {
       background: shouldUsePortrait
         ? sliderBackgroundPortraitTexture ?? sliderBackgroundTexture
@@ -539,8 +555,13 @@ export async function createGame(mount, opts = {}) {
   }
 
   function instantiateSlider(usePortrait) {
+    const usePortraitTextures = shouldUsePortraitSliderTextures({
+      usePortraitLayout: usePortrait,
+      rendererWidth: app?.renderer?.width,
+    });
+    isUsingPortraitSliderTextures = usePortraitTextures;
     return createSliderUi({
-      textures: getSliderTexturesForOrientation(usePortrait),
+      textures: getSliderTexturesForOrientation(usePortraitTextures),
       soundConfig: sliderSoundConfig,
       onRelease: (value) => {
         try {
@@ -572,12 +593,20 @@ export async function createGame(mount, opts = {}) {
 
   function updateSliderOrientation(usePortrait) {
     const normalized = Boolean(usePortrait);
+    const nextUsePortraitTextures = shouldUsePortraitSliderTextures({
+      usePortraitLayout: normalized,
+      rendererWidth: app?.renderer?.width,
+    });
+    const layoutChanged = normalized !== isPortraitLayout;
+    const texturesChanged =
+      nextUsePortraitTextures !== isUsingPortraitSliderTextures;
     if (!sliderUi) {
       isPortraitLayout = normalized;
+      isUsingPortraitSliderTextures = nextUsePortraitTextures;
       return false;
     }
 
-    if (normalized === isPortraitLayout) {
+    if (!layoutChanged && !texturesChanged) {
       return false;
     }
 
