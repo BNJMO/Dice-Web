@@ -56,7 +56,7 @@ const SLIDER = {
 };
 
 const SLIDER_LAYOUT = {
-  portraitHorizontalPadding: 40,
+  horizontalPadding: 40,
   portraitMaxWidth: 720,
 };
 
@@ -2033,8 +2033,8 @@ export async function createGame(mount, opts = {}) {
         }
 
         if (usePortraitLayout) {
-          const portraitHorizontalPadding = SLIDER_LAYOUT.portraitHorizontalPadding; // match bottom panel padding
-          const paddedWidth = Math.max(0, rendererWidth - portraitHorizontalPadding);
+          const horizontalPadding = SLIDER_LAYOUT.horizontalPadding; // match bottom panel padding
+          const paddedWidth = Math.max(0, rendererWidth - horizontalPadding);
           if (limitPortraitWidth) {
             const portraitMaxWidth = SLIDER_LAYOUT.portraitMaxWidth;
             return Math.min(paddedWidth, portraitMaxWidth);
@@ -2042,7 +2042,8 @@ export async function createGame(mount, opts = {}) {
           return paddedWidth;
         }
 
-        return rendererWidth * 0.9;
+        const horizontalPadding = SLIDER_LAYOUT.horizontalPadding; // match bottom panel padding
+        return Math.max(0, rendererWidth - horizontalPadding);
       })();
       let scale = 1;
       if (base > 0) {
