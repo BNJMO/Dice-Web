@@ -54,6 +54,11 @@ const SLIDER = {
   tickTextSizeRatio: 0.27,
 };
 
+const SLIDER_LAYOUT = {
+  portraitHorizontalPadding: 40,
+  portraitMaxWidth: 720,
+};
+
 const DICE_ANIMATION = {
   fadeInDuration: 400,
   fadeOutDuration: 400,
@@ -1986,8 +1991,10 @@ export async function createGame(mount, opts = {}) {
         }
 
         if (usePortraitLayout) {
-          const portraitHorizontalPadding = 40; // match bottom panel padding
-          return Math.max(0, rendererWidth - portraitHorizontalPadding);
+          const portraitHorizontalPadding = SLIDER_LAYOUT.portraitHorizontalPadding; // match bottom panel padding
+          const portraitMaxWidth = SLIDER_LAYOUT.portraitMaxWidth;
+          const paddedWidth = Math.max(0, rendererWidth - portraitHorizontalPadding);
+          return Math.min(paddedWidth, portraitMaxWidth);
         }
 
         return rendererWidth * 0.9;
