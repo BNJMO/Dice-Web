@@ -557,6 +557,7 @@ export async function createGame(mount, opts = {}) {
         }
       },
       animationsEnabled,
+      usePortraitLayout: Boolean(usePortrait),
     });
   }
 
@@ -1185,6 +1186,7 @@ export async function createGame(mount, opts = {}) {
     getBottomPanelHeight = () => 0,
     onRollModeChange = () => {},
     animationsEnabled: initialAnimationsEnabled = true,
+    usePortraitLayout = false,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1977,7 +1979,19 @@ export async function createGame(mount, opts = {}) {
 
     function layout() {
       const base = baseWidth || fallbackWidth;
-      const availableWidth = app.renderer.width * 0.9;
+      const availableWidth = (() => {
+        const rendererWidth = Number(app?.renderer?.width ?? 0);
+        if (!Number.isFinite(rendererWidth) || rendererWidth <= 0) {
+          return 0;
+        }
+
+        if (usePortraitLayout) {
+          const portraitPadding = 32;
+          return Math.max(0, rendererWidth - portraitPadding);
+        }
+
+        return rendererWidth * 0.9;
+      })();
       const scale = base > 0 ? Math.min(1, availableWidth / base) : 1;
       sliderContainer.scale.set(scale);
 
