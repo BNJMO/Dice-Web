@@ -1152,7 +1152,13 @@ export async function createGame(mount, opts = {}) {
       item.addChild(label);
       tickContainer.addChild(item);
 
-      return { container: item, label, value };
+      return {
+        container: item,
+        label,
+        value,
+        labelBaseScaleX: label.scale.x ?? 1,
+        labelBaseScaleY: label.scale.y ?? 1,
+      };
     });
 
     let handle;
@@ -1178,6 +1184,9 @@ export async function createGame(mount, opts = {}) {
     handle.eventMode = "static";
     handle.cursor = "pointer";
     sliderContainer.addChild(handle);
+
+    const handleBaseScaleX = handle.scale.x ?? 1;
+    const handleBaseScaleY = handle.scale.y ?? 1;
 
     const diceContainer = new Container();
     diceContainer.zIndex = 40;
@@ -1845,8 +1854,15 @@ export async function createGame(mount, opts = {}) {
     function layout() {
       const base = baseWidth || fallbackWidth;
       const availableWidth = app.renderer.width * 0.9;
-      const scale = base > 0 ? Math.min(1, availableWidth / base) : 1;
-      sliderContainer.scale.set(scale);
+      const widthScale = base > 0 ? Math.min(1, availableWidth / base) : 1;
+      const safeScale = widthScale > 0 ? widthScale : 1;
+      const inverseScale = safeScale > 0 ? 1 / safeScale : 1;
+
+      sliderContainer.scale.set(safeScale, 1);
+      handle.scale.set(handleBaseScaleX * inverseScale, handleBaseScaleY);
+      tickItems.forEach(({ label, labelBaseScaleX, labelBaseScaleY }) => {
+        label.scale.set(labelBaseScaleX * inverseScale, labelBaseScaleY);
+      });
 
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
@@ -1858,11 +1874,11 @@ export async function createGame(mount, opts = {}) {
       const panelOffset = panelHeight > 0 ? panelHeight + 48 : 0;
       const bottomPaddingCandidate = Math.max(
         60,
-        (combinedHeight * scale) / 2,
+        combinedHeight / 2,
         app.renderer.height * bottomPaddingRatio,
         panelOffset
       );
-      const minY = (baseHeight * scale) / 2 + 16;
+      const minY = baseHeight / 2 + 16;
       const sliderY = Math.max(
         minY,
         app.renderer.height - bottomPaddingCandidate
