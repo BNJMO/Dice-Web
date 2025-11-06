@@ -50,6 +50,7 @@ const SLIDER = {
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
+  backgroundOffsetRatio: 0,
 };
 
 const SLIDER_BACKGROUND_FIXED_SEGMENTS = [
@@ -290,6 +291,7 @@ function createSegmentedSliderBackground(texture, { ranges = [] } = {}) {
   const container = new Container();
   container.eventMode = "none";
   container.pivot.set(baseWidth / 2, baseHeight / 2);
+  container.position.set(baseWidth / 2, baseHeight / 2);
 
   const segments = [];
   let positionX = 0;
@@ -1207,6 +1209,11 @@ export async function createGame(mount, opts = {}) {
     const trackHeightRatio = Number.isFinite(SLIDER.trackHeightRatio)
       ? SLIDER.trackHeightRatio
       : 0;
+    const backgroundOffsetRatio = Number.isFinite(
+      SLIDER.backgroundOffsetRatio
+    )
+      ? SLIDER.backgroundOffsetRatio
+      : 0;
 
     let background;
     let updateBackgroundScale;
@@ -1241,6 +1248,9 @@ export async function createGame(mount, opts = {}) {
     background.eventMode = "none";
     if (background.anchor && typeof background.anchor.set === "function") {
       background.anchor.set(0.5);
+    }
+    if (backgroundOffsetRatio !== 0) {
+      background.position.y += baseHeight * backgroundOffsetRatio;
     }
     sliderContainer.addChild(background);
 
