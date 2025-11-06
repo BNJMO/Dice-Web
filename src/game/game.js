@@ -52,6 +52,14 @@ const SLIDER = {
   tickTextSizeRatio: 0.27,
 };
 
+const SLIDER_BACKGROUND_FIXED_SEGMENTS = [
+  { start: 0, end: 0.05 },
+  { start: 0.262, end: 0.281 },
+  { start: 0.489, end: 0.508 },
+  { start: 0.717, end: 0.736 },
+  { start: 0.945, end: 1 },
+];
+
 const DICE_ANIMATION = {
   fadeInDuration: 400,
   fadeOutDuration: 400,
@@ -213,6 +221,121 @@ export async function loadSpritesheetFrames(path, { cols = 1, rows = 1 } = {}) {
   }
 
   return { frames, frameWidth, frameHeight };
+}
+
+function clamp01(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  if (value < 0) {
+    return 0;
+  }
+
+  if (value > 1) {
+    return 1;
+  }
+
+  return value;
+}
+
+function createSegmentedSliderBackground(texture, { ranges = [] } = {}) {
+  if (!texture) {
+    return null;
+  }
+
+  const baseWidth = Math.max(1, texture.width ?? texture.orig?.width ?? 0);
+  const baseHeight = Math.max(1, texture.height ?? texture.orig?.height ?? 0);
+  const source =
+    texture.source ??
+    texture.baseTexture?.source ??
+    texture.baseTexture?.resource?.source ??
+    texture.baseTexture;
+
+  if (!source || baseWidth <= 0 || baseHeight <= 0) {
+    const sprite = new Sprite(texture);
+    sprite.anchor.set(0.5);
+    return {
+      container: sprite,
+      baseWidth,
+      baseHeight,
+      updateScale: () => {},
+    };
+  }
+
+  const normalizedRanges = ranges
+    .map(({ start, end }) => ({
+      start: clamp01(start),
+      end: clamp01(end),
+    }))
+    .filter(({ start, end }) => end > start)
+    .sort((a, b) => a.start - b.start);
+
+  const segmentsConfig = [];
+  let cursor = 0;
+  normalizedRanges.forEach(({ start, end }) => {
+    const startClamped = Math.max(cursor, start);
+    if (startClamped > cursor) {
+      segmentsConfig.push({ start: cursor, end: startClamped, stretch: true });
+    }
+    const endClamped = Math.max(startClamped, end);
+    segmentsConfig.push({ start: startClamped, end: endClamped, stretch: false });
+    cursor = Math.max(cursor, endClamped);
+  });
+
+  if (cursor < 1) {
+    segmentsConfig.push({ start: cursor, end: 1, stretch: true });
+  }
+
+  const container = new Container();
+  container.eventMode = "none";
+  container.pivot.set(baseWidth / 2, baseHeight / 2);
+
+  const segments = [];
+  let positionX = 0;
+
+  segmentsConfig.forEach(({ start, end, stretch }) => {
+    const width = Math.max(0, end - start) * baseWidth;
+    if (width <= 0) {
+      return;
+    }
+
+    const frame = new Rectangle(start * baseWidth, 0, width, baseHeight);
+    const segmentTexture = new Texture({ source, frame });
+    const sprite = new Sprite(segmentTexture);
+    sprite.pivot.set(0, baseHeight / 2);
+    sprite.position.set(positionX, 0);
+    container.addChild(sprite);
+    segments.push({ sprite, width, stretch });
+    positionX += width;
+  });
+
+  const totalWidth = segments.reduce((sum, segment) => sum + segment.width, 0);
+  const preservedTotal = segments
+    .filter((segment) => !segment.stretch)
+    .reduce((sum, segment) => sum + segment.width, 0);
+  const stretchTotal = Math.max(0, totalWidth - preservedTotal);
+
+  const updateScale = (scaleX) => {
+    const safeScale = scaleX > 0 ? scaleX : 1;
+    const targetWidth = totalWidth * safeScale;
+    const stretchTarget = Math.max(0, targetWidth - preservedTotal);
+    const stretchFactor =
+      stretchTotal > 0 ? stretchTarget / stretchTotal : 1;
+    const preservedScale = 1 / safeScale;
+    const stretchScale =
+      stretchTotal > 0 ? stretchFactor / safeScale : 1 / safeScale;
+
+    let currentX = 0;
+    segments.forEach((segment) => {
+      const segmentScale = segment.stretch ? stretchScale : preservedScale;
+      segment.sprite.scale.x = segmentScale;
+      segment.sprite.position.x = currentX;
+      currentX += segment.width * segmentScale;
+    });
+  };
+
+  return { container, baseWidth: totalWidth, baseHeight, updateScale };
 }
 
 export function createAnimatedSpriteFromFrames(
@@ -1086,13 +1209,21 @@ export async function createGame(mount, opts = {}) {
       : 0;
 
     let background;
+    let updateBackgroundScale;
     if (textures.background) {
-      background = new Sprite(textures.background);
-      background.anchor.set(0.5);
-      baseWidth =
-        textures.background.width ?? background.width ?? fallbackWidth;
-      baseHeight =
-        textures.background.height ?? background.height ?? fallbackHeight;
+      const segmented = createSegmentedSliderBackground(textures.background, {
+        ranges: SLIDER_BACKGROUND_FIXED_SEGMENTS,
+      });
+      background = segmented?.container ?? new Sprite(textures.background);
+      updateBackgroundScale = segmented?.updateScale;
+      baseWidth = segmented?.baseWidth ??
+        textures.background.width ??
+        background.width ??
+        fallbackWidth;
+      baseHeight = segmented?.baseHeight ??
+        textures.background.height ??
+        background.height ??
+        fallbackHeight;
     } else {
       background = new Graphics();
       background
@@ -1108,6 +1239,9 @@ export async function createGame(mount, opts = {}) {
       baseHeight = fallbackHeight;
     }
     background.eventMode = "none";
+    if (background.anchor && typeof background.anchor.set === "function") {
+      background.anchor.set(0.5);
+    }
     sliderContainer.addChild(background);
 
     const trackCenterY = baseHeight * trackOffsetRatio;
@@ -1859,6 +1993,7 @@ export async function createGame(mount, opts = {}) {
       const inverseScale = safeScale > 0 ? 1 / safeScale : 1;
 
       sliderContainer.scale.set(safeScale, 1);
+      updateBackgroundScale?.(safeScale);
       handle.scale.set(handleBaseScaleX * inverseScale, handleBaseScaleY);
       tickItems.forEach(({ label, labelBaseScaleX, labelBaseScaleY }) => {
         label.scale.set(labelBaseScaleX * inverseScale, labelBaseScaleY);
