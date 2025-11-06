@@ -2294,6 +2294,9 @@ export async function createGame(mount, opts = {}) {
     betHistory.destroy();
     app.destroy(true);
     if (app.canvas?.parentNode === root) root.removeChild(app.canvas);
+    if (root?.style) {
+      root.style.removeProperty("--game-render-size");
+    }
   }
 
   function revealDiceOutcome({ roll, label, displayValue } = {}) {
@@ -2315,13 +2318,19 @@ export async function createGame(mount, opts = {}) {
 
   function resizeToContainer() {
     const { width, height } = measureRootSize();
-    const resizedWidth = Math.max(1, Math.floor(width));
-    const resizedHeight = Math.max(1, Math.floor(height));
+    const availableWidth = Math.max(1, Math.floor(width));
+    const availableHeight = Math.max(1, Math.floor(height));
+    const squareSize = Math.max(1, Math.min(availableWidth, availableHeight));
+    const resizedWidth = squareSize;
+    const resizedHeight = squareSize;
     const desiredResolution = getRendererResolution();
     const resolutionChanged = desiredResolution !== rendererResolution;
     rendererResolution = desiredResolution;
 
     app.renderer.resize(resizedWidth, resizedHeight, rendererResolution);
+    if (root?.style) {
+      root.style.setProperty("--game-render-size", `${squareSize}px`);
+    }
     if (resolutionChanged) {
       try {
         app.renderer.events?.resolutionChange?.(rendererResolution);
@@ -2336,8 +2345,8 @@ export async function createGame(mount, opts = {}) {
     updateBackground();
     positionWinPopup();
     const resizedOrientationPortrait = shouldUsePortraitLayout({
-      width: resizedWidth,
-      height: resizedHeight,
+      width: availableWidth,
+      height: availableHeight,
     });
     updateSliderOrientation(resizedOrientationPortrait);
     betHistory.layout({ animate: false });
