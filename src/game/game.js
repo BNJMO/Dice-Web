@@ -586,6 +586,7 @@ export async function createGame(mount, opts = {}) {
       animationsEnabled,
       usePortraitLayout: Boolean(usePortrait),
       usePortraitTrackPadding: usePortraitTextures,
+      limitPortraitWidth: usePortraitTextures,
     });
   }
 
@@ -1224,6 +1225,7 @@ export async function createGame(mount, opts = {}) {
     animationsEnabled: initialAnimationsEnabled = true,
     usePortraitLayout = false,
     usePortraitTrackPadding = false,
+    limitPortraitWidth = false,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -2032,9 +2034,12 @@ export async function createGame(mount, opts = {}) {
 
         if (usePortraitLayout) {
           const portraitHorizontalPadding = SLIDER_LAYOUT.portraitHorizontalPadding; // match bottom panel padding
-          const portraitMaxWidth = SLIDER_LAYOUT.portraitMaxWidth;
           const paddedWidth = Math.max(0, rendererWidth - portraitHorizontalPadding);
-          return Math.min(paddedWidth, portraitMaxWidth);
+          if (limitPortraitWidth) {
+            const portraitMaxWidth = SLIDER_LAYOUT.portraitMaxWidth;
+            return Math.min(paddedWidth, portraitMaxWidth);
+          }
+          return paddedWidth;
         }
 
         return rendererWidth * 0.9;
