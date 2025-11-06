@@ -47,21 +47,21 @@ const SLIDER = {
   rightColor: 0xf0ff31,
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
-  portraitTrackPadding: 20,
+  portraitTrackPadding: 12,
   trackOffsetRatio: 0.05,
   handleOffsetRatio: 0.06,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
-  portraitDiceScaleMultiplier: 0.9,
+  portraitDiceScaleMultiplier: 0.75,
 };
 
 const SLIDER_LAYOUT = {
   horizontalPadding: 40,
-  portraitMaxWidth: 720,
+  portraitMaxWidth: 320,
 };
 
-const PORTRAIT_SLIDER_TEXTURE_WIDTH_THRESHOLD = 600;
+const PORTRAIT_SLIDER_TEXTURE_WIDTH_THRESHOLD = 550;
 
 const DICE_ANIMATION = {
   fadeInDuration: 400,
