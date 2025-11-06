@@ -585,6 +585,7 @@ export async function createGame(mount, opts = {}) {
       },
       animationsEnabled,
       usePortraitLayout: Boolean(usePortrait),
+      usePortraitTrackPadding: usePortraitTextures,
     });
   }
 
@@ -1222,6 +1223,7 @@ export async function createGame(mount, opts = {}) {
     onRollModeChange = () => {},
     animationsEnabled: initialAnimationsEnabled = true,
     usePortraitLayout = false,
+    usePortraitTrackPadding = false,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1288,7 +1290,7 @@ export async function createGame(mount, opts = {}) {
       : 0;
     const maxTrackPadding = (baseWidth - 1) / 2;
     const trackPadding = Math.min(
-      baseTrackPadding + (usePortraitLayout ? portraitTrackPadding : 0),
+      baseTrackPadding + (usePortraitTrackPadding ? portraitTrackPadding : 0),
       maxTrackPadding
     );
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
