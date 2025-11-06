@@ -53,6 +53,7 @@ const SLIDER = {
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
+  portraitDiceScaleMultiplier: 0.9,
 };
 
 const SLIDER_LAYOUT = {
@@ -561,6 +562,11 @@ export async function createGame(mount, opts = {}) {
       rendererWidth: app?.renderer?.width,
     });
     isUsingPortraitSliderTextures = usePortraitTextures;
+    const portraitDiceScaleMultiplier =
+      Number.isFinite(SLIDER.portraitDiceScaleMultiplier) &&
+      SLIDER.portraitDiceScaleMultiplier >= 0
+        ? SLIDER.portraitDiceScaleMultiplier
+        : 1;
     return createSliderUi({
       textures: getSliderTexturesForOrientation(usePortraitTextures),
       soundConfig: sliderSoundConfig,
@@ -587,6 +593,9 @@ export async function createGame(mount, opts = {}) {
       usePortraitLayout: Boolean(usePortrait),
       usePortraitTrackPadding: usePortraitTextures,
       limitPortraitWidth: usePortraitTextures,
+      diceScaleMultiplier: usePortraitTextures
+        ? portraitDiceScaleMultiplier
+        : 1,
     });
   }
 
@@ -1226,6 +1235,7 @@ export async function createGame(mount, opts = {}) {
     usePortraitLayout = false,
     usePortraitTrackPadding = false,
     limitPortraitWidth = false,
+    diceScaleMultiplier = 1,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1233,6 +1243,11 @@ export async function createGame(mount, opts = {}) {
       dragMaxSpeed = 0.8,
       dragCooldownMs = 200,
     } = soundConfig ?? {};
+    const safeDiceScaleMultiplier =
+      Number.isFinite(diceScaleMultiplier) && diceScaleMultiplier >= 0
+        ? diceScaleMultiplier
+        : 1;
+
     const sliderContainer = new Container();
     sliderContainer.sortableChildren = true;
     sliderContainer.eventMode = "static";
@@ -1674,9 +1689,17 @@ export async function createGame(mount, opts = {}) {
     app.stage.on("pointerup", stagePointerUp);
     app.stage.on("pointerupoutside", stagePointerUp);
 
+    let diceBaseScale = 1;
+
+    function getDiceScale() {
+      return diceBaseScale;
+    }
+
     function setDiceScale(scale) {
       const safeScale = Number.isFinite(scale) ? Math.max(0, scale) : 1;
-      diceContainer.scale.set(safeScale, safeScale);
+      diceBaseScale = safeScale;
+      const appliedScale = safeScale * safeDiceScaleMultiplier;
+      diceContainer.scale.set(appliedScale, appliedScale);
     }
 
     function hideDiceInstant() {
@@ -1741,7 +1764,7 @@ export async function createGame(mount, opts = {}) {
           hideDiceInstant();
           return;
         }
-        const startScale = diceContainer.scale.x;
+        const startScale = getDiceScale();
         diceFadeOutCancel = tween(app, {
           duration: diceFadeOutDuration,
           ease: (t) => Ease.easeOutQuad(t),
@@ -1801,7 +1824,7 @@ export async function createGame(mount, opts = {}) {
       diceBumpCancel = finish;
 
       const startDownPhase = () => {
-        const downStart = diceContainer.scale.x;
+        const downStart = getDiceScale();
         if (downDuration <= 0) {
           finish();
           return;
@@ -1820,7 +1843,7 @@ export async function createGame(mount, opts = {}) {
         });
       };
 
-      const upStart = diceContainer.scale.x;
+      const upStart = getDiceScale();
       if (upDuration <= 0) {
         setDiceScale(peakScale);
         startDownPhase();
