@@ -47,6 +47,7 @@ const SLIDER = {
   rightColor: 0xf0ff31,
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
+  portraitTrackPadding: 20,
   trackOffsetRatio: 0.05,
   handleOffsetRatio: 0.06,
   tickEdgePaddingRatio: -6,
@@ -1281,7 +1282,15 @@ export async function createGame(mount, opts = {}) {
 
     const trackCenterY = baseHeight * trackOffsetRatio;
     const handleOffsetY = baseHeight * handleOffsetRatio;
-    const trackPadding = Math.max(12, baseWidth * trackPaddingRatio);
+    const baseTrackPadding = Math.max(12, baseWidth * trackPaddingRatio);
+    const portraitTrackPadding = Number.isFinite(SLIDER.portraitTrackPadding)
+      ? Math.max(0, SLIDER.portraitTrackPadding)
+      : 0;
+    const maxTrackPadding = (baseWidth - 1) / 2;
+    const trackPadding = Math.min(
+      baseTrackPadding + (usePortraitLayout ? portraitTrackPadding : 0),
+      maxTrackPadding
+    );
     const trackLength = Math.max(1, baseWidth - trackPadding * 2);
     const trackStart = -trackLength / 2;
     const trackEnd = trackLength / 2;
