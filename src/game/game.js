@@ -1750,7 +1750,7 @@ export async function createGame(mount, opts = {}) {
           hideDiceInstant();
           return;
         }
-        const startScale = diceContainer.scale.x;
+        const startScale = diceScaleValue;
         diceFadeOutCancel = tween(app, {
           duration: diceFadeOutDuration,
           ease: (t) => Ease.easeOutQuad(t),
@@ -1810,7 +1810,7 @@ export async function createGame(mount, opts = {}) {
       diceBumpCancel = finish;
 
       const startDownPhase = () => {
-        const downStart = diceContainer.scale.x;
+        const downStart = diceScaleValue;
         if (downDuration <= 0) {
           finish();
           return;
@@ -1829,7 +1829,7 @@ export async function createGame(mount, opts = {}) {
         });
       };
 
-      const upStart = diceContainer.scale.x;
+      const upStart = diceScaleValue;
       if (upDuration <= 0) {
         setDiceScale(peakScale);
         startDownPhase();
