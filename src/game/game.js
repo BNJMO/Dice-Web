@@ -48,7 +48,7 @@ const SLIDER = {
   trackOffsetRatio: 0.05,
   // Adjusts how closely the track follows the segmented background stretch.
   // 1 keeps the previous behaviour, 0 locks the track to its base width.
-  trackWidthCompensationStrength: 0.75,
+  trackWidthCompensationStrength: 0.5,
   handleOffsetRatio: 0.06,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
