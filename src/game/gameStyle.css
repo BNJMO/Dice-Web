@@ -60,6 +60,7 @@
   backdrop-filter: blur(14px);
   z-index: 20;
   pointer-events: auto;
+  user-select: none;
 }
 
 .game-panel-item {
@@ -154,6 +155,7 @@ button.game-panel-value:focus-visible {
   font: inherit;
   outline: none;
   padding: 0;
+  user-select: text;
 }
 
 .game-panel-input::placeholder {

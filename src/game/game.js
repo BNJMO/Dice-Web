@@ -46,11 +46,23 @@ const SLIDER = {
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
   trackOffsetRatio: 0.05,
+  // Adjusts how closely the track follows the segmented background stretch.
+  // 1 keeps the previous behaviour, 0 locks the track to its base width.
+  trackWidthCompensationStrength: 0.5,
   handleOffsetRatio: 0.06,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
   tickTextSizeRatio: 0.27,
+  backgroundOffsetRatio: 0,
 };
+
+const SLIDER_BACKGROUND_FIXED_SEGMENTS = [
+  { start: 0, end: 0.05 },
+  { start: 0.262, end: 0.281 },
+  { start: 0.489, end: 0.508 },
+  { start: 0.717, end: 0.736 },
+  { start: 0.945, end: 1 },
+];
 
 const DICE_ANIMATION = {
   fadeInDuration: 400,
@@ -213,6 +225,127 @@ export async function loadSpritesheetFrames(path, { cols = 1, rows = 1 } = {}) {
   }
 
   return { frames, frameWidth, frameHeight };
+}
+
+function clamp01(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  if (value < 0) {
+    return 0;
+  }
+
+  if (value > 1) {
+    return 1;
+  }
+
+  return value;
+}
+
+function createSegmentedSliderBackground(texture, { ranges = [] } = {}) {
+  if (!texture) {
+    return null;
+  }
+
+  const baseWidth = Math.max(1, texture.width ?? texture.orig?.width ?? 0);
+  const baseHeight = Math.max(1, texture.height ?? texture.orig?.height ?? 0);
+  const source =
+    texture.source ??
+    texture.baseTexture?.source ??
+    texture.baseTexture?.resource?.source ??
+    texture.baseTexture;
+
+  if (!source || baseWidth <= 0 || baseHeight <= 0) {
+    const sprite = new Sprite(texture);
+    sprite.anchor.set(0.5);
+    return {
+      container: sprite,
+      baseWidth,
+      baseHeight,
+      updateScale: () => {},
+    };
+  }
+
+  const normalizedRanges = ranges
+    .map(({ start, end }) => ({
+      start: clamp01(start),
+      end: clamp01(end),
+    }))
+    .filter(({ start, end }) => end > start)
+    .sort((a, b) => a.start - b.start);
+
+  const segmentsConfig = [];
+  let cursor = 0;
+  normalizedRanges.forEach(({ start, end }) => {
+    const startClamped = Math.max(cursor, start);
+    if (startClamped > cursor) {
+      segmentsConfig.push({ start: cursor, end: startClamped, stretch: true });
+    }
+    const endClamped = Math.max(startClamped, end);
+    segmentsConfig.push({ start: startClamped, end: endClamped, stretch: false });
+    cursor = Math.max(cursor, endClamped);
+  });
+
+  if (cursor < 1) {
+    segmentsConfig.push({ start: cursor, end: 1, stretch: true });
+  }
+
+  const container = new Container();
+  container.eventMode = "none";
+  container.pivot.set(baseWidth / 2, baseHeight / 2);
+  container.position.set(0, baseHeight / 2);
+
+  const segments = [];
+  let positionX = 0;
+
+  segmentsConfig.forEach(({ start, end, stretch }) => {
+    const width = Math.max(0, end - start) * baseWidth;
+    if (width <= 0) {
+      return;
+    }
+
+    const frame = new Rectangle(start * baseWidth, 0, width, baseHeight);
+    const segmentTexture = new Texture({ source, frame });
+    const sprite = new Sprite(segmentTexture);
+    sprite.pivot.set(0, baseHeight / 2);
+    sprite.position.set(positionX, 0);
+    container.addChild(sprite);
+    segments.push({ sprite, width, stretch });
+    positionX += width;
+  });
+
+  const totalWidth = segments.reduce((sum, segment) => sum + segment.width, 0);
+  const preservedTotal = segments
+    .filter((segment) => !segment.stretch)
+    .reduce((sum, segment) => sum + segment.width, 0);
+  const stretchTotal = Math.max(0, totalWidth - preservedTotal);
+
+  const updateScale = (scaleX) => {
+    const safeScale = scaleX > 0 ? scaleX : 1;
+    const targetWidth = totalWidth * safeScale;
+    const stretchTarget = Math.max(0, targetWidth - preservedTotal);
+    const stretchFactor =
+      stretchTotal > 0 ? stretchTarget / stretchTotal : safeScale;
+    const preservedScale = 1 / safeScale;
+    const stretchScale =
+      stretchTotal > 0 ? stretchFactor / safeScale : 1 / safeScale;
+
+    let currentX = 0;
+    segments.forEach((segment) => {
+      const segmentScale = segment.stretch ? stretchScale : preservedScale;
+      segment.sprite.scale.x = segmentScale;
+      segment.sprite.position.x = currentX;
+      currentX += segment.width * segmentScale;
+    });
+
+    return {
+      totalScale: safeScale,
+      stretchScale: stretchFactor,
+    };
+  };
+
+  return { container, baseWidth: totalWidth, baseHeight, updateScale };
 }
 
 export function createAnimatedSpriteFromFrames(
@@ -1084,15 +1217,28 @@ export async function createGame(mount, opts = {}) {
     const trackHeightRatio = Number.isFinite(SLIDER.trackHeightRatio)
       ? SLIDER.trackHeightRatio
       : 0;
+    const backgroundOffsetRatio = Number.isFinite(
+      SLIDER.backgroundOffsetRatio
+    )
+      ? SLIDER.backgroundOffsetRatio
+      : 0;
 
     let background;
+    let updateBackgroundScale;
     if (textures.background) {
-      background = new Sprite(textures.background);
-      background.anchor.set(0.5);
-      baseWidth =
-        textures.background.width ?? background.width ?? fallbackWidth;
-      baseHeight =
-        textures.background.height ?? background.height ?? fallbackHeight;
+      const segmented = createSegmentedSliderBackground(textures.background, {
+        ranges: SLIDER_BACKGROUND_FIXED_SEGMENTS,
+      });
+      background = segmented?.container ?? new Sprite(textures.background);
+      updateBackgroundScale = segmented?.updateScale;
+      baseWidth = segmented?.baseWidth ??
+        textures.background.width ??
+        background.width ??
+        fallbackWidth;
+      baseHeight = segmented?.baseHeight ??
+        textures.background.height ??
+        background.height ??
+        fallbackHeight;
     } else {
       background = new Graphics();
       background
@@ -1108,6 +1254,12 @@ export async function createGame(mount, opts = {}) {
       baseHeight = fallbackHeight;
     }
     background.eventMode = "none";
+    if (background.anchor && typeof background.anchor.set === "function") {
+      background.anchor.set(0.5);
+    }
+    if (backgroundOffsetRatio !== 0) {
+      background.position.y += baseHeight * backgroundOffsetRatio;
+    }
     sliderContainer.addChild(background);
 
     const trackCenterY = baseHeight * trackOffsetRatio;
@@ -1152,8 +1304,21 @@ export async function createGame(mount, opts = {}) {
       item.addChild(label);
       tickContainer.addChild(item);
 
-      return { container: item, label, value };
+      return {
+        container: item,
+        label,
+        value,
+        labelBaseScaleX: label.scale.x ?? 1,
+        labelBaseScaleY: label.scale.y ?? 1,
+      };
     });
+
+    let trackScaleFactor = 1;
+    let sliderWidthScale = 1;
+    let diceScaleValue = 1;
+    const scalePosition = (position) => position * trackScaleFactor;
+    const unscalePosition = (position) =>
+      trackScaleFactor !== 0 ? position / trackScaleFactor : position;
 
     let handle;
     if (textures.handle) {
@@ -1178,6 +1343,9 @@ export async function createGame(mount, opts = {}) {
     handle.eventMode = "static";
     handle.cursor = "pointer";
     sliderContainer.addChild(handle);
+
+    const handleBaseScaleX = handle.scale.x ?? 1;
+    const handleBaseScaleY = handle.scale.y ?? 1;
 
     const diceContainer = new Container();
     diceContainer.zIndex = 40;
@@ -1303,25 +1471,29 @@ export async function createGame(mount, opts = {}) {
         const ratio = (clampRange(value) - SLIDER.rangeMin) / sliderRange;
         const tickTrackStart = trackStart - tickEdgePadding;
         const tickTrackLength = sliderTrackLength + tickEdgePadding * 2;
-        const x = tickTrackStart + ratio * tickTrackLength;
+        const xBase = tickTrackStart + ratio * tickTrackLength;
+        const x = scalePosition(xBase);
         container.position.set(x, trackCenterY - barHeight / 2 - labelOffset);
       });
     }
 
     function updateSliderVisuals() {
-      const position = valueToPosition(sliderValue);
+      const basePosition = valueToPosition(sliderValue);
+      const position = scalePosition(basePosition);
       handle.position.set(position, trackCenterY + handleOffsetY);
 
       leftBar.clear();
       rightBar.clear();
-      const leftWidth = Math.max(0, position - trackStart);
-      const rightWidth = Math.max(0, trackEnd - position);
+      const scaledTrackStart = scalePosition(trackStart);
+      const scaledTrackEnd = scalePosition(trackEnd);
+      const leftWidth = Math.max(0, position - scaledTrackStart);
+      const rightWidth = Math.max(0, scaledTrackEnd - position);
       if (leftWidth > 0) {
         const color =
           rollMode === "under" ? SLIDER.rightColor : SLIDER.leftColor;
         leftBar
           .roundRect(
-            trackStart,
+            scaledTrackStart,
             trackCenterY - barHeight / 2,
             leftWidth,
             barHeight,
@@ -1361,7 +1533,8 @@ export async function createGame(mount, opts = {}) {
       if (changed) {
         emitSliderChange();
         const newPosition = valueToPosition(sliderValue);
-        const deltaPosition = Math.abs(newPosition - previousPosition);
+        const deltaPosition =
+          Math.abs(newPosition - previousPosition) * trackScaleFactor;
         const deltaTime = Math.max(1, now - lastHandleUpdateTime);
         const positionSpeed = deltaPosition / deltaTime;
         const normalizedSpeed =
@@ -1448,7 +1621,8 @@ export async function createGame(mount, opts = {}) {
 
     function updateFromPointer(event) {
       const local = sliderContainer.toLocal(event.global);
-      const rawValue = positionToValue(local.x);
+      const adjustedX = unscalePosition(local.x);
+      const rawValue = positionToValue(adjustedX);
       setSliderValue(rawValue);
     }
 
@@ -1492,9 +1666,19 @@ export async function createGame(mount, opts = {}) {
     app.stage.on("pointerup", stagePointerUp);
     app.stage.on("pointerupoutside", stagePointerUp);
 
+    function applyDiceScale() {
+      const widthCompensation =
+        sliderWidthScale > 0 ? 1 / sliderWidthScale : 1;
+      diceContainer.scale.set(
+        diceScaleValue * widthCompensation,
+        diceScaleValue
+      );
+    }
+
     function setDiceScale(scale) {
       const safeScale = Number.isFinite(scale) ? Math.max(0, scale) : 1;
-      diceContainer.scale.set(safeScale, safeScale);
+      diceScaleValue = safeScale;
+      applyDiceScale();
     }
 
     function hideDiceInstant() {
@@ -1509,7 +1693,14 @@ export async function createGame(mount, opts = {}) {
         return;
       }
       diceContainer.visible = true;
-      diceContainer.position.x = target.positionX;
+      const basePosition =
+        Number.isFinite(target.basePosition)
+          ? target.basePosition
+          : valueToPosition(clampRange(target.value ?? sliderValue));
+      const scaledPosition = scalePosition(basePosition);
+      diceContainer.position.x = scaledPosition;
+      target.positionX = scaledPosition;
+      target.basePosition = basePosition;
       diceContainer.alpha = 1;
       setDiceScale(1);
       diceLabel.text = target.label;
@@ -1559,7 +1750,7 @@ export async function createGame(mount, opts = {}) {
           hideDiceInstant();
           return;
         }
-        const startScale = diceContainer.scale.x;
+        const startScale = diceScaleValue;
         diceFadeOutCancel = tween(app, {
           duration: diceFadeOutDuration,
           ease: (t) => Ease.easeOutQuad(t),
@@ -1619,7 +1810,7 @@ export async function createGame(mount, opts = {}) {
       diceBumpCancel = finish;
 
       const startDownPhase = () => {
-        const downStart = diceContainer.scale.x;
+        const downStart = diceScaleValue;
         if (downDuration <= 0) {
           finish();
           return;
@@ -1638,7 +1829,7 @@ export async function createGame(mount, opts = {}) {
         });
       };
 
-      const upStart = diceContainer.scale.x;
+      const upStart = diceScaleValue;
       if (upDuration <= 0) {
         setDiceScale(peakScale);
         startDownPhase();
@@ -1679,10 +1870,12 @@ export async function createGame(mount, opts = {}) {
 
       const currentPosition = diceContainer.position.x;
       const startingValue = diceHasShown
-        ? clampRange(positionToValue(currentPosition))
+        ? clampRange(positionToValue(unscalePosition(currentPosition)))
         : SLIDER.rangeMin;
-      const startX = valueToPosition(startingValue);
-      const endX = valueToPosition(clampedRoll);
+      const startBaseX = valueToPosition(startingValue);
+      const endBaseX = valueToPosition(clampedRoll);
+      const startX = scalePosition(startBaseX);
+      const endX = scalePosition(endBaseX);
 
       const isWin = Number.isFinite(numericRoll)
         ? rollMode === "under"
@@ -1702,6 +1895,8 @@ export async function createGame(mount, opts = {}) {
         label: displayLabel,
         isWin,
         positionX: endX,
+        basePosition: endBaseX,
+        value: clampedRoll,
         targetColor,
       };
 
@@ -1754,6 +1949,10 @@ export async function createGame(mount, opts = {}) {
           diceAnimationCancel = null;
           diceHasShown = true;
           diceContainer.position.x = endX;
+          if (diceLastOutcome) {
+            diceLastOutcome.positionX = endX;
+            diceLastOutcome.basePosition = endBaseX;
+          }
           setDiceScale(1);
           scheduleDiceFadeOut();
           playDiceBump();
@@ -1816,7 +2015,9 @@ export async function createGame(mount, opts = {}) {
         diceLabel.style.dropShadow.color =
           numberToHexColorString(diceLabelShadowColor);
       }
-      diceContainer.position.x = valueToPosition(SLIDER.rangeMin);
+      diceContainer.position.x = scalePosition(
+        valueToPosition(SLIDER.rangeMin)
+      );
       setDiceScale(diceFadeInScaleStart);
     }
 
@@ -1845,8 +2046,60 @@ export async function createGame(mount, opts = {}) {
     function layout() {
       const base = baseWidth || fallbackWidth;
       const availableWidth = app.renderer.width * 0.9;
-      const scale = base > 0 ? Math.min(1, availableWidth / base) : 1;
-      sliderContainer.scale.set(scale);
+      const widthScale = base > 0 ? Math.min(1, availableWidth / base) : 1;
+      const safeScale = widthScale > 0 ? widthScale : 1;
+      const inverseScale = safeScale > 0 ? 1 / safeScale : 1;
+
+      sliderWidthScale = safeScale > 0 ? safeScale : 1;
+      sliderContainer.scale.set(sliderWidthScale, 1);
+      const backgroundScaleResult = updateBackgroundScale?.(safeScale);
+      const targetTrackScale =
+        typeof backgroundScaleResult === "object"
+          ? backgroundScaleResult.stretchScale ?? safeScale
+          : typeof backgroundScaleResult === "number"
+          ? backgroundScaleResult
+          : safeScale;
+      const normalizedTrackScale =
+        Number.isFinite(targetTrackScale) && targetTrackScale > 0
+          ? targetTrackScale
+          : safeScale;
+      const rawTrackScaleFactor =
+        safeScale > 0 ? normalizedTrackScale / safeScale : 1;
+      const compensationStrength =
+        typeof SLIDER.trackWidthCompensationStrength === "number"
+          ? SLIDER.trackWidthCompensationStrength
+          : 1;
+      const compensatedTrackScaleFactor =
+        1 + (rawTrackScaleFactor - 1) * compensationStrength;
+
+      trackScaleFactor =
+        compensatedTrackScaleFactor > 0 ? compensatedTrackScaleFactor : 1;
+
+      applyDiceScale();
+
+      handle.scale.set(handleBaseScaleX * inverseScale, handleBaseScaleY);
+      tickItems.forEach(({ label, labelBaseScaleX, labelBaseScaleY }) => {
+        label.scale.set(labelBaseScaleX * inverseScale, labelBaseScaleY);
+      });
+
+      updateTickLayout();
+      updateSliderVisuals();
+
+      if (!diceAnimationCancel) {
+        const baseDicePosition = diceLastOutcome
+          ? Number.isFinite(diceLastOutcome.basePosition)
+            ? diceLastOutcome.basePosition
+            : valueToPosition(
+                clampRange(diceLastOutcome.value ?? SLIDER.rangeMin)
+              )
+          : valueToPosition(SLIDER.rangeMin);
+        const scaledDicePosition = scalePosition(baseDicePosition);
+        diceContainer.position.x = scaledDicePosition;
+        if (diceLastOutcome) {
+          diceLastOutcome.positionX = scaledDicePosition;
+          diceLastOutcome.basePosition = baseDicePosition;
+        }
+      }
 
       const diceHeight = diceSpriteHeight ?? baseHeight * 0.8;
       const combinedHeight = baseHeight + diceHeight * 0.9;
@@ -1858,11 +2111,11 @@ export async function createGame(mount, opts = {}) {
       const panelOffset = panelHeight > 0 ? panelHeight + 48 : 0;
       const bottomPaddingCandidate = Math.max(
         60,
-        (combinedHeight * scale) / 2,
+        combinedHeight / 2,
         app.renderer.height * bottomPaddingRatio,
         panelOffset
       );
-      const minY = (baseHeight * scale) / 2 + 16;
+      const minY = baseHeight / 2 + 16;
       const sliderY = Math.max(
         minY,
         app.renderer.height - bottomPaddingCandidate
