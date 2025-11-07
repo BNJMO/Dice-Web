@@ -46,6 +46,9 @@ const SLIDER = {
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
   trackOffsetRatio: 0.05,
+  // Adjusts how closely the track follows the segmented background stretch.
+  // 1 keeps the previous behaviour, 0 locks the track to its base width.
+  trackWidthCompensationStrength: 0.75,
   handleOffsetRatio: 0.06,
   tickEdgePaddingRatio: -6,
   tickPadding: -22,
@@ -2047,8 +2050,17 @@ export async function createGame(mount, opts = {}) {
         Number.isFinite(targetTrackScale) && targetTrackScale > 0
           ? targetTrackScale
           : safeScale;
-      trackScaleFactor =
+      const rawTrackScaleFactor =
         safeScale > 0 ? normalizedTrackScale / safeScale : 1;
+      const compensationStrength =
+        typeof SLIDER.trackWidthCompensationStrength === "number"
+          ? SLIDER.trackWidthCompensationStrength
+          : 1;
+      const compensatedTrackScaleFactor =
+        1 + (rawTrackScaleFactor - 1) * compensationStrength;
+
+      trackScaleFactor =
+        compensatedTrackScaleFactor > 0 ? compensatedTrackScaleFactor : 1;
 
       handle.scale.set(handleBaseScaleX * inverseScale, handleBaseScaleY);
       tickItems.forEach(({ label, labelBaseScaleX, labelBaseScaleY }) => {
