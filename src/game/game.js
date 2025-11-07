@@ -1314,6 +1314,8 @@ export async function createGame(mount, opts = {}) {
     });
 
     let trackScaleFactor = 1;
+    let sliderWidthScale = 1;
+    let diceScaleValue = 1;
     const scalePosition = (position) => position * trackScaleFactor;
     const unscalePosition = (position) =>
       trackScaleFactor !== 0 ? position / trackScaleFactor : position;
@@ -1664,9 +1666,19 @@ export async function createGame(mount, opts = {}) {
     app.stage.on("pointerup", stagePointerUp);
     app.stage.on("pointerupoutside", stagePointerUp);
 
+    function applyDiceScale() {
+      const widthCompensation =
+        sliderWidthScale > 0 ? 1 / sliderWidthScale : 1;
+      diceContainer.scale.set(
+        diceScaleValue * widthCompensation,
+        diceScaleValue
+      );
+    }
+
     function setDiceScale(scale) {
       const safeScale = Number.isFinite(scale) ? Math.max(0, scale) : 1;
-      diceContainer.scale.set(safeScale, safeScale);
+      diceScaleValue = safeScale;
+      applyDiceScale();
     }
 
     function hideDiceInstant() {
@@ -2038,7 +2050,8 @@ export async function createGame(mount, opts = {}) {
       const safeScale = widthScale > 0 ? widthScale : 1;
       const inverseScale = safeScale > 0 ? 1 / safeScale : 1;
 
-      sliderContainer.scale.set(safeScale, 1);
+      sliderWidthScale = safeScale > 0 ? safeScale : 1;
+      sliderContainer.scale.set(sliderWidthScale, 1);
       const backgroundScaleResult = updateBackgroundScale?.(safeScale);
       const targetTrackScale =
         typeof backgroundScaleResult === "object"
@@ -2061,6 +2074,8 @@ export async function createGame(mount, opts = {}) {
 
       trackScaleFactor =
         compensatedTrackScaleFactor > 0 ? compensatedTrackScaleFactor : 1;
+
+      applyDiceScale();
 
       handle.scale.set(handleBaseScaleX * inverseScale, handleBaseScaleY);
       tickItems.forEach(({ label, labelBaseScaleX, labelBaseScaleY }) => {
