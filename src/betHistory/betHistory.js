@@ -1,4 +1,9 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
+import {
+  createSdfText,
+  setSdfTextColor,
+  setSdfTextFontSize,
+} from "../sdfText.js";
 import Ease from "../ease.js";
 
 const DEFAULT_HISTORY_CONFIG = {
@@ -158,7 +163,7 @@ export function createBetHistory({
     const background = new Graphics();
     container.addChild(background);
 
-    const text = new Text({
+    const text = createSdfText({
       text: label,
       style: {
         fill: isWin ? colors.winText : colors.lossText,
@@ -184,10 +189,10 @@ export function createBetHistory({
           .roundRect(-width / 2, -height / 2, width, height, radius)
           .fill(isWin ? colors.winFill : colors.lossFill);
         const fontSize = Math.round(Math.max(12, height * config.fontSizeRatio));
-        if (text.style.fontSize !== fontSize) {
-          text.style.fontSize = fontSize;
+        if (text.fontSize !== fontSize) {
+          setSdfTextFontSize(text, fontSize);
         }
-        text.style.fill = isWin ? colors.winText : colors.lossText;
+        setSdfTextColor(text, isWin ? colors.winText : colors.lossText);
       },
       setLabel(value) {
         text.text = value;
