@@ -3,6 +3,7 @@ import {
   Container,
   Graphics,
   Text,
+  TextStyle,
   Texture,
   Rectangle,
   AnimatedSprite,
@@ -123,7 +124,7 @@ function getRendererResolution() {
   }
 
   const dpr = window.devicePixelRatio ?? 1;
-  return Math.max(1, Math.min(dpr, MAX_RENDERER_RESOLUTION));
+  return Math.max(1, dpr);
 }
 
 function createDevicePixelRatioWatcher(callback) {
@@ -1110,13 +1111,13 @@ export async function createGame(mount, opts = {}) {
 
     const multiplierText = new Text({
       text: "1.00×",
-      style: {
+      style: new TextStyle({
         fill: PALETTE.winPopupMultiplierText,
         fontFamily,
         fontSize: 36,
         fontWeight: "700",
         align: "center",
-      },
+      }),
     });
     multiplierText.anchor.set(0.5);
     multiplierText.position.set(0, multiplierVerticalOffset);
@@ -1125,13 +1126,13 @@ export async function createGame(mount, opts = {}) {
 
     const amountText = new Text({
       text: "0.0",
-      style: {
+      style: new TextStyle({
         fill: 0xffffff,
         fontFamily,
         fontSize: 24,
         fontWeight: "600",
         align: "center",
-      },
+      }),
     });
     amountText.anchor.set(0.5);
     amountRow.addChild(amountText);
@@ -1142,13 +1143,13 @@ export async function createGame(mount, opts = {}) {
     coinBg.circle(0, 0, coinRadius).fill(0xf6a821);
     const coinText = new Text({
       text: "₿",
-      style: {
+      style: new TextStyle({
         fill: 0xffffff,
         fontFamily,
         fontSize: 18,
         fontWeight: "700",
         align: "center",
-      },
+      }),
     });
     coinText.anchor.set(0.5);
     coinContainer.addChild(coinBg, coinText);
@@ -1290,13 +1291,13 @@ export async function createGame(mount, opts = {}) {
       item.eventMode = "none";
       const label = new Text({
         text: `${value}`,
-        style: {
+        style: new TextStyle({
           fill: 0xffffff,
           fontFamily,
           fontSize: Math.max(14, baseHeight * SLIDER.tickTextSizeRatio),
           fontWeight: "600",
           align: "center",
-        },
+        }),
       });
       label.anchor.set(0.5, 1);
       label.position.set(0, SLIDER.tickPadding);
@@ -1375,7 +1376,7 @@ export async function createGame(mount, opts = {}) {
 
     const diceLabel = new Text({
       text: "",
-      style: {
+      style: new TextStyle({
         fill: DICE_LABEL_COLORS.default,
         fontFamily,
         fontSize: Math.max(18, baseHeight * 0.33),
@@ -1388,7 +1389,7 @@ export async function createGame(mount, opts = {}) {
           angle: Math.PI / 2,
           color: numberToHexColorString(DICE_LABEL_SHADOW_COLORS.default),
         },
-      },
+      }),
     });
     diceLabel.anchor.set(0.5);
     const labelOffset = diceSpriteHeight * 0.55;
