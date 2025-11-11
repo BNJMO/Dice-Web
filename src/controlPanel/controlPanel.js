@@ -786,7 +786,7 @@ export class ControlPanel extends EventTarget {
 
     this.footerActions = document.createElement("div");
     this.footerActions.className = "control-footer-actions";
-    this.footer.appendChild(this.footerActions);
+    // this.footer.appendChild(this.footerActions);
 
     this.animationToggleWrapper = document.createElement("div");
     this.animationToggleWrapper.className = "control-animations-toggle";
