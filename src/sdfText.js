@@ -3,6 +3,7 @@ import { BitmapFont, BitmapText } from "pixi.js";
 const FONT_CACHE = new Map();
 const DEFAULT_BASE_FONT_SIZE = 64;
 const DEFAULT_FONT_RESOLUTION = 2;
+const DEFAULT_FONT_FAMILY = "Arial";
 
 function normalizeColor(value, fallback = 0xffffff) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -33,12 +34,72 @@ function normalizeColor(value, fallback = 0xffffff) {
   return fallback;
 }
 
+function stripQuotes(value) {
+  if (value.length <= 1) {
+    return value;
+  }
+
+  const first = value.charAt(0);
+  const last = value.charAt(value.length - 1);
+  if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+}
+
+function normalizeFontFamily(fontFamily) {
+  if (Array.isArray(fontFamily)) {
+    for (const entry of fontFamily) {
+      if (typeof entry === "string") {
+        const trimmed = entry.trim();
+        if (trimmed) {
+          return stripQuotes(trimmed);
+        }
+      }
+    }
+    return DEFAULT_FONT_FAMILY;
+  }
+
+  if (typeof fontFamily === "string") {
+    const parts = fontFamily.split(",");
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (trimmed) {
+        return stripQuotes(trimmed);
+      }
+    }
+  }
+
+  if (fontFamily && typeof fontFamily === "object") {
+    if (typeof fontFamily.family === "string") {
+      const trimmed = fontFamily.family.trim();
+      if (trimmed) {
+        return stripQuotes(trimmed);
+      }
+    }
+    if (typeof fontFamily.fontFamily === "string") {
+      const trimmed = fontFamily.fontFamily.trim();
+      if (trimmed) {
+        return stripQuotes(trimmed);
+      }
+    }
+  }
+
+  return DEFAULT_FONT_FAMILY;
+}
+
 function getFontCacheKey(fontFamily, fontWeight) {
   return `${fontFamily ?? ""}__${fontWeight ?? ""}`;
 }
 
 function installSdfFont({ fontFamily, fontWeight }) {
-  const cacheKey = getFontCacheKey(fontFamily, fontWeight);
+  const normalizedFamily = normalizeFontFamily(fontFamily);
+  const normalizedWeight =
+    typeof fontWeight === "number"
+      ? fontWeight.toString()
+      : fontWeight ?? "400";
+  const cacheKey = getFontCacheKey(normalizedFamily, normalizedWeight);
   if (FONT_CACHE.has(cacheKey)) {
     return FONT_CACHE.get(cacheKey);
   }
@@ -49,9 +110,9 @@ function installSdfFont({ fontFamily, fontWeight }) {
   BitmapFont.install({
     name: fontName,
     style: {
-      fontFamily: fontFamily ?? "Arial",
+      fontFamily: normalizedFamily,
       fontSize: DEFAULT_BASE_FONT_SIZE,
-      fontWeight: fontWeight ?? "400",
+      fontWeight: normalizedWeight,
       fill: 0xffffff,
     },
     resolution: DEFAULT_FONT_RESOLUTION,
