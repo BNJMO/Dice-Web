@@ -2,7 +2,6 @@ import {
   Application,
   Container,
   Graphics,
-  Text,
   Texture,
   Rectangle,
   AnimatedSprite,
@@ -13,6 +12,11 @@ import {
 import Ease from "../ease.js";
 import { createBetHistory } from "../betHistory/betHistory.js";
 import { Stepper } from "../stepper/stepper.js";
+import {
+  createSdfText,
+  getSdfTextColor,
+  setSdfTextColor,
+} from "../sdfText.js";
 import gameStartSoundUrl from "../../assets/sounds/GameStart.wav";
 import winSoundUrl from "../../assets/sounds/Win.wav";
 import loseSoundUrl from "../../assets/sounds/Lost.wav";
@@ -1108,7 +1112,7 @@ export async function createGame(mount, opts = {}) {
       )
       .fill(0x323232);
 
-    const multiplierText = new Text({
+    const multiplierText = createSdfText({
       text: "1.00×",
       style: {
         fill: PALETTE.winPopupMultiplierText,
@@ -1123,7 +1127,7 @@ export async function createGame(mount, opts = {}) {
 
     const amountRow = new Container();
 
-    const amountText = new Text({
+    const amountText = createSdfText({
       text: "0.0",
       style: {
         fill: 0xffffff,
@@ -1140,7 +1144,7 @@ export async function createGame(mount, opts = {}) {
     const coinRadius = 16;
     const coinBg = new Graphics();
     coinBg.circle(0, 0, coinRadius).fill(0xf6a821);
-    const coinText = new Text({
+    const coinText = createSdfText({
       text: "₿",
       style: {
         fill: 0xffffff,
@@ -1288,7 +1292,7 @@ export async function createGame(mount, opts = {}) {
     const tickItems = tickValues.map((value) => {
       const item = new Container();
       item.eventMode = "none";
-      const label = new Text({
+      const label = createSdfText({
         text: `${value}`,
         style: {
           fill: 0xffffff,
@@ -1373,7 +1377,7 @@ export async function createGame(mount, opts = {}) {
     diceSprite.eventMode = "none";
     diceContainer.addChild(diceSprite);
 
-    const diceLabel = new Text({
+    const diceLabel = createSdfText({
       text: "",
       style: {
         fill: DICE_LABEL_COLORS.default,
@@ -1381,19 +1385,24 @@ export async function createGame(mount, opts = {}) {
         fontSize: Math.max(18, baseHeight * 0.33),
         fontWeight: "700",
         align: "center",
-        dropShadow: {
-          alpha: 1,
-          blur: 1,
-          distance: 2.0,
-          angle: Math.PI / 2,
-          color: numberToHexColorString(DICE_LABEL_SHADOW_COLORS.default),
-        },
       },
     });
     diceLabel.anchor.set(0.5);
     const labelOffset = diceSpriteHeight * 0.55;
     diceLabel.position.set(0, -labelOffset);
-    diceContainer.addChild(diceLabel);
+    const diceLabelShadow = createSdfText({
+      text: "",
+      style: {
+        fill: DICE_LABEL_SHADOW_COLORS.default,
+        fontFamily,
+        fontSize: Math.max(18, baseHeight * 0.33),
+        fontWeight: "700",
+        align: "center",
+      },
+    });
+    diceLabelShadow.anchor.set(0.5);
+    diceLabelShadow.position.set(0, -labelOffset + 2);
+    diceContainer.addChild(diceLabelShadow, diceLabel);
 
     const diceBottomGap = Math.max(10, barHeight * 0.25);
     diceContainer.position.y = trackCenterY - barHeight / 2 - diceBottomGap;
@@ -1704,13 +1713,10 @@ export async function createGame(mount, opts = {}) {
       diceContainer.alpha = 1;
       setDiceScale(1);
       diceLabel.text = target.label;
-      diceLabel.style.fill = target.targetColor;
+      diceLabelShadow.text = target.label;
+      setSdfTextColor(diceLabel, target.targetColor);
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.target;
-      if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color = numberToHexColorString(
-          diceLabelShadowColor
-        );
-      }
+      setSdfTextColor(diceLabelShadow, diceLabelShadowColor);
     }
 
     function cancelDiceAnimations() {
@@ -1867,6 +1873,7 @@ export async function createGame(mount, opts = {}) {
       }
       const displayLabel = `${textValue}`;
       diceLabel.text = displayLabel;
+      diceLabelShadow.text = displayLabel;
 
       const currentPosition = diceContainer.position.x;
       const startingValue = diceHasShown
@@ -1905,14 +1912,11 @@ export async function createGame(mount, opts = {}) {
       diceLabelShadowColor = skipAnimations
         ? DICE_LABEL_SHADOW_COLORS.target
         : DICE_LABEL_SHADOW_COLORS.default;
-      diceLabel.style.fill = skipAnimations
-        ? targetColor
-        : DICE_LABEL_COLORS.default;
-      if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color = numberToHexColorString(
-          diceLabelShadowColor
-        );
-      }
+      setSdfTextColor(
+        diceLabel,
+        skipAnimations ? targetColor : DICE_LABEL_COLORS.default
+      );
+      setSdfTextColor(diceLabelShadow, diceLabelShadowColor);
 
       diceContainer.visible = true;
       diceContainer.position.x = skipAnimations ? endX : startX;
@@ -1957,19 +1961,18 @@ export async function createGame(mount, opts = {}) {
           scheduleDiceFadeOut();
           playDiceBump();
           playSoundEffect(isWin ? "win" : "lose");
-          const startColor =
-            typeof diceLabel.style.fill === "number"
-              ? diceLabel.style.fill
-              : DICE_LABEL_COLORS.default;
+          const startColor = getSdfTextColor(
+            diceLabel,
+            DICE_LABEL_COLORS.default
+          );
           const startShadowColor = diceLabelShadowColor;
           diceLabelColorCancel = tween(app, {
             duration: 150,
             ease: (t) => t,
             update: (progress) => {
-              diceLabel.style.fill = lerpColor(
-                startColor,
-                targetColor,
-                progress
+              setSdfTextColor(
+                diceLabel,
+                lerpColor(startColor, targetColor, progress)
               );
               const nextShadowColor = lerpColor(
                 startShadowColor,
@@ -1977,18 +1980,12 @@ export async function createGame(mount, opts = {}) {
                 progress
               );
               diceLabelShadowColor = nextShadowColor;
-              if (diceLabel.style.dropShadow) {
-                diceLabel.style.dropShadow.color =
-                  numberToHexColorString(nextShadowColor);
-              }
+              setSdfTextColor(diceLabelShadow, nextShadowColor);
             },
             complete: () => {
-              diceLabel.style.fill = targetColor;
+              setSdfTextColor(diceLabel, targetColor);
               diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.target;
-              if (diceLabel.style.dropShadow) {
-                diceLabel.style.dropShadow.color =
-                  numberToHexColorString(diceLabelShadowColor);
-              }
+              setSdfTextColor(diceLabelShadow, diceLabelShadowColor);
               diceLabelColorCancel = null;
             },
           });
@@ -2009,12 +2006,10 @@ export async function createGame(mount, opts = {}) {
       diceLastOutcome = null;
       hideDiceInstant();
       diceLabel.text = "";
-      diceLabel.style.fill = DICE_LABEL_COLORS.default;
+      diceLabelShadow.text = "";
+      setSdfTextColor(diceLabel, DICE_LABEL_COLORS.default);
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
-      if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color =
-          numberToHexColorString(diceLabelShadowColor);
-      }
+      setSdfTextColor(diceLabelShadow, diceLabelShadowColor);
       diceContainer.position.x = scalePosition(
         valueToPosition(SLIDER.rangeMin)
       );
