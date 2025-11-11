@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import Ease from "../ease.js";
 
 const DEFAULT_HISTORY_CONFIG = {
@@ -160,13 +160,13 @@ export function createBetHistory({
 
     const text = new Text({
       text: label,
-      style: {
+      style: new TextStyle({
         fill: isWin ? colors.winText : colors.lossText,
         fontFamily,
         fontSize: 20,
         fontWeight: "700",
         align: "center",
-      },
+      }),
     });
     text.anchor.set(0.5);
     container.addChild(text);
