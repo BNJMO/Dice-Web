@@ -8,6 +8,7 @@
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>"
     />
+    <link rel="stylesheet" href="./src/loading/loading.css" />
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
@@ -15,7 +16,10 @@
       <div class="app-container">
         <div class="game-container">
           <div id="game">
-            <div class="loading">Loading Game</div>
+              <video class="loading-video" autoplay loop muted>
+                  <source src="./assets/videos/loading.webm" type="video/webm" />
+                  <div class="loading">Loading Game</div>
+              </video>
           </div>
         </div>
         <div id="control-panel" class="control-panel-mount"></div>

@@ -180,36 +180,6 @@ button.game-panel-value:focus-visible {
   aspect-ratio: 1 / 1;
 }
 
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  font-size: 1.5rem;
-  color: #eaff00;
-}
-
-.loading::after {
-  content: "...";
-  animation: dots 1.5s steps(4, end) infinite;
-}
-
-@keyframes dots {
-  0%,
-  20% {
-    content: ".";
-  }
-
-  40% {
-    content: "..";
-  }
-
-  60%,
-  100% {
-    content: "...";
-  }
-}
-
 @media (max-width: 1100px), (orientation: portrait) {
   .game-bottom-panel {
     bottom: 12px;
