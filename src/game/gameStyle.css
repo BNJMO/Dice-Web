@@ -176,18 +176,18 @@ button.game-panel-value:focus-visible {
 }
 
 .game-panel-icon--multiplier {
+  --game-panel-icon-width: 25px;
+  --game-panel-icon-height: 25px;
+}
+
+.game-panel-icon--roll-mode {
   --game-panel-icon-width: 18px;
   --game-panel-icon-height: 18px;
 }
 
-.game-panel-icon--roll-mode {
-  --game-panel-icon-width: 15px;
-  --game-panel-icon-height: 15px;
-}
-
 .game-panel-icon--win-chance {
-  --game-panel-icon-width: 12px;
-  --game-panel-icon-height: 12px;
+  --game-panel-icon-width: 17px;
+  --game-panel-icon-height: 17px;
 }
 
 #game canvas {
