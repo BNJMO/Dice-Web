@@ -1492,6 +1492,10 @@ export async function createGame(mount, opts = {}) {
 
       leftBar.clear();
       rightBar.clear();
+      const sliderScaleX = sliderWidthScale > 0 ? sliderWidthScale : 1;
+      const widthCompensation = sliderScaleX > 0 ? 1 / sliderScaleX : 1;
+      leftBar.scale.set(widthCompensation, 1);
+      rightBar.scale.set(widthCompensation, 1);
       const scaledTrackStart = scalePosition(trackStart);
       const scaledTrackEnd = scalePosition(trackEnd);
       const leftWidth = Math.max(0, position - scaledTrackStart);
@@ -1499,11 +1503,13 @@ export async function createGame(mount, opts = {}) {
       if (leftWidth > 0) {
         const color =
           rollMode === "under" ? SLIDER.rightColor : SLIDER.leftColor;
+        const drawStart = scaledTrackStart * sliderScaleX;
+        const drawWidth = leftWidth * sliderScaleX;
         leftBar
           .roundRect(
-            scaledTrackStart,
+            drawStart,
             trackCenterY - barHeight / 2,
-            leftWidth,
+            drawWidth,
             barHeight,
             barRadius
           )
@@ -1513,11 +1519,13 @@ export async function createGame(mount, opts = {}) {
       if (rightWidth > 0) {
         const color =
           rollMode === "under" ? SLIDER.leftColor : SLIDER.rightColor;
+        const drawStart = position * sliderScaleX;
+        const drawWidth = rightWidth * sliderScaleX;
         rightBar
           .roundRect(
-            position,
+            drawStart,
             trackCenterY - barHeight / 2,
-            rightWidth,
+            drawWidth,
             barHeight,
             barRadius
           )
