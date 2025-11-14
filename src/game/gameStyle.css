@@ -54,7 +54,7 @@
   padding: 16px 20px;
   width: max(500px, calc((100% - 40px) * var(--panel-width-factor, 1)));
   max-width: max(500px, calc((100% - 40px) * var(--panel-width-factor, 1)));
-  background: #182934;
+  background: #213743;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(14px);
@@ -84,19 +84,21 @@
   align-items: center;
   gap: 10px;
   padding: 14px 72px 14px 18px;
-  background: #091b26;
-  border: 2px solid #223845;
+  background: #0a1a26;
+  border: 1px solid rgba(48, 92, 116, 0.5);
   border-radius: 14px;
   color: #f1f5ff;
   font-size: 1.05rem;
   font-weight: 600;
   line-height: 1.2;
   cursor: text;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .game-panel-value:hover {
-  border-color: #325b73;
+  border-color: rgba(74, 134, 166, 0.9);
+  background: #0c2332;
 }
 
 .game-panel-value.is-non-clickable,
@@ -117,14 +119,13 @@ button.game-panel-value.is-non-clickable:hover {
 button.game-panel-value {
   font: inherit;
   color: inherit;
-  background: #091b26;
-  border: 1px solid #091b26;
+  background: #0a1a26;
+  border: 1px solid rgba(48, 92, 116, 0.5);
   border-radius: 14px;
   width: 100%;
   text-align: left;
   cursor: pointer;
   appearance: none;
-  border: 2px solid #223845;
 }
 
 button.game-panel-value:focus-visible {
@@ -165,10 +166,28 @@ button.game-panel-value:focus-visible {
 .game-panel-icon {
   position: absolute;
   right: 16px;
-  width: 18px;
-  height: 18px;
+  width: var(--game-panel-icon-width, 20px);
+  height: var(--game-panel-icon-height, 20px);
   opacity: 0.85;
   pointer-events: none;
+  display: block;
+  object-fit: contain;
+  aspect-ratio: var(--game-panel-icon-aspect, 1 / 1);
+}
+
+.game-panel-icon--multiplier {
+  --game-panel-icon-width: 25px;
+  --game-panel-icon-height: 25px;
+}
+
+.game-panel-icon--roll-mode {
+  --game-panel-icon-width: 18px;
+  --game-panel-icon-height: 18px;
+}
+
+.game-panel-icon--win-chance {
+  --game-panel-icon-width: 17px;
+  --game-panel-icon-height: 17px;
 }
 
 #game canvas {

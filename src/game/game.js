@@ -669,6 +669,7 @@ export async function createGame(mount, opts = {}) {
     function createEditableBox({
       label,
       icon,
+      iconClass = "",
       step = 1,
       getValue = () => NaN,
       format = (value) => `${value ?? ""}`,
@@ -701,6 +702,9 @@ export async function createGame(mount, opts = {}) {
       iconEl.src = icon;
       iconEl.alt = "";
       iconEl.className = "game-panel-icon";
+      if (iconClass) {
+        iconEl.classList.add(iconClass);
+      }
       valueWrapper.appendChild(iconEl);
 
       const stepper = new Stepper({
@@ -851,6 +855,7 @@ export async function createGame(mount, opts = {}) {
       iconEl.src = rollModeIconUrl;
       iconEl.alt = "";
       iconEl.className = "game-panel-icon";
+      iconEl.classList.add("game-panel-icon--roll-mode");
       button.appendChild(iconEl);
 
       button.addEventListener("click", () => {
@@ -887,6 +892,7 @@ export async function createGame(mount, opts = {}) {
     const multiplierBox = createEditableBox({
       label: "Multiplier",
       icon: multiplierIconUrl,
+      iconClass: "game-panel-icon--multiplier",
       step: 1,
       getValue: () => sliderUi.getMultiplier(),
       format: (value) => value.toFixed(4),
@@ -899,6 +905,7 @@ export async function createGame(mount, opts = {}) {
     const winChanceBox = createEditableBox({
       label: "Win Chance",
       icon: winChanceIconUrl,
+      iconClass: "game-panel-icon--win-chance",
       step: 1,
       getValue: () => sliderUi.getWinChance(),
       format: (value) => value.toFixed(4),
