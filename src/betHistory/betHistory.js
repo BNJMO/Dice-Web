@@ -7,10 +7,10 @@ const DEFAULT_HISTORY_CONFIG = {
   rightPadding: 28,
   heightRatio: 0.09,
   minBubbleHeight: 26,
-  maxBubbleHeight: 36,
+  maxBubbleHeight: 35,
   widthToHeightRatio: 2.0,
   spacingRatio: 0.13,
-  fontSizeRatio: 0.4,
+  fontSizeRatio: 0.36,
   fadeInDuration: 320,
   fadeOutDuration: 260, 
 };
