@@ -2051,8 +2051,13 @@ export async function createGame(mount, opts = {}) {
       const safeScale = widthScale > 0 ? widthScale : 1;
       const inverseScale = safeScale > 0 ? 1 / safeScale : 1;
 
+      const { width: containerWidth, height: containerHeight } =
+        typeof measureRootSize === "function"
+          ? measureRootSize()
+          : { width: app.renderer.width, height: app.renderer.height };
+
       diceOrientationScale =
-        app.renderer.height > app.renderer.width ? DICE_PORTRAIT_SCALE : 1;
+        containerHeight > containerWidth ? DICE_PORTRAIT_SCALE : 1;
 
       sliderWidthScale = safeScale > 0 ? safeScale : 1;
       sliderContainer.scale.set(sliderWidthScale, 1);
