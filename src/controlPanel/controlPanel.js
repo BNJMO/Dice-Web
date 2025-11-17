@@ -877,13 +877,17 @@ export class ControlPanel extends EventTarget {
     this.container.classList.toggle("is-portrait", isPortrait);
 
     if (this.autoStartButton) {
-      const referenceNode = this.footer ?? null;
-      this.container.insertBefore(this.autoStartButton, referenceNode);
+      if (isPortrait && this.scrollContainer) {
+        this.container.insertBefore(this.autoStartButton, this.scrollContainer);
+      } else {
+        const referenceNode = this.footer ?? null;
+        this.container.insertBefore(this.autoStartButton, referenceNode);
+      }
     }
 
     if (this.toggleWrapper) {
       if (isPortrait) {
-        const referenceNode = this.autoStartButton ?? this.footer ?? null;
+        const referenceNode = this.footer ?? null;
         this.container.insertBefore(this.toggleWrapper, referenceNode);
       } else {
         this.scrollContainer.insertBefore(
