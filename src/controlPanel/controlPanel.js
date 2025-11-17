@@ -858,9 +858,7 @@ export class ControlPanel extends EventTarget {
   setupResponsiveLayout() {
     if (!this.container) return;
 
-    const query = window.matchMedia(
-      "(max-width: 1100px), (orientation: portrait)"
-    );
+    const query = window.matchMedia("(orientation: portrait)");
     this._layoutMediaQuery = query;
     this._onMediaQueryChange = () => this.updateResponsiveLayout();
 
@@ -879,11 +877,8 @@ export class ControlPanel extends EventTarget {
     this.container.classList.toggle("is-portrait", isPortrait);
 
     if (this.autoStartButton) {
-      if (isPortrait) {
-        this.container.insertBefore(
-          this.autoStartButton,
-          this.container.firstChild
-        );
+      if (isPortrait && this.scrollContainer) {
+        this.container.insertBefore(this.autoStartButton, this.scrollContainer);
       } else {
         const referenceNode = this.footer ?? null;
         this.container.insertBefore(this.autoStartButton, referenceNode);
@@ -891,10 +886,15 @@ export class ControlPanel extends EventTarget {
     }
 
     if (this.toggleWrapper) {
-      this.scrollContainer.insertBefore(
-        this.toggleWrapper,
-        this.scrollContainer.firstChild
-      );
+      if (isPortrait) {
+        const referenceNode = this.footer ?? null;
+        this.container.insertBefore(this.toggleWrapper, referenceNode);
+      } else {
+        this.scrollContainer.insertBefore(
+          this.toggleWrapper,
+          this.scrollContainer.firstChild
+        );
+      }
     }
   }
 

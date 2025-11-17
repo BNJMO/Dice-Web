@@ -739,10 +739,12 @@
 
 .control-panel.is-portrait .control-start-autobet-btn {
   margin-top: 0;
+  margin-bottom: 12px;
 }
 
 .control-panel.is-portrait .control-toggle {
   margin-top: 12px;
+  margin-bottom: 0;
 }
 
 .control-bet-input-field.is-non-clickable {
