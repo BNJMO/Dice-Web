@@ -97,6 +97,7 @@ serverRelay.addEventListener("demomodechange", (event) => {
     controlPanel = new ControlPanel("#control-panel", {
       gameName: "Dice",
     });
+    controlPanel?.setInteractable?.(false);
     controlPanel.addEventListener("animationschange", (event) => {
       const enabled = Boolean(event.detail?.enabled);
       opts.disableAnimations = !enabled;
@@ -177,6 +178,8 @@ serverRelay.addEventListener("demomodechange", (event) => {
         </div>
       `;
     }
+  } finally {
+    controlPanel?.setInteractable?.(true);
   }
 
   serverDummy = createServerDummy(serverRelay, {
