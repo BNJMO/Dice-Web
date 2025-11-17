@@ -925,7 +925,6 @@ export async function createGame(mount, opts = {}) {
     const SCALE_EPSILON = 0.0001;
     let appliedScale = 1;
     let lastScaledHeight = 0;
-    let lastWidthFactor = 1;
 
     function layout() {
       const panelHeight = Number(panel.offsetHeight);
@@ -985,21 +984,7 @@ export async function createGame(mount, opts = {}) {
         panel.style.removeProperty("--panel-scale");
       }
 
-      if (!scaleIsDefault && appliedScale > 0) {
-        const widthFactor = 1 / appliedScale;
-        if (Number.isFinite(widthFactor) && widthFactor > 0) {
-          if (Math.abs(widthFactor - lastWidthFactor) > SCALE_EPSILON) {
-            panel.style.setProperty("--panel-width-factor", `${widthFactor}`);
-            lastWidthFactor = widthFactor;
-          }
-        } else if (lastWidthFactor !== 1) {
-          panel.style.removeProperty("--panel-width-factor");
-          lastWidthFactor = 1;
-        }
-      } else if (lastWidthFactor !== 1) {
-        panel.style.removeProperty("--panel-width-factor");
-        lastWidthFactor = 1;
-      }
+
 
       const scaledHeight =
         Number.isFinite(panelHeight) && panelHeight > 0
@@ -1068,7 +1053,6 @@ export async function createGame(mount, opts = {}) {
         panel.style.removeProperty("--panel-width-factor");
         appliedScale = 1;
         lastScaledHeight = 0;
-        lastWidthFactor = 1;
         panel.remove();
       },
     };
