@@ -75,6 +75,8 @@ const DICE_ANIMATION = {
   bumpDuration: 300,
 };
 
+const DICE_PORTRAIT_SCALE = 0.85;
+
 const SOUND_ALIASES = {
   gameStart: "game.gameStart",
   win: "game.win",
@@ -1308,6 +1310,7 @@ export async function createGame(mount, opts = {}) {
     let trackScaleFactor = 1;
     let sliderWidthScale = 1;
     let diceScaleValue = 1;
+    let diceOrientationScale = 1;
     const scalePosition = (position) => position * trackScaleFactor;
     const unscalePosition = (position) =>
       trackScaleFactor !== 0 ? position / trackScaleFactor : position;
@@ -1669,10 +1672,8 @@ export async function createGame(mount, opts = {}) {
     function applyDiceScale() {
       const widthCompensation =
         sliderWidthScale > 0 ? 1 / sliderWidthScale : 1;
-      diceContainer.scale.set(
-        diceScaleValue * widthCompensation,
-        diceScaleValue
-      );
+      const baseScale = diceScaleValue * diceOrientationScale;
+      diceContainer.scale.set(baseScale * widthCompensation, baseScale);
     }
 
     function setDiceScale(scale) {
@@ -2049,6 +2050,14 @@ export async function createGame(mount, opts = {}) {
       const widthScale = base > 0 ? Math.min(1, availableWidth / base) : 1;
       const safeScale = widthScale > 0 ? widthScale : 1;
       const inverseScale = safeScale > 0 ? 1 / safeScale : 1;
+
+      const { width: containerWidth, height: containerHeight } =
+        typeof measureRootSize === "function"
+          ? measureRootSize()
+          : { width: app.renderer.width, height: app.renderer.height };
+
+      diceOrientationScale =
+        containerHeight > containerWidth ? DICE_PORTRAIT_SCALE : 1;
 
       sliderWidthScale = safeScale > 0 ? safeScale : 1;
       sliderContainer.scale.set(sliderWidthScale, 1);
