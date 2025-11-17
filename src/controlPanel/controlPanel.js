@@ -60,6 +60,8 @@ export class ControlPanel extends EventTarget {
     this.minesSelectState = "clickable";
     this.autoStartButtonState = "clickable";
     this.autoStartButtonMode = "start";
+    this.showDummyServerPanelVisible = false;
+    this.showDummyServerButtonLocked = false;
 
     this.totalProfitMultiplier = 1;
 
@@ -820,6 +822,8 @@ export class ControlPanel extends EventTarget {
       this.dispatchEvent(new CustomEvent("showdummyserver"));
     });
     this.footerActions.appendChild(this.showDummyServerButton);
+
+    this.updateShowDummyServerButtonState();
   }
 
   setMode(mode) {
@@ -1271,10 +1275,18 @@ export class ControlPanel extends EventTarget {
   }
 
   setDummyServerPanelVisibility(isVisible) {
+    this.showDummyServerPanelVisible = Boolean(isVisible);
+    this.updateShowDummyServerButtonState();
+  }
+
+  updateShowDummyServerButtonState() {
     if (!this.showDummyServerButton) return;
-    const disabled = Boolean(isVisible);
+    const panelVisible = Boolean(this.showDummyServerPanelVisible);
+    const locked = Boolean(this.showDummyServerButtonLocked);
+    const disabled = panelVisible || locked;
     this.showDummyServerButton.disabled = disabled;
-    this.showDummyServerButton.classList.toggle("is-disabled", disabled);
+    this.showDummyServerButton.classList.toggle("is-disabled", panelVisible);
+    this.showDummyServerButton.classList.toggle("is-non-clickable", locked);
     this.showDummyServerButton.setAttribute("aria-disabled", String(disabled));
   }
 
@@ -1354,6 +1366,23 @@ export class ControlPanel extends EventTarget {
     return this.autoStartButtonMode ?? "start";
   }
 
+  setInteractable(isInteractive) {
+    const clickable = Boolean(isInteractive);
+    this.setModeToggleClickable(clickable);
+    this.setBetControlsClickable(clickable);
+    this.setBetButtonState(clickable ? "clickable" : "non-clickable");
+    this.setRandomPickState(clickable ? "clickable" : "non-clickable");
+    this.setAutoStartButtonState(clickable ? "clickable" : "non-clickable");
+    this.setMinesSelectState(clickable ? "clickable" : "non-clickable");
+    this.setNumberOfBetsClickable(clickable);
+    this.setAdvancedToggleClickable(clickable);
+    this.setAdvancedStrategyControlsClickable(clickable);
+    this.setStopOnProfitClickable(clickable);
+    this.setStopOnLossClickable(clickable);
+    this.setAnimationsToggleClickable(clickable);
+    this.setShowDummyServerButtonClickable(clickable);
+  }
+
   setModeToggleClickable(isClickable) {
     const clickable = Boolean(isClickable);
     if (this.manualButton) {
@@ -1363,6 +1392,15 @@ export class ControlPanel extends EventTarget {
     if (this.autoButton) {
       this.autoButton.disabled = !clickable;
       this.autoButton.classList.toggle("is-non-clickable", !clickable);
+    }
+  }
+
+  setAnimationsToggleClickable(isClickable) {
+    const clickable = Boolean(isClickable);
+    if (this.animationToggleButton) {
+      this.animationToggleButton.disabled = !clickable;
+      this.animationToggleButton.classList.toggle("is-non-clickable", !clickable);
+      this.animationToggleButton.setAttribute("aria-disabled", String(!clickable));
     }
   }
 
@@ -1415,6 +1453,11 @@ export class ControlPanel extends EventTarget {
     if (this.autoNumberOfBetsStepper?.setClickable) {
       this.autoNumberOfBetsStepper.setClickable(clickable);
     }
+  }
+
+  setShowDummyServerButtonClickable(isClickable) {
+    this.showDummyServerButtonLocked = !Boolean(isClickable);
+    this.updateShowDummyServerButtonState();
   }
 
   setAdvancedToggleClickable(isClickable) {
