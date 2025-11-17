@@ -484,6 +484,7 @@ export async function createGame(mount, opts = {}) {
   const root =
     typeof mount === "string" ? document.querySelector(mount) : mount;
   if (!root) throw new Error("createGame: mount element not found");
+  const appContainerElement = root.closest?.(".app-container") ?? null;
 
   root.style.position = root.style.position || "relative";
   root.style.aspectRatio = root.style.aspectRatio || "1 / 1";
@@ -635,6 +636,7 @@ export async function createGame(mount, opts = {}) {
       }
     },
     animationsEnabled,
+    appContainer: appContainerElement,
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -1177,6 +1179,7 @@ export async function createGame(mount, opts = {}) {
     getBottomPanelHeight = () => 0,
     onRollModeChange = () => {},
     animationsEnabled: initialAnimationsEnabled = true,
+    appContainer = null,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -1191,6 +1194,12 @@ export async function createGame(mount, opts = {}) {
     sliderContainer.zIndex = 100;
 
     let animationsEnabled = Boolean(initialAnimationsEnabled);
+    const appContainerElement = appContainer ?? null;
+    const portraitMediaQuery =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(max-width: 768px), (orientation: portrait)")
+        : null;
+    let removePortraitModeWatcher = () => {};
 
     const fallbackWidth = 560;
     const fallbackHeight = 140;
@@ -1305,9 +1314,12 @@ export async function createGame(mount, opts = {}) {
       };
     });
 
+    const DICE_PORTRAIT_SCALE = 0.85;
+    const DICE_ORIENTATION_EPSILON = 0.0001;
     let trackScaleFactor = 1;
     let sliderWidthScale = 1;
     let diceScaleValue = 1;
+    let diceOrientationScale = 1;
     const scalePosition = (position) => position * trackScaleFactor;
     const unscalePosition = (position) =>
       trackScaleFactor !== 0 ? position / trackScaleFactor : position;
@@ -1669,11 +1681,71 @@ export async function createGame(mount, opts = {}) {
     function applyDiceScale() {
       const widthCompensation =
         sliderWidthScale > 0 ? 1 / sliderWidthScale : 1;
-      diceContainer.scale.set(
-        diceScaleValue * widthCompensation,
-        diceScaleValue
-      );
+      const appliedScale = diceScaleValue * diceOrientationScale;
+      diceContainer.scale.set(appliedScale * widthCompensation, appliedScale);
     }
+
+    function isAppContainerInPortraitMode() {
+      if (appContainerElement && typeof window !== "undefined") {
+        try {
+          const styles = window.getComputedStyle(appContainerElement);
+          if (styles?.flexDirection) {
+            const direction = `${styles.flexDirection}`.toLowerCase();
+            if (direction.includes("column")) {
+              return true;
+            }
+            if (direction.includes("row")) {
+              return false;
+            }
+          }
+        } catch {}
+
+        const rect = appContainerElement.getBoundingClientRect?.();
+        if (rect && rect.width > 0 && rect.height > 0) {
+          return rect.height >= rect.width;
+        }
+      }
+
+      if (portraitMediaQuery) {
+        return portraitMediaQuery.matches;
+      }
+
+      return false;
+    }
+
+    function updateDiceOrientationScale() {
+      const isPortrait = isAppContainerInPortraitMode();
+      const nextScale = isPortrait ? DICE_PORTRAIT_SCALE : 1;
+      if (
+        Math.abs(nextScale - diceOrientationScale) <=
+        DICE_ORIENTATION_EPSILON
+      ) {
+        return;
+      }
+      diceOrientationScale = nextScale;
+      applyDiceScale();
+    }
+
+    if (portraitMediaQuery) {
+      const handlePortraitModeChange = () => updateDiceOrientationScale();
+      if (typeof portraitMediaQuery.addEventListener === "function") {
+        portraitMediaQuery.addEventListener(
+          "change",
+          handlePortraitModeChange
+        );
+        removePortraitModeWatcher = () =>
+          portraitMediaQuery.removeEventListener(
+            "change",
+            handlePortraitModeChange
+          );
+      } else if (typeof portraitMediaQuery.addListener === "function") {
+        portraitMediaQuery.addListener(handlePortraitModeChange);
+        removePortraitModeWatcher = () =>
+          portraitMediaQuery.removeListener(handlePortraitModeChange);
+      }
+    }
+
+    updateDiceOrientationScale();
 
     function setDiceScale(scale) {
       const safeScale = Number.isFinite(scale) ? Math.max(0, scale) : 1;
@@ -2075,6 +2147,7 @@ export async function createGame(mount, opts = {}) {
       trackScaleFactor =
         compensatedTrackScaleFactor > 0 ? compensatedTrackScaleFactor : 1;
 
+      updateDiceOrientationScale();
       applyDiceScale();
 
       handle.scale.set(handleBaseScaleX * inverseScale, handleBaseScaleY);
@@ -2156,6 +2229,7 @@ export async function createGame(mount, opts = {}) {
         app.stage.off("pointerup", stagePointerUp);
         app.stage.off("pointerupoutside", stagePointerUp);
         cancelDiceAnimations();
+        removePortraitModeWatcher();
       },
       setAnimationsEnabled: (value) => setDiceAnimationsEnabled(value),
     };
