@@ -128,7 +128,14 @@ export class ControlPanel extends EventTarget {
     this.manualButton.type = "button";
     this.manualButton.className = "control-toggle-btn";
     this.manualButton.textContent = "Manual";
-    this.manualButton.addEventListener("click", () => this.setMode("manual"));
+    this.manualButton.addEventListener("click", () => {
+      const isAutoMode = this.mode === "auto";
+      const isAutoBetRunning = this.getAutoStartButtonMode?.() === "stop";
+      if (isAutoMode && isAutoBetRunning) {
+        this.dispatchEvent(new CustomEvent("stopautobet"));
+      }
+      this.setMode("manual");
+    });
 
     this.autoButton = document.createElement("button");
     this.autoButton.type = "button";
