@@ -54,7 +54,7 @@
   padding: 16px 20px;
   width: max(500px, calc(100% - 40px));
   max-width: max(500px, calc(100% - 40px));
-  background: #213743;
+  background: #182934;
   border-radius: 18px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(14px);
@@ -82,16 +82,15 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 72px 14px 18px;
+  gap: 8px;
   background: #0a1a26;
-  border: 1px solid rgba(48, 92, 116, 0.5);
-  border-radius: 14px;
+  border: 2px solid #223845;
+  border-radius: 8px;
   color: #f1f5ff;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
-  line-height: 1.2;
   cursor: text;
+  padding: 12px 0px 14px 8px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease,
     background-color 0.2s ease;
 }
@@ -119,9 +118,6 @@ button.game-panel-value.is-non-clickable:hover {
 button.game-panel-value {
   font: inherit;
   color: inherit;
-  background: #0a1a26;
-  border: 1px solid rgba(48, 92, 116, 0.5);
-  border-radius: 14px;
   width: 100%;
   text-align: left;
   cursor: pointer;
