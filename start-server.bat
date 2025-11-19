@@ -24,6 +24,14 @@ if not exist "node_modules\" (
     echo.
 )
 
+REM Update Vite base path before starting the dev server
+set "CONFIG_FILE=vite.config.js"
+set "ORIGINAL_BASE=/Dice-Web/"
+set "TEMP_BASE=/_Games/dice_crash/"
+
+echo [INFO] Temporarily setting Vite base to %TEMP_BASE%
+powershell -Command "(Get-Content -Raw '%CONFIG_FILE%') -replace ""base: '%ORIGINAL_BASE%'"",""base: '%TEMP_BASE%'"" | Set-Content '%CONFIG_FILE%'"
+
 REM Start the development server
 echo [INFO] Starting Vite development server...
 echo.
@@ -34,6 +42,9 @@ echo Press Ctrl+C to stop the server.
 echo.
 
 call npm run dev
+
+echo [INFO] Restoring original Vite base path (%ORIGINAL_BASE%)
+powershell -Command "(Get-Content -Raw '%CONFIG_FILE%') -replace ""base: '%TEMP_BASE%'"",""base: '%ORIGINAL_BASE%'"" | Set-Content '%CONFIG_FILE%'"
 
 pause
 
