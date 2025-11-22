@@ -2526,8 +2526,6 @@ export async function createGame(mount, opts = {}) {
   const ro = new ResizeObserver(() => resizeToContainer());
   ro.observe(root);
 
-  playStartSoundIfNeeded();
-
   function setBottomPanelControlsClickable(isClickable) {
     bottomPanelUi?.setControlsClickable?.(isClickable);
   }
