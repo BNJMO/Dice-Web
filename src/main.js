@@ -3,7 +3,6 @@ import { ControlPanel } from "./controlPanel/controlPanel.js";
 import { ServerRelay } from "./serverRelay.js";
 import { createServerDummy } from "./serverDummy/serverDummy.js";
 
-import gameStartSoundUrl from "../assets/sounds/GameStart.wav";
 import winSoundUrl from "../assets/sounds/Win.wav";
 
 let game;
@@ -39,7 +38,6 @@ const opts = {
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Arial",
 
   // Sounds
-  gameStartSoundPath: gameStartSoundUrl,
   winSoundPath: winSoundUrl,
 
   // Win pop-up
