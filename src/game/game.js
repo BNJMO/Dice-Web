@@ -14,7 +14,6 @@ import {
 import Ease from "../ease.js";
 import { createBetHistory } from "../betHistory/betHistory.js";
 import { Stepper } from "../stepper/stepper.js";
-import gameStartSoundUrl from "../../assets/sounds/GameStart.wav";
 import winSoundUrl from "../../assets/sounds/Win.wav";
 import loseSoundUrl from "../../assets/sounds/Lost.wav";
 import diceRollSoundUrl from "../../assets/sounds/DiceRoll.wav";
@@ -76,7 +75,6 @@ const DICE_ANIMATION = {
 };
 
 const SOUND_ALIASES = {
-  gameStart: "game.gameStart",
   win: "game.win",
   lose: "game.lose",
   diceRoll: "game.diceRoll",
@@ -396,7 +394,6 @@ export async function createGame(mount, opts = {}) {
   const backgroundTexturePath = opts.backgroundTexturePath ?? null;
 
   /* Sounds */
-  const gameStartSoundPath = opts.gameStartSoundPath ?? gameStartSoundUrl;
   const winSoundPath = opts.winSoundPath ?? winSoundUrl;
   const loseSoundPath = opts.loseSoundPath ?? loseSoundUrl;
   const diceRollSoundPath = opts.diceRollSoundPath ?? diceRollSoundUrl;
@@ -465,7 +462,6 @@ export async function createGame(mount, opts = {}) {
   const winPopupHeight = opts.winPopupHeight ?? 170;
 
   const soundEffectPaths = {
-    gameStart: gameStartSoundPath,
     win: winSoundPath,
     lose: loseSoundPath,
     diceRoll: diceRollSoundPath,
@@ -587,8 +583,6 @@ export async function createGame(mount, opts = {}) {
   const winPopup = createWinPopup();
   ui.addChild(winPopup.container);
 
-  let shouldPlayStartSound = true;
-
   const betHistory = createBetHistory({
     app,
     fontFamily,
@@ -659,6 +653,56 @@ export async function createGame(mount, opts = {}) {
   function setupBottomPanel() {
     const panel = document.createElement("div");
     panel.className = "game-bottom-panel";
+
+    const portraitMediaQuery =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(max-width: 768px), (orientation: portrait)")
+        : null;
+
+    let removePortraitModeWatcher = () => {};
+
+    function isPortraitMode() {
+      if (appContainerElement && typeof window !== "undefined") {
+        try {
+          const styles = window.getComputedStyle(appContainerElement);
+          if (styles?.flexDirection) {
+            const direction = `${styles.flexDirection}`.toLowerCase();
+            if (direction.includes("column")) {
+              return true;
+            }
+            if (direction.includes("row")) {
+              return false;
+            }
+          }
+        } catch {}
+
+        const rect = appContainerElement.getBoundingClientRect?.();
+        if (rect && rect.width > 0 && rect.height > 0) {
+          return rect.height >= rect.width;
+        }
+      }
+
+      if (portraitMediaQuery) {
+        return portraitMediaQuery.matches;
+      }
+
+      return false;
+    }
+
+    function formatPanelValue(value, defaultFormatter, fallback = "") {
+      if (!Number.isFinite(value)) {
+        return fallback;
+      }
+
+      if (isPortraitMode()) {
+        const preciseValue = Number(value);
+        if (Number.isFinite(preciseValue)) {
+          return preciseValue.toPrecision(4);
+        }
+      }
+
+      return defaultFormatter(value);
+    }
 
     const notifySliderApplied = () => {
       try {
@@ -872,9 +916,14 @@ export async function createGame(mount, opts = {}) {
         button.setAttribute("data-mode", mode);
         const value = sliderUi.getValue();
         if (force || document.activeElement !== button) {
+          const fallbackValue = formatPanelValue(
+            NaN,
+            (v) => v.toFixed(2),
+            "0.00"
+          );
           valueEl.textContent = Number.isFinite(value)
-            ? value.toFixed(2)
-            : "0.00";
+            ? formatPanelValue(value, (v) => v.toFixed(2), fallbackValue)
+            : fallbackValue;
         }
       }
 
@@ -897,7 +946,7 @@ export async function createGame(mount, opts = {}) {
       iconClass: "game-panel-icon--multiplier",
       step: 1,
       getValue: () => sliderUi.getMultiplier(),
-      format: (value) => value.toFixed(4),
+      format: (value) => formatPanelValue(value, (v) => v.toFixed(4)),
       onCommit: (value) => sliderUi.setMultiplier(value),
       afterCommit: notifySliderApplied,
     });
@@ -910,7 +959,7 @@ export async function createGame(mount, opts = {}) {
       iconClass: "game-panel-icon--win-chance",
       step: 1,
       getValue: () => sliderUi.getWinChance(),
-      format: (value) => value.toFixed(4),
+      format: (value) => formatPanelValue(value, (v) => v.toFixed(4)),
       onCommit: (value) => sliderUi.setWinChance(value),
       afterCommit: notifySliderApplied,
       allowDecimalOnly: true,
@@ -927,6 +976,7 @@ export async function createGame(mount, opts = {}) {
     const SCALE_EPSILON = 0.0001;
     let appliedScale = 1;
     let lastScaledHeight = 0;
+    let lastIsPortrait = isPortraitMode();
 
     function layout() {
       const panelHeight = Number(panel.offsetHeight);
@@ -995,7 +1045,14 @@ export async function createGame(mount, opts = {}) {
       const heightChanged = Math.abs(scaledHeight - lastScaledHeight) > 0.5;
       lastScaledHeight = scaledHeight;
 
-      return scaleChanged || heightChanged;
+      const isPortrait = isPortraitMode();
+      const portraitChanged = isPortrait !== lastIsPortrait;
+      lastIsPortrait = isPortrait;
+      if (portraitChanged) {
+        refresh(true);
+      }
+
+      return scaleChanged || heightChanged || portraitChanged;
     }
 
     function getScaledHeight() {
@@ -1021,6 +1078,29 @@ export async function createGame(mount, opts = {}) {
 
     refresh(true);
     layout();
+
+    const handlePortraitModeChange = () => {
+      const layoutChanged = layout();
+      if (!layoutChanged) {
+        refresh(true);
+      }
+      sliderUi.layout();
+    };
+
+    if (portraitMediaQuery) {
+      if (typeof portraitMediaQuery.addEventListener === "function") {
+        portraitMediaQuery.addEventListener("change", handlePortraitModeChange);
+        removePortraitModeWatcher = () =>
+          portraitMediaQuery.removeEventListener(
+            "change",
+            handlePortraitModeChange
+          );
+      } else if (typeof portraitMediaQuery.addListener === "function") {
+        portraitMediaQuery.addListener(handlePortraitModeChange);
+        removePortraitModeWatcher = () =>
+          portraitMediaQuery.removeListener(handlePortraitModeChange);
+      }
+    }
 
     function setMultiplierClickable(isClickable) {
       multiplierBox?.setClickable?.(isClickable);
@@ -1055,6 +1135,7 @@ export async function createGame(mount, opts = {}) {
         panel.style.removeProperty("--panel-width-factor");
         appliedScale = 1;
         lastScaledHeight = 0;
+        removePortraitModeWatcher?.();
         panel.remove();
       },
     };
@@ -2362,8 +2443,6 @@ export async function createGame(mount, opts = {}) {
     betHistory.layout({ animate: false });
     sliderUi.resetState();
     sliderUi.resetDice();
-    shouldPlayStartSound = true;
-    playStartSoundIfNeeded();
   }
 
   function getState() {
@@ -2402,12 +2481,6 @@ export async function createGame(mount, opts = {}) {
         isWin: Boolean(result.isWin),
       });
     }
-  }
-
-  function playStartSoundIfNeeded() {
-    if (!shouldPlayStartSound) return;
-    playSoundEffect("gameStart");
-    shouldPlayStartSound = false;
   }
 
   function resizeToContainer() {
