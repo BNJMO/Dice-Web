@@ -1,0 +1,164 @@
+.game-bottom-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 32px;
+  transform: translate(-50%, 0) scale(var(--panel-scale, 1));
+  transform-origin: bottom center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  justify-content: center;
+  padding: 16px 20px;
+  width: max(500px, calc(100% - 40px));
+  max-width: max(500px, calc(100% - 40px));
+  background: #182934;
+  border-radius: 18px;
+  box-shadow: 0 8px 8px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(14px);
+  z-index: 20;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.game-panel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+
+.game-panel-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #92aab7;
+}
+
+.game-panel-value {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0a1a26;
+  border: 2px solid #223845;
+  border-radius: 8px;
+  color: #f1f5ff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: text;
+  padding: 12px 0px 14px 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.game-panel-value:hover {
+  border-color: rgba(74, 134, 166, 0.9);
+  background: #0c2332;
+}
+
+.game-panel-value.is-non-clickable,
+button.game-panel-value.is-non-clickable {
+  background: #06111a;
+  border-color: #06111a;
+  color: rgba(241, 245, 255, 0.55);
+  cursor: default;
+  box-shadow: none;
+}
+
+.game-panel-value.is-non-clickable:hover,
+button.game-panel-value.is-non-clickable:hover {
+  border-color: #06111a;
+  box-shadow: none;
+}
+
+button.game-panel-value {
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+button.game-panel-value:focus-visible {
+  outline: 2px solid rgba(234, 255, 0, 0.6);
+  outline-offset: 2px;
+}
+
+.game-panel-value.game-panel-toggle {
+  justify-content: space-between;
+  padding-right: 56px;
+}
+
+.game-panel-value.game-panel-toggle:hover {
+  border-color: #325b73;
+}
+
+.game-panel-display {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.game-panel-input {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+  padding: 0;
+  user-select: text;
+}
+
+.game-panel-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.game-panel-icon {
+  position: absolute;
+  right: 16px;
+  width: var(--game-panel-icon-width, 20px);
+  height: var(--game-panel-icon-height, 20px);
+  opacity: 0.85;
+  pointer-events: none;
+  display: block;
+  object-fit: contain;
+  aspect-ratio: var(--game-panel-icon-aspect, 1 / 1);
+}
+
+.game-panel-icon--multiplier {
+  --game-panel-icon-width: 25px;
+  --game-panel-icon-height: 25px;
+}
+
+.game-panel-icon--roll-mode {
+  --game-panel-icon-width: 18px;
+  --game-panel-icon-height: 18px;
+}
+
+.game-panel-icon--win-chance {
+  --game-panel-icon-width: 17px;
+  --game-panel-icon-height: 17px;
+}
+
+@media (max-width: 768px), (orientation: portrait) {
+  .game-bottom-panel {
+    bottom: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .game-bottom-panel {
+    gap: 12px;
+    padding: 22px 14px;
+    bottom: 24px;
+    max-width: calc(120% - 15px);
+    max-height: 30%;
+  }
+
+  .game-panel-item {
+    min-width: 100px;
+  }
+}
