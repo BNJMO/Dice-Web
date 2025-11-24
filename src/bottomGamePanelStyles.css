@@ -2,7 +2,7 @@
   position: absolute;
   left: 50%;
   bottom: 32px;
-  transform: translate(-50%, 0) scale(var(--panel-scale, 1));
+  transform: translate(-50%, 0) scaleX(var(--panel-scale, 1));
   transform-origin: bottom center;
   display: flex;
   flex-wrap: nowrap;

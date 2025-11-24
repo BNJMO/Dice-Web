@@ -331,15 +331,7 @@ export function createBottomGamePanel({
   let lastIsPortrait = isPortraitMode();
 
   function layout() {
-    const panelHeight = Number(panel.offsetHeight);
-    const gameHeight = Number(app?.renderer?.height ?? 0);
-    const maxPanelHeight =
-      Number.isFinite(gameHeight) && gameHeight > 0 ? gameHeight * 0.4 : 0;
-
     let desiredScale = 1;
-    if (Number.isFinite(panelHeight) && panelHeight > 0 && maxPanelHeight > 0) {
-      desiredScale = Math.min(1, maxPanelHeight / panelHeight);
-    }
 
     const panelContentWidth = Number(panel.scrollWidth);
     const parentWidth = Number(
@@ -379,8 +371,9 @@ export function createBottomGamePanel({
       panel.style.removeProperty("--panel-scale");
     }
 
+    const panelHeight = Number(panel.offsetHeight);
     const scaledHeight =
-      Number.isFinite(panelHeight) && panelHeight > 0 ? panelHeight * appliedScale : 0;
+      Number.isFinite(panelHeight) && panelHeight > 0 ? panelHeight : 0;
     const heightChanged = Math.abs(scaledHeight - lastScaledHeight) > 0.5;
     lastScaledHeight = scaledHeight;
 
@@ -394,13 +387,13 @@ export function createBottomGamePanel({
     return scaleChanged || heightChanged || portraitChanged;
   }
 
-  function getScaledHeight() {
-    const panelHeight = Number(panel.offsetHeight);
-    if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
-      return 0;
+    function getScaledHeight() {
+      const panelHeight = Number(panel.offsetHeight);
+      if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
+        return 0;
+      }
+      return panelHeight;
     }
-    return panelHeight * appliedScale;
-  }
 
   function refresh(force = false) {
     multiplierBox.refresh(force);
