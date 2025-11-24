@@ -1,7 +1,7 @@
-import { Stepper } from "./stepper/stepper.js";
-import multiplierIconUrl from "../assets/sprites/MultiplierIcon.svg";
-import rollModeIconUrl from "../assets/sprites/RollOverIcon.svg";
-import winChanceIconUrl from "../assets/sprites/WinChanceIcon.svg";
+import { Stepper } from "../stepper/stepper.js";
+import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.svg";
+import rollModeIconUrl from "../../assets/sprites/RollOverIcon.svg";
+import winChanceIconUrl from "../../assets/sprites/WinChanceIcon.svg";
 
 export function createBottomGamePanel({
   root,

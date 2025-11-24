@@ -13,7 +13,7 @@ import {
 
 import Ease from "../ease.js";
 import { createBetHistory } from "../betHistory/betHistory.js";
-import { createBottomGamePanel } from "../bottomGamePanel.js";
+import { createBottomGamePanel } from "../bottomGamePanel/bottomGamePanel.js";
 import winSoundUrl from "../../assets/sounds/Win.wav";
 import loseSoundUrl from "../../assets/sounds/Lost.wav";
 import diceRollSoundUrl from "../../assets/sounds/DiceRoll.wav";
