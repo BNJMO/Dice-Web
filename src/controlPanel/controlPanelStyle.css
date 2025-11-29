@@ -816,4 +816,8 @@
   .control-bet-box {
     gap: 10px;
   }
+
+  .control-toggle {
+    order: 99;
+  }
 }

@@ -54,29 +54,16 @@
   .game-container {
     order: 1;
     padding-top: 0px;
-  }
-}
-
-@media (max-width: 768px) {
-  .game-container {
     min-height: 330px;
-    max-height: 350px;
-  }
-
-  #game {
-    min-height: 360px;
-  }
-}
-
-
-@media (orientation: portrait) {
-  .game-container {
+    max-height: 380px;
     padding-top: 2px;
     align-items: center;
     justify-content: center;
   }
 
   #game {
+    min-height: 360px;
     justify-content: center;
   }
 }
+

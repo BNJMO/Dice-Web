@@ -21,8 +21,8 @@
 }
 
 body {
-  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI",
-    Arial, sans-serif;
+  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Arial,
+    sans-serif;
   background: #091b26;
   color: #ffffff;
   --app-body-vertical-padding: clamp(16px, 6vh, 80px);
@@ -76,16 +76,10 @@ body {
   }
 
   .app-container {
-    --app-container-vertical-padding: 48px;
     flex-direction: column;
     align-items: stretch;
     padding: 24px;
     gap: 24px;
-  }
-}
-
-@media (orientation: portrait) {
-  .app-container {
     --app-container-vertical-padding: 32px;
     padding: 16px;
     height: auto;

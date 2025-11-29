@@ -879,30 +879,7 @@ export class ControlPanel extends EventTarget {
   }
 
   updateResponsiveLayout() {
-    if (!this.container || !this.scrollContainer) return;
-    const isPortrait = Boolean(this._layoutMediaQuery?.matches);
-    this.container.classList.toggle("is-portrait", isPortrait);
-
-    if (this.autoStartButton) {
-      if (isPortrait && this.scrollContainer) {
-        this.container.insertBefore(this.autoStartButton, this.scrollContainer);
-      } else {
-        const referenceNode = this.footer ?? null;
-        this.container.insertBefore(this.autoStartButton, referenceNode);
-      }
-    }
-
-    if (this.toggleWrapper) {
-      if (isPortrait) {
-        const referenceNode = this.footer ?? null;
-        this.container.insertBefore(this.toggleWrapper, referenceNode);
-      } else {
-        this.scrollContainer.insertBefore(
-          this.toggleWrapper,
-          this.scrollContainer.firstChild
-        );
-      }
-    }
+  
   }
 
   sanitizeNumberOfBets() {
