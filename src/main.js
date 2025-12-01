@@ -10,6 +10,7 @@ let controlPanel;
 let autoBetTimeoutId = null;
 let autoBetStopRequested = false;
 let isAutoBetRunning = false;
+let serverAutoTimeoutId = null;
 const serverRelay = new ServerRelay();
 let demoMode = serverRelay.demoMode;
 let serverPanel = null;
@@ -300,12 +301,13 @@ function handleServerAutoBetStart() {
   }
   initializeAutoBetCounter();
   serverAutoStopPending = false;
+  clearTimeout(serverAutoTimeoutId);
+  serverAutoTimeoutId = null;
   if (controlPanel?.getMode?.() === "auto") {
     controlPanel?.setAutoStartButtonMode?.("stop");
   }
   lockBetControls("auto");
   lockAutoNumberOfBets();
-  awaitingServerAutoOutcome = true;
   lockBottomPanelControls("auto");
   const payload = buildServerBetPayload();
   const numberOfBetsValue = controlPanel?.getNumberOfBetsValue?.();
@@ -313,6 +315,92 @@ function handleServerAutoBetStart() {
     ? Math.max(0, Math.floor(numberOfBetsValue))
     : null;
   sendRelayMessage("control:start-autobet", payload);
+  runServerAutoBetRound();
+}
+
+function runServerAutoBetRound() {
+  if (demoMode) {
+    return;
+  }
+  if (serverAutoStopPending) {
+    finalizeServerAutoLoop();
+    return;
+  }
+  if (awaitingServerAutoOutcome) {
+    return;
+  }
+
+  const betAmount = toFiniteNumber(controlPanel?.getBetValue?.());
+  if (betAmount === null || betAmount <= 0) {
+    finalizeServerAutoLoop();
+    return;
+  }
+
+  awaitingServerAutoOutcome = true;
+  const payload = buildServerBetPayload();
+  payload.betAmount = betAmount;
+  sendRelayMessage("control:auto-bet", payload);
+
+  (async () => {
+    try {
+      const betResponse = await submitBet({
+        amount: betAmount,
+        rate: payload.winChance ?? 0,
+        targetMultiplier: payload.targetMultiplier,
+        relay: serverRelay,
+      });
+
+      const state = betResponse?.state ?? betResponse?.responseData?.state ?? null;
+      const rawResultValue =
+        state?.resultValue?.value ?? state?.resultValue ?? payload.resultValue;
+      const resultValue = toFiniteNumber(rawResultValue);
+      const rollValue = resultValue === null ? null : resultValue * 100;
+      const winAmount = state?.winAmount ?? betResponse?.responseData?.state?.winAmount;
+
+      awaitingServerAutoOutcome = false;
+      processServerRoll({
+        roll: rollValue,
+        betValue: betAmount,
+        winChance: payload.winChance,
+        totalProfit: winAmount,
+        totalProfitValue: winAmount,
+      });
+      const shouldStop = decrementAutoBetsRemaining();
+      if (shouldStop || serverAutoStopPending) {
+        finalizeServerAutoLoop();
+        return;
+      }
+      scheduleNextServerAutoBet();
+    } catch (error) {
+      console.error("Failed to submit auto bet", error);
+      awaitingServerAutoOutcome = false;
+      finalizeServerAutoLoop();
+    }
+  })();
+}
+
+function scheduleNextServerAutoBet() {
+  clearTimeout(serverAutoTimeoutId);
+  serverAutoTimeoutId = setTimeout(() => {
+    runServerAutoBetRound();
+  }, 1000);
+}
+
+function finalizeServerAutoLoop() {
+  clearTimeout(serverAutoTimeoutId);
+  serverAutoTimeoutId = null;
+  onServerStopAutobetSignal();
+}
+
+function stopServerAutoLoop() {
+  clearTimeout(serverAutoTimeoutId);
+  serverAutoTimeoutId = null;
+  if (awaitingServerAutoOutcome) {
+    serverAutoStopPending = true;
+    return;
+  }
+  finalizeServerAutoLoop();
+  serverAutoStopPending = false;
 }
 
 function startAutoBet() {
@@ -391,6 +479,7 @@ function applyDemoMode(enabled) {
   awaitingServerBetOutcome = false;
   awaitingServerAutoOutcome = false;
   stopAutoBetImmediately();
+  stopServerAutoLoop();
   serverPanel?.setDemoMode?.(demoMode);
   unlockManualBetControls();
   resetBetControlLocks();
@@ -742,4 +831,5 @@ function requestServerAutoBetStop() {
     sendRelayMessage("control:stop-autobet");
     serverAutoStopPending = true;
   }
+  stopServerAutoLoop();
 }
