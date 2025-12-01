@@ -17,7 +17,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 20;
+  z-index: 200;
 }
 
 .server-panel--hidden {
@@ -149,7 +149,6 @@
 
 .server-panel__log {
   flex: 1;
-  border-right: 1px solid rgba(34, 56, 69, 0.4);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -240,100 +239,6 @@
   word-break: break-word;
 }
 
-.server-panel__controls {
-  width: 160px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: rgba(17, 40, 53, 0.78);
-  overflow-y: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.server-panel__controls::-webkit-scrollbar {
-  display: none;
-}
-
-.server-panel__controls-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.server-panel__controls-group-title {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(165, 196, 214, 0.8);
-}
-
-.server-panel__controls-group-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.server-panel__field-row {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  flex: 1 1 100%;
-}
-
-.server-panel__input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(49, 86, 108, 0.8);
-  background: rgba(9, 27, 38, 0.9);
-  color: #d9e6ef;
-  font-size: 12px;
-  font-family: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.server-panel__input::placeholder {
-  color: rgba(165, 196, 214, 0.6);
-}
-
-.server-panel__input:focus {
-  outline: none;
-  border-color: rgba(127, 181, 255, 0.8);
-  box-shadow: 0 0 0 2px rgba(31, 142, 250, 0.25);
-}
-
-.server-panel__input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.server-panel__button {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(49, 86, 108, 0.8);
-  background: rgba(28, 55, 72, 0.9);
-  color: #d9e6ef;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.server-panel__button:hover:not(:disabled) {
-  background: rgba(40, 90, 120, 0.95);
-  transform: translateY(-1px);
-}
-
-.server-panel__button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
 .server-panel__empty {
   font-size: 12px;
   color: rgba(165, 196, 214, 0.6);
@@ -350,28 +255,5 @@
 
   .server-panel__body {
     flex-direction: column;
-  }
-
-  .server-panel__controls {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-  }
-
-  .server-panel__controls-group {
-    flex: 1 1 160px;
-    max-width: 240px;
-  }
-
-  .server-panel__controls-group-buttons {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .server-panel__button {
-    flex: 1 1 calc(50% - 8px);
   }
 }

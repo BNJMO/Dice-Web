@@ -1,30 +1,5 @@
 import { ServerRelay } from "../serverRelay.js";
-
-function createLogEntry(direction, type, payload) {
-  const entry = document.createElement("div");
-  entry.className = `server-panel__log-entry server-panel__log-entry--${direction}`;
-
-  const header = document.createElement("div");
-  const directionLabel = document.createElement("span");
-  directionLabel.className = "server-panel__log-direction";
-  directionLabel.textContent =
-    direction === "incoming" ? "Server → App" : "App → Server";
-  header.appendChild(directionLabel);
-
-  const typeLabel = document.createElement("span");
-  typeLabel.className = "server-panel__log-type";
-  typeLabel.textContent = type ?? "unknown";
-  header.appendChild(typeLabel);
-
-  entry.appendChild(header);
-
-  const payloadNode = document.createElement("pre");
-  payloadNode.className = "server-panel__log-payload";
-  payloadNode.textContent = JSON.stringify(payload ?? {}, null, 2);
-  entry.appendChild(payloadNode);
-
-  return entry;
-}
+import { ServerPanel } from "./serverPanel.js";
 
 function ensureRelay(relay) {
   if (!relay) {
@@ -38,322 +13,51 @@ function ensureRelay(relay) {
 
 export function createServer(relay, options = {}) {
   const serverRelay = ensureRelay(relay);
-  const mount = options.mount ?? document.querySelector(".app-wrapper") ?? document.body;
-  const onDemoModeToggle = options.onDemoModeToggle ?? (() => {});
-  const onVisibilityChange = options.onVisibilityChange ?? (() => {});
-  const initialDemoMode = Boolean(options.initialDemoMode ?? true);
-  const initialCollapsed = Boolean(options.initialCollapsed ?? true);
-  const initialHidden = Boolean(options.initialHidden ?? false);
+  const {
+    mount = document.querySelector(".app-wrapper") ?? document.body,
+    onDemoModeToggle = () => {},
+    onVisibilityChange = () => {},
+    initialDemoMode = true,
+    initialCollapsed = false,
+    initialHidden = false,
+  } = options;
 
-  const container = document.createElement("div");
-  container.className = "server-panel";
-  if (initialCollapsed) {
-    container.classList.add("server-panel--collapsed");
-  }
-  if (initialHidden) {
-    container.classList.add("server-panel--hidden");
-  }
-
-  const header = document.createElement("div");
-  header.className = "server-panel__header";
-  container.appendChild(header);
-
-  const title = document.createElement("div");
-  title.className = "server-panel__title";
-  title.textContent = "Server Panel";
-  header.appendChild(title);
-
-  const headerControls = document.createElement("div");
-  headerControls.className = "server-panel__header-controls";
-  header.appendChild(headerControls);
-
-  const toggleLabel = document.createElement("label");
-  toggleLabel.className = "server-panel__toggle";
-  toggleLabel.textContent = "Demo Mode";
-
-  const toggleInput = document.createElement("input");
-  toggleInput.type = "checkbox";
-  toggleInput.checked = initialDemoMode;
-  toggleInput.addEventListener("change", () => {
-    onDemoModeToggle(Boolean(toggleInput.checked));
+  const serverPanel = new ServerPanel({
+    mount,
+    initialDemoMode: Boolean(initialDemoMode),
+    initialCollapsed: Boolean(initialCollapsed),
+    initialHidden: Boolean(initialHidden),
+    onDemoModeToggle,
+    onVisibilityChange,
   });
-
-  toggleLabel.appendChild(toggleInput);
-  headerControls.appendChild(toggleLabel);
-
-  const minimizeButton = document.createElement("button");
-  minimizeButton.type = "button";
-  minimizeButton.className = "server-panel__minimize";
-  minimizeButton.setAttribute("aria-label", "Toggle server panel visibility");
-  minimizeButton.textContent = initialCollapsed ? "+" : "−";
-  minimizeButton.addEventListener("click", () => {
-    const collapsed = container.classList.toggle("server-panel--collapsed");
-    minimizeButton.textContent = collapsed ? "+" : "−";
-  });
-  headerControls.appendChild(minimizeButton);
-
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.className = "server-panel__close";
-  closeButton.setAttribute("aria-label", "Hide server panel");
-  closeButton.textContent = "×";
-  headerControls.appendChild(closeButton);
-
-  const body = document.createElement("div");
-  body.className = "server-panel__body";
-  container.appendChild(body);
-
-  const logSection = document.createElement("div");
-  logSection.className = "server-panel__log";
-  body.appendChild(logSection);
-
-  const logList = document.createElement("div");
-  logList.className = "server-panel__log-list";
-  logSection.appendChild(logList);
-
-  const logHeader = document.createElement("div");
-  logHeader.className = "server-panel__log-header";
-  logSection.insertBefore(logHeader, logList);
-
-  const logTitle = document.createElement("div");
-  logTitle.className = "server-panel__log-title";
-  logTitle.textContent = "Relay Log";
-  logHeader.appendChild(logTitle);
-
-  const clearButton = document.createElement("button");
-  clearButton.type = "button";
-  clearButton.className = "server-panel__clear-log";
-  clearButton.textContent = "Clear";
-  clearButton.addEventListener("click", () => {
-    logList.textContent = "";
-  });
-  logHeader.appendChild(clearButton);
-
-  const controlsSection = document.createElement("div");
-  controlsSection.className = "server-panel__controls";
-  body.appendChild(controlsSection);
-
-  function createControlsGroup(title) {
-    const group = document.createElement("div");
-    group.className = "server-panel__controls-group";
-
-    const heading = document.createElement("div");
-    heading.className = "server-panel__controls-group-title";
-    heading.textContent = title;
-    group.appendChild(heading);
-
-    const buttonsContainer = document.createElement("div");
-    buttonsContainer.className = "server-panel__controls-group-buttons";
-    group.appendChild(buttonsContainer);
-
-    controlsSection.appendChild(group);
-    return buttonsContainer;
-  }
-
-  const manualControls = createControlsGroup("Manual Actions");
-  const autoControls = createControlsGroup("Auto Actions");
-  const profitControls = createControlsGroup("PROFIT");
-
-  const buttons = [];
-  const inputs = [];
-
-  createInputRow({
-    placeholder: "Total profit",
-    type: "text",
-    inputMode: "decimal",
-    mountPoint: profitControls,
-    buttonLabel: "Update Profit",
-    onSubmit: ({ input }) => {
-      const raw = input.value.trim();
-      const payload = { value: raw === "" ? null : raw };
-      const numeric = Number(raw);
-      if (Number.isFinite(numeric)) {
-        payload.numericValue = numeric;
-      }
-      serverRelay.deliver("profit:update-total", payload);
-      input.value = "";
-    },
-  });
-
-  function appendLog(direction, type, payload) {
-    const entry = createLogEntry(direction, type, payload);
-    logList.appendChild(entry);
-    logList.scrollTop = logList.scrollHeight;
-  }
-
-  function createButton(label, onClick, mountPoint = controlsSection) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-    button.className = "server-panel__button";
-    button.addEventListener("click", () => {
-      if (typeof onClick === "function") {
-        onClick();
-      }
-    });
-    mountPoint.appendChild(button);
-    buttons.push(button);
-    return button;
-  }
-
-  function createInputRow({
-    placeholder,
-    type = "text",
-    step,
-    inputMode,
-    onSubmit,
-    mountPoint,
-    buttonLabel,
-  }) {
-    const row = document.createElement("div");
-    row.className = "server-panel__field-row";
-    (mountPoint ?? controlsSection).appendChild(row);
-
-    const input = document.createElement("input");
-    input.type = type;
-    input.placeholder = placeholder;
-    input.className = "server-panel__input";
-    if (step !== undefined) {
-      input.step = step;
-    }
-    if (inputMode) {
-      input.inputMode = inputMode;
-    }
-    row.appendChild(input);
-    inputs.push(input);
-
-    const button = createButton(
-      buttonLabel ?? "Submit",
-      () => {
-        if (typeof onSubmit === "function") {
-          onSubmit({ input, button });
-        }
-      },
-      row
-    );
-
-    if (typeof onSubmit === "function") {
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          button.click();
-        }
-      });
-    }
-
-    return { row, input, button };
-  }
-
-  function createRollPayload(rawValue) {
-    const numeric = Number(rawValue);
-    if (Number.isFinite(numeric)) {
-      return { roll: numeric };
-    }
-    return {};
-  }
-
-  createInputRow({
-    placeholder: "Dice roll (0-100)",
-    type: "number",
-    step: "0.01",
-    inputMode: "decimal",
-    mountPoint: manualControls,
-    buttonLabel: "On Bet Outcome",
-    onSubmit: ({ input }) => {
-      const payload = createRollPayload(input.value);
-      serverRelay.deliver("game:bet-outcome", payload);
-      input.value = "";
-    },
-  });
-
-  createInputRow({
-    placeholder: "Dice roll (0-100)",
-    type: "number",
-    step: "0.01",
-    inputMode: "decimal",
-    mountPoint: autoControls,
-    buttonLabel: "On Autobet Outcome",
-    onSubmit: ({ input }) => {
-      const payload = createRollPayload(input.value);
-      serverRelay.deliver("game:auto-bet-outcome", payload);
-      input.value = "";
-    },
-  });
-
-  createButton(
-    "Stop Autobet",
-    () => {
-      serverRelay.deliver("stop-autobet");
-    },
-    autoControls
-  );
-
-  mount.prepend(container);
-
-  let visible = !initialHidden;
-
-  function applyVisibility(next, { force = false } = {}) {
-    const normalized = Boolean(next);
-    if (!force && normalized === visible) {
-      return;
-    }
-    visible = normalized;
-    container.classList.toggle("server-panel--hidden", !normalized);
-    onVisibilityChange(visible);
-  }
-
-  const show = () => applyVisibility(true);
-  const hide = () => applyVisibility(false);
-
-  closeButton.addEventListener("click", () => {
-    hide();
-  });
-
-  function setDemoMode(enabled) {
-    const normalized = Boolean(enabled);
-    if (toggleInput.checked !== normalized) {
-      toggleInput.checked = normalized;
-    }
-    buttons.forEach((button) => {
-      button.disabled = normalized;
-    });
-    inputs.forEach((input) => {
-      input.disabled = normalized;
-    });
-  }
-
-  setDemoMode(initialDemoMode);
-  applyVisibility(visible, { force: true });
 
   const outgoingHandler = (event) => {
     const { type, payload } = event.detail ?? {};
-    appendLog("outgoing", type, payload);
+    serverPanel.appendLog("outgoing", type, payload);
   };
 
   const incomingHandler = (event) => {
     const { type, payload } = event.detail ?? {};
-    appendLog("incoming", type, payload);
+    serverPanel.appendLog("incoming", type, payload);
   };
 
   serverRelay.addEventListener("outgoing", outgoingHandler);
   serverRelay.addEventListener("incoming", incomingHandler);
 
   serverRelay.addEventListener("demomodechange", (event) => {
-    setDemoMode(Boolean(event.detail?.value));
+    serverPanel.setDemoMode(Boolean(event.detail?.value));
   });
 
   return {
-    element: container,
-    setDemoMode,
-    show,
-    hide,
-    isVisible() {
-      return Boolean(visible);
-    },
+    element: serverPanel.container,
+    setDemoMode: (enabled) => serverPanel.setDemoMode(enabled),
+    show: () => serverPanel.show(),
+    hide: () => serverPanel.hide(),
+    isVisible: () => serverPanel.isVisible(),
     destroy() {
       serverRelay.removeEventListener("outgoing", outgoingHandler);
       serverRelay.removeEventListener("incoming", incomingHandler);
-      container.remove();
+      serverPanel.destroy();
     },
   };
 }
