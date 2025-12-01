@@ -120,6 +120,14 @@ window.addEventListener("keydown", (event) => {
     controlPanel.addEventListener("betvaluechange", (event) => {
       const detail = event?.detail ?? {};
       console.debug(`Bet value updated to ${detail.value}`);
+      const numericBetValue = Number(detail.numericValue);
+      if (Number.isFinite(numericBetValue)) {
+        if (numericBetValue > 0 && demoMode) {
+          serverRelay.setDemoMode(false);
+        } else if (numericBetValue === 0 && !demoMode) {
+          serverRelay.setDemoMode(true);
+        }
+      }
       sendRelayMessage("control:betvaluechange", detail);
     });
     controlPanel.addEventListener("numberofbetschange", (event) => {
