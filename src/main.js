@@ -268,13 +268,15 @@ function handleServerBetRequest() {
       });
 
       const state = betResponse?.state ?? betResponse?.responseData?.state ?? null;
-      const resultValue =
+      const rawResultValue =
         state?.resultValue?.value ?? state?.resultValue ?? payload.resultValue;
+      const resultValue = toFiniteNumber(rawResultValue);
+      const rollValue = resultValue === null ? null : resultValue * 100;
       const winAmount = state?.winAmount ?? betResponse?.responseData?.state?.winAmount;
 
       onManualBetOutcomeReceived();
       processServerRoll({
-        roll: resultValue,
+        roll: rollValue,
         betValue: betAmount,
         winChance: payload.winChance,
         totalProfit: winAmount,
