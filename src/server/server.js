@@ -1,29 +1,58 @@
 import { ServerRelay } from "../serverRelay.js";
+import { ServerPanel } from "./serverPanel.js";
 
-function createLogEntry(direction, type, payload) {
-  const entry = document.createElement("div");
-  entry.className = `server-panel__log-entry server-panel__log-entry--${direction}`;
+export const DEFAULT_SERVER_URL = "https://dev.securesocket.net:8443";
+export const DEFAULT_SCRATCH_GAME_ID = "CrashDice";
 
-  const header = document.createElement("div");
-  const directionLabel = document.createElement("span");
-  directionLabel.className = "server-panel__log-direction";
-  directionLabel.textContent =
-    direction === "incoming" ? "Server → App" : "App → Server";
-  header.appendChild(directionLabel);
+let sessionId = null;
+let sessionGameDetails = null;
+let sessionGameUrl = null;
+let sessionUserToken = null;
+let lastBetResult = null;
+let lastBetRoundId = null;
+let lastBetBalance = null;
+let lastBetRegisteredBets = [];
 
-  const typeLabel = document.createElement("span");
-  typeLabel.className = "server-panel__log-type";
-  typeLabel.textContent = type ?? "unknown";
-  header.appendChild(typeLabel);
+function normalizeBaseUrl(url) {
+  if (typeof url !== "string") {
+    return DEFAULT_SERVER_URL;
+  }
 
-  entry.appendChild(header);
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return DEFAULT_SERVER_URL;
+  }
 
-  const payloadNode = document.createElement("pre");
-  payloadNode.className = "server-panel__log-payload";
-  payloadNode.textContent = JSON.stringify(payload ?? {}, null, 2);
-  entry.appendChild(payloadNode);
+  return trimmed.replace(/\/+$/, "");
+}
 
-  return entry;
+function normalizeScratchGameId(id) {
+  if (typeof id !== "string") {
+    return DEFAULT_SCRATCH_GAME_ID;
+  }
+
+  const trimmed = id.trim();
+  if (!trimmed) {
+    return DEFAULT_SCRATCH_GAME_ID;
+  }
+
+  return trimmed;
+}
+
+export function getSessionId() {
+  return sessionId;
+}
+
+export function getGameSessionDetails() {
+  return sessionGameDetails;
+}
+
+export function getGameUrl() {
+  return sessionGameUrl;
+}
+
+export function getUserToken() {
+  return sessionUserToken;
 }
 
 function ensureRelay(relay) {
@@ -36,324 +65,593 @@ function ensureRelay(relay) {
   return relay;
 }
 
-export function createServer(relay, options = {}) {
-  const serverRelay = ensureRelay(relay);
-  const mount = options.mount ?? document.querySelector(".app-wrapper") ?? document.body;
-  const onDemoModeToggle = options.onDemoModeToggle ?? (() => {});
-  const onVisibilityChange = options.onVisibilityChange ?? (() => {});
-  const initialDemoMode = Boolean(options.initialDemoMode ?? true);
-  const initialCollapsed = Boolean(options.initialCollapsed ?? true);
-  const initialHidden = Boolean(options.initialHidden ?? false);
+function isServerRelay(candidate) {
+  return candidate instanceof ServerRelay;
+}
 
-  const container = document.createElement("div");
-  container.className = "server-panel";
-  if (initialCollapsed) {
-    container.classList.add("server-panel--collapsed");
+function normalizeBetAmount(amount) {
+  const numeric = Number(amount);
+  if (!Number.isFinite(numeric)) {
+    return 0;
   }
-  if (initialHidden) {
-    container.classList.add("server-panel--hidden");
-  }
+  return Math.max(0, numeric);
+}
 
-  const header = document.createElement("div");
-  header.className = "server-panel__header";
-  container.appendChild(header);
-
-  const title = document.createElement("div");
-  title.className = "server-panel__title";
-  title.textContent = "Server Panel";
-  header.appendChild(title);
-
-  const headerControls = document.createElement("div");
-  headerControls.className = "server-panel__header-controls";
-  header.appendChild(headerControls);
-
-  const toggleLabel = document.createElement("label");
-  toggleLabel.className = "server-panel__toggle";
-  toggleLabel.textContent = "Demo Mode";
-
-  const toggleInput = document.createElement("input");
-  toggleInput.type = "checkbox";
-  toggleInput.checked = initialDemoMode;
-  toggleInput.addEventListener("change", () => {
-    onDemoModeToggle(Boolean(toggleInput.checked));
-  });
-
-  toggleLabel.appendChild(toggleInput);
-  headerControls.appendChild(toggleLabel);
-
-  const minimizeButton = document.createElement("button");
-  minimizeButton.type = "button";
-  minimizeButton.className = "server-panel__minimize";
-  minimizeButton.setAttribute("aria-label", "Toggle server panel visibility");
-  minimizeButton.textContent = initialCollapsed ? "+" : "−";
-  minimizeButton.addEventListener("click", () => {
-    const collapsed = container.classList.toggle("server-panel--collapsed");
-    minimizeButton.textContent = collapsed ? "+" : "−";
-  });
-  headerControls.appendChild(minimizeButton);
-
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.className = "server-panel__close";
-  closeButton.setAttribute("aria-label", "Hide server panel");
-  closeButton.textContent = "×";
-  headerControls.appendChild(closeButton);
-
-  const body = document.createElement("div");
-  body.className = "server-panel__body";
-  container.appendChild(body);
-
-  const logSection = document.createElement("div");
-  logSection.className = "server-panel__log";
-  body.appendChild(logSection);
-
-  const logList = document.createElement("div");
-  logList.className = "server-panel__log-list";
-  logSection.appendChild(logList);
-
-  const logHeader = document.createElement("div");
-  logHeader.className = "server-panel__log-header";
-  logSection.insertBefore(logHeader, logList);
-
-  const logTitle = document.createElement("div");
-  logTitle.className = "server-panel__log-title";
-  logTitle.textContent = "Relay Log";
-  logHeader.appendChild(logTitle);
-
-  const clearButton = document.createElement("button");
-  clearButton.type = "button";
-  clearButton.className = "server-panel__clear-log";
-  clearButton.textContent = "Clear";
-  clearButton.addEventListener("click", () => {
-    logList.textContent = "";
-  });
-  logHeader.appendChild(clearButton);
-
-  const controlsSection = document.createElement("div");
-  controlsSection.className = "server-panel__controls";
-  body.appendChild(controlsSection);
-
-  function createControlsGroup(title) {
-    const group = document.createElement("div");
-    group.className = "server-panel__controls-group";
-
-    const heading = document.createElement("div");
-    heading.className = "server-panel__controls-group-title";
-    heading.textContent = title;
-    group.appendChild(heading);
-
-    const buttonsContainer = document.createElement("div");
-    buttonsContainer.className = "server-panel__controls-group-buttons";
-    group.appendChild(buttonsContainer);
-
-    controlsSection.appendChild(group);
-    return buttonsContainer;
-  }
-
-  const manualControls = createControlsGroup("Manual Actions");
-  const autoControls = createControlsGroup("Auto Actions");
-  const profitControls = createControlsGroup("PROFIT");
-
-  const buttons = [];
-  const inputs = [];
-
-  createInputRow({
-    placeholder: "Total profit",
-    type: "text",
-    inputMode: "decimal",
-    mountPoint: profitControls,
-    buttonLabel: "Update Profit",
-    onSubmit: ({ input }) => {
-      const raw = input.value.trim();
-      const payload = { value: raw === "" ? null : raw };
-      const numeric = Number(raw);
-      if (Number.isFinite(numeric)) {
-        payload.numericValue = numeric;
-      }
-      serverRelay.deliver("profit:update-total", payload);
-      input.value = "";
-    },
-  });
-
-  function appendLog(direction, type, payload) {
-    const entry = createLogEntry(direction, type, payload);
-    logList.appendChild(entry);
-    logList.scrollTop = logList.scrollHeight;
-  }
-
-  function createButton(label, onClick, mountPoint = controlsSection) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-    button.className = "server-panel__button";
-    button.addEventListener("click", () => {
-      if (typeof onClick === "function") {
-        onClick();
-      }
-    });
-    mountPoint.appendChild(button);
-    buttons.push(button);
-    return button;
-  }
-
-  function createInputRow({
-    placeholder,
-    type = "text",
-    step,
-    inputMode,
-    onSubmit,
-    mountPoint,
-    buttonLabel,
-  }) {
-    const row = document.createElement("div");
-    row.className = "server-panel__field-row";
-    (mountPoint ?? controlsSection).appendChild(row);
-
-    const input = document.createElement("input");
-    input.type = type;
-    input.placeholder = placeholder;
-    input.className = "server-panel__input";
-    if (step !== undefined) {
-      input.step = step;
+function formatBetAmountLiteral(amount) {
+  const normalized = normalizeBetAmount(amount);
+  const safeDecimals = 8;
+  try {
+    return normalized.toFixed(safeDecimals);
+  } catch (error) {
+    const fallback = String(normalized);
+    if (/e/i.test(fallback)) {
+      return Number.isFinite(normalized)
+        ? normalized.toLocaleString("en-US", {
+            useGrouping: false,
+            minimumFractionDigits: safeDecimals,
+            maximumFractionDigits: safeDecimals,
+          })
+        : "0.00000000";
     }
-    if (inputMode) {
-      input.inputMode = inputMode;
-    }
-    row.appendChild(input);
-    inputs.push(input);
+    return fallback;
+  }
+}
 
-    const button = createButton(
-      buttonLabel ?? "Submit",
-      () => {
-        if (typeof onSubmit === "function") {
-          onSubmit({ input, button });
-        }
+function serializeBetRequestBody({ type = "bet", amountLiteral, betInfo }) {
+  const safeType = typeof type === "string" && type.length ? type : "bet";
+  const literal =
+    typeof amountLiteral === "string" && amountLiteral.length > 0
+      ? amountLiteral
+      : "0.00000000";
+  const betInfoJson = JSON.stringify(betInfo ?? {});
+  return `{"type":${JSON.stringify(safeType)},"amount":${literal},"betInfo":${betInfoJson}}`;
+}
+
+function normalizeBetRate(rate) {
+  const numeric = Number(rate);
+  if (!Number.isFinite(numeric)) {
+    return 1;
+  }
+  return Math.max(1, Math.floor(numeric));
+}
+
+export async function initializeSessionId({
+  url = DEFAULT_SERVER_URL,
+  relay,
+} = {}) {
+  const baseUrl = normalizeBaseUrl(url);
+  const endpoint = `${baseUrl}/get_session_id`;
+
+  const requestPayload = {
+    method: "GET",
+    url: endpoint,
+  };
+
+  if (isServerRelay(relay)) {
+    relay.send("api:get_session_id:request", requestPayload);
+  }
+
+  let response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain, */*",
       },
-      row
-    );
-
-    if (typeof onSubmit === "function") {
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          button.click();
-        }
+    });
+  } catch (networkError) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:get_session_id:response", {
+        ok: false,
+        error: networkError?.message ?? "Network error",
+        request: requestPayload,
       });
     }
-
-    return { row, input, button };
+    throw networkError;
   }
 
-  function createRollPayload(rawValue) {
-    const numeric = Number(rawValue);
-    if (Number.isFinite(numeric)) {
-      return { roll: numeric };
+  const rawBody = await response.text();
+  let nextSessionId = rawBody;
+
+  const responsePayload = {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    body: rawBody,
+    request: requestPayload,
+  };
+
+  try {
+    const parsed = JSON.parse(rawBody);
+    if (typeof parsed === "string") {
+      nextSessionId = parsed;
+    } else if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof parsed.sessionId === "string"
+    ) {
+      nextSessionId = parsed.sessionId;
     }
-    return {};
+  } catch (error) {
+    // Response is not JSON; treat raw body as the session id string.
   }
 
-  createInputRow({
-    placeholder: "Dice roll (0-100)",
-    type: "number",
-    step: "0.01",
-    inputMode: "decimal",
-    mountPoint: manualControls,
-    buttonLabel: "On Bet Outcome",
-    onSubmit: ({ input }) => {
-      const payload = createRollPayload(input.value);
-      serverRelay.deliver("game:bet-outcome", payload);
-      input.value = "";
-    },
-  });
-
-  createInputRow({
-    placeholder: "Dice roll (0-100)",
-    type: "number",
-    step: "0.01",
-    inputMode: "decimal",
-    mountPoint: autoControls,
-    buttonLabel: "On Autobet Outcome",
-    onSubmit: ({ input }) => {
-      const payload = createRollPayload(input.value);
-      serverRelay.deliver("game:auto-bet-outcome", payload);
-      input.value = "";
-    },
-  });
-
-  createButton(
-    "Stop Autobet",
-    () => {
-      serverRelay.deliver("stop-autobet");
-    },
-    autoControls
-  );
-
-  mount.prepend(container);
-
-  let visible = !initialHidden;
-
-  function applyVisibility(next, { force = false } = {}) {
-    const normalized = Boolean(next);
-    if (!force && normalized === visible) {
-      return;
+  if (typeof nextSessionId !== "string" || nextSessionId.length === 0) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:get_session_id:response", {
+        ...responsePayload,
+        ok: false,
+        error: "Session id response did not include a session id value",
+      });
     }
-    visible = normalized;
-    container.classList.toggle("server-panel--hidden", !normalized);
-    onVisibilityChange(visible);
+    throw new Error("Session id response did not include a session id value");
   }
 
-  const show = () => applyVisibility(true);
-  const hide = () => applyVisibility(false);
-
-  closeButton.addEventListener("click", () => {
-    hide();
-  });
-
-  function setDemoMode(enabled) {
-    const normalized = Boolean(enabled);
-    if (toggleInput.checked !== normalized) {
-      toggleInput.checked = normalized;
+  if (!response.ok) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:get_session_id:response", {
+        ...responsePayload,
+        ok: false,
+        error: `Failed to initialize session id: ${response.status} ${response.statusText}`,
+      });
     }
-    buttons.forEach((button) => {
-      button.disabled = normalized;
-    });
-    inputs.forEach((input) => {
-      input.disabled = normalized;
+    throw new Error(
+      `Failed to initialize session id: ${response.status} ${response.statusText}`
+    );
+  }
+
+  sessionId = nextSessionId;
+
+  if (isServerRelay(relay)) {
+    relay.deliver("api:get_session_id:response", {
+      ...responsePayload,
+      ok: true,
+      sessionId,
     });
   }
 
-  setDemoMode(initialDemoMode);
-  applyVisibility(visible, { force: true });
+  return sessionId;
+}
+
+export async function initializeGameSession({
+  url = DEFAULT_SERVER_URL,
+  scratchGameId = DEFAULT_SCRATCH_GAME_ID,
+  relay,
+} = {}) {
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    const error = new Error(
+      "Cannot join game session before the session id is initialized"
+    );
+    if (isServerRelay(relay)) {
+      relay.deliver("api:join:response", {
+        ok: false,
+        error: error.message,
+      });
+    }
+    throw error;
+  }
+
+  const baseUrl = normalizeBaseUrl(url);
+  const gameId = normalizeScratchGameId(scratchGameId);
+  const endpoint = `${baseUrl}/join/${encodeURIComponent(gameId)}/`;
+
+  sessionGameDetails = null;
+  sessionGameUrl = null;
+  sessionUserToken = null;
+
+  const requestPayload = {
+    method: "GET",
+    url: endpoint,
+    gameId,
+  };
+
+  if (isServerRelay(relay)) {
+    relay.send("api:join:request", requestPayload);
+  }
+
+  let response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "X-CASINOTV-TOKEN": sessionId,
+        "X-CASINOTV-PROTOCOL-VERSION": "1.1",
+      },
+    });
+  } catch (networkError) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:join:response", {
+        ok: false,
+        error: networkError?.message ?? "Network error",
+        request: requestPayload,
+      });
+    }
+    throw networkError;
+  }
+
+  const rawBody = await response.text();
+  let parsedBody = null;
+
+  if (rawBody) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch (error) {
+      // Response body was not JSON; leave parsedBody as null.
+    }
+  }
+
+  const responsePayload = {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    body: parsedBody ?? rawBody,
+    request: requestPayload,
+  };
+
+  if (!response.ok) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:join:response", {
+        ...responsePayload,
+        ok: false,
+        error: `Failed to join game session: ${response.status} ${response.statusText}`,
+      });
+    }
+    throw new Error(
+      `Failed to join game session: ${response.status} ${response.statusText}`
+    );
+  }
+
+  if (!parsedBody || typeof parsedBody !== "object") {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:join:response", {
+        ...responsePayload,
+        ok: false,
+        error: "Join game session response was not valid JSON",
+      });
+    }
+    throw new Error("Join game session response was not valid JSON");
+  }
+
+  const isSuccess = Boolean(parsedBody?.IsSuccess);
+  const responseData = parsedBody?.ResponseData ?? null;
+
+  if (!isSuccess || !responseData) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:join:response", {
+        ...responsePayload,
+        ok: false,
+        error: "Join game session response did not indicate success",
+      });
+    }
+    throw new Error("Join game session response did not indicate success");
+  }
+
+  const gameData = responseData?.GameData ?? null;
+  const userData = responseData?.UserData ?? null;
+  const userDataList = responseData?.UserDataList ?? null;
+  const gameIds = Array.isArray(responseData?.GameIds)
+    ? [...responseData.GameIds]
+    : [];
+
+  sessionGameDetails = {
+    isSuccess,
+    gameIds,
+    gameData,
+    userData,
+    userDataList,
+    raw: parsedBody,
+  };
+
+  sessionGameUrl =
+    typeof gameData?.gameUrl === "string" && gameData.gameUrl
+      ? gameData.gameUrl
+      : null;
+  sessionUserToken =
+    typeof gameData?.userToken === "string" && gameData.userToken
+      ? gameData.userToken
+      : null;
+
+  if (isServerRelay(relay)) {
+    relay.deliver("api:join:response", {
+      ...responsePayload,
+      ok: true,
+      gameSession: sessionGameDetails,
+      gameUrl: sessionGameUrl,
+      userToken: sessionUserToken,
+    });
+  }
+
+  return sessionGameDetails;
+}
+
+export async function submitBet({
+  url = DEFAULT_SERVER_URL,
+  gameId = DEFAULT_SCRATCH_GAME_ID,
+  amount = 0,
+  rate = 0,
+  targetMultiplier = null,
+  relay,
+} = {}) {
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    const error = new Error(
+      "Cannot submit bet before the session id is initialized"
+    );
+    if (isServerRelay(relay)) {
+      relay.deliver("api:bet:response", {
+        ok: false,
+        error: error.message,
+      });
+    }
+    throw error;
+  }
+
+  const baseUrl = normalizeBaseUrl(url);
+  const normalizedGameId = normalizeScratchGameId(gameId);
+  const endpoint = `${baseUrl}/post/${encodeURIComponent(
+    normalizedGameId
+  )}?betInfo`;
+
+  lastBetResult = null;
+  lastBetRoundId = null;
+  lastBetBalance = null;
+  lastBetRegisteredBets = [];
+
+  const normalizedAmount = normalizeBetAmount(amount);
+  const normalizedRate = normalizeBetRate(rate);
+  const amountLiteral = formatBetAmountLiteral(normalizedAmount);
+  const normalizedTargetMultiplier = Number.isFinite(targetMultiplier)
+    ? targetMultiplier
+    : null;
+
+  const betInfo = {
+    id: 4,
+    title: {
+      key: "straight",
+      value: {},
+    },
+    type: "straight",
+    items: [],
+    rate: normalizedRate,
+    state: "Active",
+  };
+
+  if (normalizedTargetMultiplier !== null) {
+    betInfo.targetMultiplier = normalizedTargetMultiplier;
+  }
+
+  const requestBody = {
+    type: "bet",
+    amount: normalizedAmount,
+    betInfo,
+  };
+
+  const serializedRequestBody = serializeBetRequestBody({
+    type: requestBody.type,
+    amountLiteral,
+    betInfo,
+  });
+
+  const requestPayload = {
+    method: "POST",
+    url: endpoint,
+    gameId: normalizedGameId,
+    body: requestBody,
+    bodyLiteral: serializedRequestBody,
+  };
+
+  if (isServerRelay(relay)) {
+    relay.send("api:bet:request", requestPayload);
+  }
+
+  let response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+        "X-CASINOTV-TOKEN": sessionId,
+        "X-CASINOTV-PROTOCOL-VERSION": "1.1",
+      },
+      body: serializedRequestBody,
+    });
+  } catch (networkError) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:bet:response", {
+        ok: false,
+        error: networkError?.message ?? "Network error",
+        request: requestPayload,
+      });
+    }
+    throw networkError;
+  }
+
+  const rawBody = await response.text();
+  let parsedBody = null;
+
+  if (rawBody) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch (error) {
+      // Response body was not JSON; leave parsedBody as null.
+    }
+  }
+
+  const responsePayload = {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    body: parsedBody ?? rawBody,
+    request: requestPayload,
+  };
+
+  if (!response.ok) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:bet:response", {
+        ...responsePayload,
+        ok: false,
+        error: `Failed to submit bet: ${response.status} ${response.statusText}`,
+      });
+    }
+    throw new Error(
+      `Failed to submit bet: ${response.status} ${response.statusText}`
+    );
+  }
+
+  if (!parsedBody || typeof parsedBody !== "object") {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:bet:response", {
+        ...responsePayload,
+        ok: false,
+        error: "Bet response was not valid JSON",
+      });
+    }
+    throw new Error("Bet response was not valid JSON");
+  }
+
+  const isSuccess = Boolean(parsedBody?.IsSuccess);
+  const responseData = parsedBody?.ResponseData ?? null;
+  const registeredBets = Array.isArray(responseData?.registeredBets)
+    ? responseData.registeredBets.map((bet) => ({ ...(bet ?? {}) }))
+    : [];
+  const balance = responseData?.balance ?? null;
+  const state = responseData?.state ?? null;
+  const roundId = responseData?.roundId ?? null;
+
+  if (!responseData) {
+    if (isServerRelay(relay)) {
+      relay.deliver("api:bet:response", {
+        ...responsePayload,
+        ok: false,
+        error: "Bet response did not include response data",
+      });
+    }
+    throw new Error("Bet response did not include response data");
+  }
+
+  lastBetResult = state ?? null;
+  lastBetRoundId = roundId ?? null;
+  lastBetBalance = balance ?? null;
+  lastBetRegisteredBets = registeredBets;
+
+  if (isServerRelay(relay)) {
+    relay.deliver("api:bet:response", {
+      ...responsePayload,
+      ok: true,
+      bet: {
+        success: isSuccess,
+        state,
+        roundId,
+        registeredBets,
+        balance,
+      },
+    });
+  }
+
+  return {
+    isSuccess,
+    responseData,
+    state,
+    roundId,
+    registeredBets,
+    balance,
+    raw: parsedBody,
+  };
+}
+
+export async function initializeServerConnection({
+  relay,
+  url = DEFAULT_SERVER_URL,
+  scratchGameId = DEFAULT_SCRATCH_GAME_ID,
+} = {}) {
+  const serverRelay = ensureRelay(relay);
+  const gameSessionId = await initializeSessionId({ url, relay: serverRelay });
+  const gameSession = await initializeGameSession({
+    url,
+    scratchGameId,
+    relay: serverRelay,
+  });
+
+  return {
+    sessionId: gameSessionId,
+    gameSession,
+    gameUrl: getGameUrl(),
+    userToken: getUserToken(),
+  };
+}
+
+export function createServer(relay, options = {}) {
+  const serverRelay = ensureRelay(relay);
+  const {
+    mount = document.querySelector(".app-wrapper") ?? document.body,
+    onDemoModeToggle = () => {},
+    onVisibilityChange = () => {},
+    initialDemoMode = true,
+    initialCollapsed = false,
+    initialHidden = false,
+    serverUrl = DEFAULT_SERVER_URL,
+    scratchGameId = DEFAULT_SCRATCH_GAME_ID,
+    autoInitialize = true,
+  } = options;
+
+  const serverPanel = new ServerPanel({
+    mount,
+    initialDemoMode: Boolean(initialDemoMode),
+    initialCollapsed: Boolean(initialCollapsed),
+    initialHidden: Boolean(initialHidden),
+    onDemoModeToggle,
+    onVisibilityChange,
+  });
+
+  serverRelay.addEventListener("demomodechange", (event) => {
+    serverPanel.setDemoMode(Boolean(event.detail?.value));
+  });
 
   const outgoingHandler = (event) => {
     const { type, payload } = event.detail ?? {};
-    appendLog("outgoing", type, payload);
+    serverPanel.appendLog("outgoing", type, payload);
   };
 
   const incomingHandler = (event) => {
     const { type, payload } = event.detail ?? {};
-    appendLog("incoming", type, payload);
+    serverPanel.appendLog("incoming", type, payload);
   };
 
   serverRelay.addEventListener("outgoing", outgoingHandler);
   serverRelay.addEventListener("incoming", incomingHandler);
 
-  serverRelay.addEventListener("demomodechange", (event) => {
-    setDemoMode(Boolean(event.detail?.value));
-  });
+  const initializationPromise = autoInitialize
+    ? initializeServerConnection({
+        relay: serverRelay,
+        url: serverUrl,
+        scratchGameId,
+      }).catch((error) => {
+        console.error("Server initialization failed", error);
+        throw error;
+      })
+    : null;
 
   return {
-    element: container,
-    setDemoMode,
-    show,
-    hide,
-    isVisible() {
-      return Boolean(visible);
-    },
+    element: serverPanel.container,
+    setDemoMode: (enabled) => serverPanel.setDemoMode(enabled),
+    show: () => serverPanel.show(),
+    hide: () => serverPanel.hide(),
+    isVisible: () => serverPanel.isVisible(),
+    initialize: () =>
+      initializeServerConnection({
+        relay: serverRelay,
+        url: serverUrl,
+        scratchGameId,
+      }),
+    initialization: initializationPromise,
     destroy() {
       serverRelay.removeEventListener("outgoing", outgoingHandler);
       serverRelay.removeEventListener("incoming", incomingHandler);
-      container.remove();
+      serverPanel.destroy();
     },
   };
 }
