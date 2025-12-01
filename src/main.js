@@ -1,7 +1,7 @@
 import { createGame } from "./game/game.js";
 import { ControlPanel } from "./controlPanel/controlPanel.js";
 import { ServerRelay } from "./serverRelay.js";
-import { createServer } from "./server/server.js";
+import { createServer, submitBet } from "./server/server.js";
 
 import winSoundUrl from "../assets/sounds/Win.wav";
 
@@ -17,6 +17,7 @@ let lastRollMode = "over";
 let awaitingServerBetOutcome = false;
 let awaitingServerAutoOutcome = false;
 let lastWinChance = null;
+let lastTargetMultiplier = null;
 const bottomPanelLocks = {
   manual: false,
   auto: false,
@@ -64,6 +65,7 @@ const opts = {
         : clampPercent(100 - normalizedTarget);
     lastWinChance = winChance;
     const multiplier = winChance > 0 ? 99 / winChance : Infinity;
+    lastTargetMultiplier = multiplier;
 
     console.debug(`Main calculated win chance: ${winChance.toFixed(2)}%`);
 
@@ -180,6 +182,11 @@ window.addEventListener("keydown", (event) => {
   try {
     game = await createGame("#game", opts);
     window.game = game;
+    const initialWinChance = toFiniteNumber(game?.getWinChance?.());
+    if (initialWinChance !== null) {
+      lastWinChance = initialWinChance;
+      lastTargetMultiplier = initialWinChance > 0 ? 99 / initialWinChance : null;
+    }
   } catch (e) {
     console.error("Game initialization failed:", e);
     const gameDiv = document.querySelector("#game");
@@ -238,13 +245,48 @@ function handleServerBetRequest() {
   if (awaitingServerBetOutcome) {
     return;
   }
+  const betAmount = toFiniteNumber(controlPanel?.getBetValue?.());
+  if (betAmount === null || betAmount <= 0) {
+    return;
+  }
   if (controlPanel?.getMode?.() === "manual") {
     lockManualBetControls();
   }
   awaitingServerBetOutcome = true;
   lockBottomPanelControls("manual");
   const payload = buildServerBetPayload();
+  payload.betAmount = betAmount;
   sendRelayMessage("control:bet", payload);
+
+  (async () => {
+    try {
+      const betResponse = await submitBet({
+        amount: betAmount,
+        rate: payload.winChance ?? 0,
+        targetMultiplier: payload.targetMultiplier,
+        relay: serverRelay,
+      });
+
+      const state = betResponse?.state ?? betResponse?.responseData?.state ?? null;
+      const resultValue =
+        state?.resultValue?.value ?? state?.resultValue ?? payload.resultValue;
+      const winAmount = state?.winAmount ?? betResponse?.responseData?.state?.winAmount;
+
+      onManualBetOutcomeReceived();
+      processServerRoll({
+        roll: resultValue,
+        betValue: betAmount,
+        winChance: payload.winChance,
+        totalProfit: winAmount,
+        totalProfitValue: winAmount,
+      });
+    } catch (error) {
+      console.error("Failed to submit bet", error);
+      awaitingServerBetOutcome = false;
+      unlockManualBetControls();
+      unlockBottomPanelControls("manual");
+    }
+  })();
 }
 
 function handleServerAutoBetStart() {
@@ -536,8 +578,31 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, numeric));
 }
 
+function getTargetMultiplierValue() {
+  const winChance = (() => {
+    const value = toFiniteNumber(game?.getWinChance?.());
+    if (value !== null) {
+      return value;
+    }
+    if (toFiniteNumber(lastWinChance) !== null) {
+      return lastWinChance;
+    }
+    return null;
+  })();
+
+  if (winChance === null || winChance <= 0) {
+    return toFiniteNumber(lastTargetMultiplier);
+  }
+
+  return 99 / winChance;
+}
+
 function buildServerBetPayload() {
   const payload = {};
+  const betValue = toFiniteNumber(controlPanel?.getBetValue?.());
+  if (betValue !== null) {
+    payload.betValue = betValue;
+  }
   const rollMode =
     typeof game?.getRollMode === "function" ? game.getRollMode() : lastRollMode;
   if (rollMode) {
@@ -557,6 +622,10 @@ function buildServerBetPayload() {
   })();
   if (Number.isFinite(winChanceValue)) {
     payload.winChance = winChanceValue;
+  }
+  const targetMultiplier = getTargetMultiplierValue();
+  if (targetMultiplier !== null) {
+    payload.targetMultiplier = targetMultiplier;
   }
   return payload;
 }
