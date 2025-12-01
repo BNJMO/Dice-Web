@@ -459,7 +459,7 @@
   flex: 0 0 auto;
 }
 
-.control-show-dummy-server {
+.control-show-server {
   padding: 8px 14px;
   border-radius: 8px;
   border: 1px solid rgba(68, 112, 134, 0.8);
@@ -471,12 +471,12 @@
   transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
 
-.control-show-dummy-server:hover:not(.is-disabled) {
+.control-show-server:hover:not(.is-disabled) {
   background: rgba(52, 94, 118, 0.95);
   transform: translateY(-1px);
 }
 
-.control-show-dummy-server.is-disabled {
+.control-show-server.is-disabled {
   opacity: 0.55;
   cursor: default;
   pointer-events: none;
