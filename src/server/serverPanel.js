@@ -20,7 +20,7 @@ export class ServerPanel {
       this.container.classList.add("server-panel--hidden");
     }
 
-    this.buildHeader(initialDemoMode);
+    this.buildHeader(initialDemoMode, initialCollapsed);
     this.buildBody();
 
     mount.prepend(this.container);
@@ -29,7 +29,7 @@ export class ServerPanel {
     this.applyVisibility(this.visible, { force: true });
   }
 
-  buildHeader(initialDemoMode) {
+  buildHeader(initialDemoMode, initialCollapsed) {
     const header = document.createElement("div");
     header.className = "server-panel__header";
     this.container.appendChild(header);

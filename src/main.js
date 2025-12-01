@@ -89,6 +89,14 @@ serverRelay.addEventListener("demomodechange", (event) => {
   applyDemoMode(Boolean(event?.detail?.value));
 });
 
+window.addEventListener("keydown", (event) => {
+  const key = typeof event.key === "string" ? event.key.toLowerCase() : "";
+  if (event.ctrlKey && event.altKey && key === "o") {
+    event.preventDefault();
+    serverPanel?.show?.();
+  }
+});
+
 (async () => {
   // Initialize Control Panel
   try {
