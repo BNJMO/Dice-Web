@@ -1485,6 +1485,50 @@ export class ControlPanel extends EventTarget {
     }
   }
 
+  isAutoAdvancedEnabled() {
+    return Boolean(this.isAdvancedEnabled);
+  }
+
+  getOnWinMode() {
+    return this.onWinMode === "increase" ? "increase" : "reset";
+  }
+
+  getOnLossMode() {
+    return this.onLossMode === "increase" ? "increase" : "reset";
+  }
+
+  getOnWinIncreaseValue() {
+    return this.parseStrategyValue(this.onWinInput?.value);
+  }
+
+  getOnLossIncreaseValue() {
+    return this.parseStrategyValue(this.onLossInput?.value);
+  }
+
+  getStopOnProfitValue() {
+    if (!this.autoStopOnProfitField?.input) return 0;
+    const numeric = this.parseBetValue(this.autoStopOnProfitField.input.value);
+    return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+  }
+
+  getStopOnLossValue() {
+    if (!this.autoStopOnLossField?.input) return 0;
+    const numeric = this.parseBetValue(this.autoStopOnLossField.input.value);
+    return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+  }
+
+  parseStrategyValue(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    }
+    if (typeof value !== "string") {
+      return 0;
+    }
+    const sanitized = value.replace(/[^0-9.]/g, "");
+    const numeric = Number.parseFloat(sanitized);
+    return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+  }
+
   getMode() {
     return this.mode;
   }

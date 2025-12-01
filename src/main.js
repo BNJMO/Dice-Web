@@ -32,6 +32,8 @@ const betControlLocks = {
 let autoBetsRemaining = null;
 let serverAutoStopPending = false;
 
+let serverAutoSessionProfit = 0;
+
 let autoNumberOfBetsLocked = false;
 
 const opts = {
@@ -301,6 +303,7 @@ function handleServerAutoBetStart() {
   }
   initializeAutoBetCounter();
   serverAutoStopPending = false;
+  resetServerAutoSessionProfit();
   clearTimeout(serverAutoTimeoutId);
   serverAutoTimeoutId = null;
   if (controlPanel?.getMode?.() === "auto") {
@@ -356,6 +359,15 @@ function runServerAutoBetRound() {
       const resultValue = toFiniteNumber(rawResultValue);
       const rollValue = resultValue === null ? null : resultValue * 100;
       const winAmount = state?.winAmount ?? betResponse?.responseData?.state?.winAmount;
+      const outcomeStatus =
+        typeof state?.status === "string"
+          ? state.status.toLowerCase()
+          : null;
+      const didWin = outcomeStatus === "won" || (toFiniteNumber(winAmount) ?? 0) > 0;
+      const roundProfit = calculateServerAutoRoundProfit({
+        betAmount,
+        winAmount,
+      });
 
       awaitingServerAutoOutcome = false;
       processServerRoll({
@@ -365,6 +377,13 @@ function runServerAutoBetRound() {
         totalProfit: winAmount,
         totalProfitValue: winAmount,
       });
+      updateServerAutoSessionProfit(roundProfit);
+      applyServerAutoAdvancedStrategies({ didWin, didLose: !didWin, betAmount });
+      const shouldStopForProfit = shouldStopServerAutoForProfitOrLoss();
+      if (shouldStopForProfit) {
+        finalizeServerAutoLoop();
+        return;
+      }
       const shouldStop = decrementAutoBetsRemaining();
       if (shouldStop || serverAutoStopPending) {
         finalizeServerAutoLoop();
@@ -401,6 +420,79 @@ function stopServerAutoLoop() {
   }
   finalizeServerAutoLoop();
   serverAutoStopPending = false;
+}
+
+function calculateServerAutoRoundProfit({ betAmount = 0, winAmount = 0 } = {}) {
+  const wager = toFiniteNumber(betAmount) ?? 0;
+  const winnings = toFiniteNumber(winAmount) ?? 0;
+  return winnings - wager;
+}
+
+function updateServerAutoSessionProfit(delta) {
+  const change = toFiniteNumber(delta);
+  if (change === null) {
+    return;
+  }
+  serverAutoSessionProfit += change;
+}
+
+function resetServerAutoSessionProfit() {
+  serverAutoSessionProfit = 0;
+}
+
+function applyServerAutoAdvancedStrategies({ didWin = false, didLose = false, betAmount = null } = {}) {
+  if (!controlPanel?.isAutoAdvancedEnabled?.()) {
+    return;
+  }
+
+  if (didWin && controlPanel?.getOnWinMode?.() === "increase") {
+    increaseBetAmountByPercent(controlPanel?.getOnWinIncreaseValue?.(), betAmount);
+  }
+
+  if (didLose && controlPanel?.getOnLossMode?.() === "increase") {
+    increaseBetAmountByPercent(controlPanel?.getOnLossIncreaseValue?.(), betAmount);
+  }
+}
+
+function shouldStopServerAutoForProfitOrLoss() {
+  if (!controlPanel?.isAutoAdvancedEnabled?.()) {
+    return false;
+  }
+  const profitThreshold = getServerAutoStopOnProfitThreshold();
+  if (profitThreshold > 0 && serverAutoSessionProfit >= profitThreshold) {
+    return true;
+  }
+
+  const lossThreshold = getServerAutoStopOnLossThreshold();
+  if (lossThreshold > 0 && -serverAutoSessionProfit >= lossThreshold) {
+    return true;
+  }
+
+  return false;
+}
+
+function getServerAutoStopOnProfitThreshold() {
+  const threshold = toFiniteNumber(controlPanel?.getStopOnProfitValue?.());
+  return threshold !== null ? Math.max(0, threshold) : 0;
+}
+
+function getServerAutoStopOnLossThreshold() {
+  const threshold = toFiniteNumber(controlPanel?.getStopOnLossValue?.());
+  return threshold !== null ? Math.max(0, threshold) : 0;
+}
+
+function increaseBetAmountByPercent(percent, currentBetFallback = null) {
+  const percentValue = Math.max(0, toFiniteNumber(percent) ?? 0);
+  const betValue = toFiniteNumber(controlPanel?.getBetValue?.());
+  const baseBet = betValue !== null ? betValue : toFiniteNumber(currentBetFallback);
+  if (baseBet === null || baseBet === undefined || baseBet < 0) {
+    return;
+  }
+  const nextBet = baseBet * (1 + percentValue / 100);
+  if (!Number.isFinite(nextBet)) {
+    return;
+  }
+  controlPanel?.setBetInputValue?.(nextBet);
 }
 
 function startAutoBet() {
