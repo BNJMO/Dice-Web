@@ -31,19 +31,6 @@ export function createServer(relay, options = {}) {
     onVisibilityChange,
   });
 
-  const outgoingHandler = (event) => {
-    const { type, payload } = event.detail ?? {};
-    serverPanel.appendLog("outgoing", type, payload);
-  };
-
-  const incomingHandler = (event) => {
-    const { type, payload } = event.detail ?? {};
-    serverPanel.appendLog("incoming", type, payload);
-  };
-
-  serverRelay.addEventListener("outgoing", outgoingHandler);
-  serverRelay.addEventListener("incoming", incomingHandler);
-
   serverRelay.addEventListener("demomodechange", (event) => {
     serverPanel.setDemoMode(Boolean(event.detail?.value));
   });
@@ -55,8 +42,6 @@ export function createServer(relay, options = {}) {
     hide: () => serverPanel.hide(),
     isVisible: () => serverPanel.isVisible(),
     destroy() {
-      serverRelay.removeEventListener("outgoing", outgoingHandler);
-      serverRelay.removeEventListener("incoming", incomingHandler);
       serverPanel.destroy();
     },
   };
