@@ -1,7 +1,7 @@
 import { createGame } from "./game/game.js";
 import { ControlPanel } from "./controlPanel/controlPanel.js";
 import { ServerRelay } from "./serverRelay.js";
-import { createServerDummy } from "./serverDummy/serverDummy.js";
+import { createServerDummy } from "./server/server.js";
 
 import winSoundUrl from "../assets/sounds/Win.wav";
 
