@@ -1,7 +1,7 @@
 import { createGame } from "./game/game.js";
 import { ControlPanel } from "./controlPanel/controlPanel.js";
 import { ServerRelay } from "./serverRelay.js";
-import { createServerDummy } from "./server/server.js";
+import { createServer } from "./server/server.js";
 
 import winSoundUrl from "../assets/sounds/Win.wav";
 
@@ -12,7 +12,7 @@ let autoBetStopRequested = false;
 let isAutoBetRunning = false;
 const serverRelay = new ServerRelay();
 let demoMode = serverRelay.demoMode;
-let serverDummy = null;
+let serverPanel = null;
 let lastRollMode = "over";
 let awaitingServerBetOutcome = false;
 let awaitingServerAutoOutcome = false;
@@ -101,8 +101,8 @@ serverRelay.addEventListener("demomodechange", (event) => {
       opts.disableAnimations = !enabled;
       game?.setAnimationsEnabled?.(enabled);
     });
-    controlPanel.addEventListener("showdummyserver", () => {
-      serverDummy?.show?.();
+    controlPanel.addEventListener("showserver", () => {
+      serverPanel?.show?.();
     });
     controlPanel.addEventListener("modechange", (event) => {
       const mode = event?.detail?.mode;
@@ -180,13 +180,13 @@ serverRelay.addEventListener("demomodechange", (event) => {
     controlPanel?.setInteractable?.(true);
   }
 
-  serverDummy = createServerDummy(serverRelay, {
+  serverPanel = createServer(serverRelay, {
     initialDemoMode: demoMode,
     onDemoModeToggle: (value) => serverRelay.setDemoMode(value),
     initialDemoMode: demoMode,
     initialHidden: true,
     onVisibilityChange: (isVisible) => {
-      controlPanel?.setDummyServerPanelVisibility?.(isVisible);
+      controlPanel?.setServerPanelVisibility?.(isVisible);
     },
   });
 
@@ -331,7 +331,7 @@ function applyDemoMode(enabled) {
   awaitingServerBetOutcome = false;
   awaitingServerAutoOutcome = false;
   stopAutoBetImmediately();
-  serverDummy?.setDemoMode?.(demoMode);
+  serverPanel?.setDemoMode?.(demoMode);
   unlockManualBetControls();
   resetBetControlLocks();
   unlockAutoNumberOfBets();

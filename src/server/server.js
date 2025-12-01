@@ -2,24 +2,24 @@ import { ServerRelay } from "../serverRelay.js";
 
 function createLogEntry(direction, type, payload) {
   const entry = document.createElement("div");
-  entry.className = `server-dummy__log-entry server-dummy__log-entry--${direction}`;
+  entry.className = `server-panel__log-entry server-panel__log-entry--${direction}`;
 
   const header = document.createElement("div");
   const directionLabel = document.createElement("span");
-  directionLabel.className = "server-dummy__log-direction";
+  directionLabel.className = "server-panel__log-direction";
   directionLabel.textContent =
     direction === "incoming" ? "Server → App" : "App → Server";
   header.appendChild(directionLabel);
 
   const typeLabel = document.createElement("span");
-  typeLabel.className = "server-dummy__log-type";
+  typeLabel.className = "server-panel__log-type";
   typeLabel.textContent = type ?? "unknown";
   header.appendChild(typeLabel);
 
   entry.appendChild(header);
 
   const payloadNode = document.createElement("pre");
-  payloadNode.className = "server-dummy__log-payload";
+  payloadNode.className = "server-panel__log-payload";
   payloadNode.textContent = JSON.stringify(payload ?? {}, null, 2);
   entry.appendChild(payloadNode);
 
@@ -31,12 +31,12 @@ function ensureRelay(relay) {
     throw new Error("A ServerRelay instance is required");
   }
   if (!(relay instanceof ServerRelay)) {
-    throw new Error("ServerDummy expects a ServerRelay instance");
+    throw new Error("Server expects a ServerRelay instance");
   }
   return relay;
 }
 
-export function createServerDummy(relay, options = {}) {
+export function createServer(relay, options = {}) {
   const serverRelay = ensureRelay(relay);
   const mount = options.mount ?? document.querySelector(".app-wrapper") ?? document.body;
   const onDemoModeToggle = options.onDemoModeToggle ?? (() => {});
@@ -46,29 +46,29 @@ export function createServerDummy(relay, options = {}) {
   const initialHidden = Boolean(options.initialHidden ?? false);
 
   const container = document.createElement("div");
-  container.className = "server-dummy";
+  container.className = "server-panel";
   if (initialCollapsed) {
-    container.classList.add("server-dummy--collapsed");
+    container.classList.add("server-panel--collapsed");
   }
   if (initialHidden) {
-    container.classList.add("server-dummy--hidden");
+    container.classList.add("server-panel--hidden");
   }
 
   const header = document.createElement("div");
-  header.className = "server-dummy__header";
+  header.className = "server-panel__header";
   container.appendChild(header);
 
   const title = document.createElement("div");
-  title.className = "server-dummy__title";
-  title.textContent = "Dummy Server";
+  title.className = "server-panel__title";
+  title.textContent = "Server Panel";
   header.appendChild(title);
 
   const headerControls = document.createElement("div");
-  headerControls.className = "server-dummy__header-controls";
+  headerControls.className = "server-panel__header-controls";
   header.appendChild(headerControls);
 
   const toggleLabel = document.createElement("label");
-  toggleLabel.className = "server-dummy__toggle";
+  toggleLabel.className = "server-panel__toggle";
   toggleLabel.textContent = "Demo Mode";
 
   const toggleInput = document.createElement("input");
@@ -83,46 +83,46 @@ export function createServerDummy(relay, options = {}) {
 
   const minimizeButton = document.createElement("button");
   minimizeButton.type = "button";
-  minimizeButton.className = "server-dummy__minimize";
-  minimizeButton.setAttribute("aria-label", "Toggle dummy server visibility");
+  minimizeButton.className = "server-panel__minimize";
+  minimizeButton.setAttribute("aria-label", "Toggle server panel visibility");
   minimizeButton.textContent = initialCollapsed ? "+" : "−";
   minimizeButton.addEventListener("click", () => {
-    const collapsed = container.classList.toggle("server-dummy--collapsed");
+    const collapsed = container.classList.toggle("server-panel--collapsed");
     minimizeButton.textContent = collapsed ? "+" : "−";
   });
   headerControls.appendChild(minimizeButton);
 
   const closeButton = document.createElement("button");
   closeButton.type = "button";
-  closeButton.className = "server-dummy__close";
-  closeButton.setAttribute("aria-label", "Hide dummy server");
+  closeButton.className = "server-panel__close";
+  closeButton.setAttribute("aria-label", "Hide server panel");
   closeButton.textContent = "×";
   headerControls.appendChild(closeButton);
 
   const body = document.createElement("div");
-  body.className = "server-dummy__body";
+  body.className = "server-panel__body";
   container.appendChild(body);
 
   const logSection = document.createElement("div");
-  logSection.className = "server-dummy__log";
+  logSection.className = "server-panel__log";
   body.appendChild(logSection);
 
   const logList = document.createElement("div");
-  logList.className = "server-dummy__log-list";
+  logList.className = "server-panel__log-list";
   logSection.appendChild(logList);
 
   const logHeader = document.createElement("div");
-  logHeader.className = "server-dummy__log-header";
+  logHeader.className = "server-panel__log-header";
   logSection.insertBefore(logHeader, logList);
 
   const logTitle = document.createElement("div");
-  logTitle.className = "server-dummy__log-title";
+  logTitle.className = "server-panel__log-title";
   logTitle.textContent = "Relay Log";
   logHeader.appendChild(logTitle);
 
   const clearButton = document.createElement("button");
   clearButton.type = "button";
-  clearButton.className = "server-dummy__clear-log";
+  clearButton.className = "server-panel__clear-log";
   clearButton.textContent = "Clear";
   clearButton.addEventListener("click", () => {
     logList.textContent = "";
@@ -130,20 +130,20 @@ export function createServerDummy(relay, options = {}) {
   logHeader.appendChild(clearButton);
 
   const controlsSection = document.createElement("div");
-  controlsSection.className = "server-dummy__controls";
+  controlsSection.className = "server-panel__controls";
   body.appendChild(controlsSection);
 
   function createControlsGroup(title) {
     const group = document.createElement("div");
-    group.className = "server-dummy__controls-group";
+    group.className = "server-panel__controls-group";
 
     const heading = document.createElement("div");
-    heading.className = "server-dummy__controls-group-title";
+    heading.className = "server-panel__controls-group-title";
     heading.textContent = title;
     group.appendChild(heading);
 
     const buttonsContainer = document.createElement("div");
-    buttonsContainer.className = "server-dummy__controls-group-buttons";
+    buttonsContainer.className = "server-panel__controls-group-buttons";
     group.appendChild(buttonsContainer);
 
     controlsSection.appendChild(group);
@@ -185,7 +185,7 @@ export function createServerDummy(relay, options = {}) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
-    button.className = "server-dummy__button";
+    button.className = "server-panel__button";
     button.addEventListener("click", () => {
       if (typeof onClick === "function") {
         onClick();
@@ -206,13 +206,13 @@ export function createServerDummy(relay, options = {}) {
     buttonLabel,
   }) {
     const row = document.createElement("div");
-    row.className = "server-dummy__field-row";
+    row.className = "server-panel__field-row";
     (mountPoint ?? controlsSection).appendChild(row);
 
     const input = document.createElement("input");
     input.type = type;
     input.placeholder = placeholder;
-    input.className = "server-dummy__input";
+    input.className = "server-panel__input";
     if (step !== undefined) {
       input.step = step;
     }
@@ -298,7 +298,7 @@ export function createServerDummy(relay, options = {}) {
       return;
     }
     visible = normalized;
-    container.classList.toggle("server-dummy--hidden", !normalized);
+    container.classList.toggle("server-panel--hidden", !normalized);
     onVisibilityChange(visible);
   }
 
