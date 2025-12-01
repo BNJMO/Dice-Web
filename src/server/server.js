@@ -365,6 +365,19 @@ export function createServer(relay, options = {}) {
     serverPanel.setDemoMode(Boolean(event.detail?.value));
   });
 
+  const outgoingHandler = (event) => {
+    const { type, payload } = event.detail ?? {};
+    serverPanel.appendLog("outgoing", type, payload);
+  };
+
+  const incomingHandler = (event) => {
+    const { type, payload } = event.detail ?? {};
+    serverPanel.appendLog("incoming", type, payload);
+  };
+
+  serverRelay.addEventListener("outgoing", outgoingHandler);
+  serverRelay.addEventListener("incoming", incomingHandler);
+
   const initializationPromise = autoInitialize
     ? initializeServerConnection({
         relay: serverRelay,
@@ -390,6 +403,8 @@ export function createServer(relay, options = {}) {
       }),
     initialization: initializationPromise,
     destroy() {
+      serverRelay.removeEventListener("outgoing", outgoingHandler);
+      serverRelay.removeEventListener("incoming", incomingHandler);
       serverPanel.destroy();
     },
   };
