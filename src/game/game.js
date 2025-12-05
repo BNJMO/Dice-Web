@@ -48,7 +48,7 @@ const SLIDER = {
   trackWidthCompensationStrength: 0.5,
   handleOffsetRatio: 0.06,
   tickEdgePaddingRatio: -6,
-  tickPadding: -22,
+  tickPadding: -28,
   tickTextSizeRatio: 0.27,
   backgroundOffsetRatio: 0,
 };
