@@ -1,9 +1,18 @@
+import buildConfig from "../buildConfig.json";
 import { createGame } from "./game/game.js";
 import { ControlPanel } from "./controlPanel/controlPanel.js";
 import { ServerRelay } from "./serverRelay.js";
 import { createServer, submitBet } from "./server/server.js";
 
 import winSoundUrl from "../assets/sounds/Win.wav";
+
+const buildId = buildConfig?.buildId ?? "0.0.0";
+const buildDate = buildConfig?.buildDate ?? "Unknown";
+const buildEnvironment = buildConfig?.environment ?? "Production";
+
+console.info(`🚀 Build: ${buildId}`);
+console.info(`📅 Date: ${buildDate}`);
+console.info(`🌐 Environment: ${buildEnvironment}`);
 
 let game;
 let controlPanel;
