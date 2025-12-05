@@ -971,12 +971,17 @@ export class ControlPanel extends EventTarget {
   }
 
   updateNumberOfBetsIcon() {
-    if (!this.autoNumberOfBetsInfinityIcon || !this.autoNumberOfBetsInput) return;
+    if (
+      !this.autoNumberOfBetsInfinityIcon ||
+      !this.autoNumberOfBetsInput ||
+      !this.autoNumberOfBetsField
+    ) {
+      return;
+    }
     const current = Number(this.autoNumberOfBetsInput.value) || 0;
-    this.autoNumberOfBetsInfinityIcon.classList.toggle(
-      "is-visible",
-      current === 0
-    );
+    const isInfinite = current === 0;
+    this.autoNumberOfBetsInfinityIcon.classList.toggle("is-visible", isInfinite);
+    this.autoNumberOfBetsField.classList.toggle("is-infinity-hidden", !isInfinite);
   }
 
   updateAdvancedVisibility() {

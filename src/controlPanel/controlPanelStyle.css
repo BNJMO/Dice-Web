@@ -520,6 +520,10 @@
   padding: 14px var(--control-bet-padding-right) 14px 8px;
 }
 
+.auto-number-field.is-infinity-hidden {
+  --control-bet-stepper-offset: calc(var(--control-bet-infinity-offset) + 12px);
+}
+
 .auto-number-input {
   text-align: left;
 }
