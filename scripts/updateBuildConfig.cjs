@@ -13,6 +13,10 @@ function loadConfig() {
   }
 }
 
+function saveConfig(config) {
+  fs.writeFileSync(buildConfigPath, `${JSON.stringify(config, null, 2)}\n`);
+}
+
 function incrementBuildId(currentId = "0.0.0") {
   const parts = currentId.split(".").map((value) => Number.parseInt(value, 10));
   const [major = 0, minor = 0, patch = 0] = parts;
@@ -28,16 +32,57 @@ function formatBuildDate() {
   return new Date().toLocaleString();
 }
 
-function updateConfig() {
-  const config = loadConfig();
-  const nextConfig = {
-    buildId: incrementBuildId(config.buildId),
-    buildDate: formatBuildDate(),
-    environment: config.environment || "Production",
+function ensureViteConfig(config) {
+  const defaultVite = {
+    vitePath: "/Mines-Demo/",
+    localVitePath: "/Mines-Demo/",
+    exportVitePath: "/_Games/dice_crash/",
   };
 
-  fs.writeFileSync(buildConfigPath, `${JSON.stringify(nextConfig, null, 2)}\n`);
-  console.log("Updated buildConfig.json:", nextConfig);
+  return {
+    ...defaultVite,
+    ...(config.vite || {}),
+  };
+}
+
+function applyVitePath(config, source) {
+  const normalizedSource = source?.toLowerCase();
+
+  if (normalizedSource === "export") {
+    config.vite.vitePath = config.vite.exportVitePath;
+    console.log("Set vitePath to exportVitePath:", config.vite.vitePath);
+  } else if (normalizedSource === "local") {
+    config.vite.vitePath = config.vite.localVitePath;
+    console.log("Set vitePath to localVitePath:", config.vite.vitePath);
+  }
+}
+
+function applyMetadata(config) {
+  config.buildId = incrementBuildId(config.buildId);
+  config.buildDate = formatBuildDate();
+  config.environment = config.environment || "Production";
+}
+
+function updateConfig() {
+  const args = process.argv.slice(2);
+  const vitePathIndex = args.indexOf("--set-vite-path");
+  const vitePathSource = vitePathIndex !== -1 ? args[vitePathIndex + 1] : undefined;
+  const skipMetadata = args.includes("--skip-metadata");
+
+  const config = loadConfig();
+  config.vite = ensureViteConfig(config);
+  config.environment = config.environment || "Production";
+
+  if (vitePathSource) {
+    applyVitePath(config, vitePathSource);
+  }
+
+  if (!skipMetadata) {
+    applyMetadata(config);
+  }
+
+  saveConfig(config);
+  console.log("Updated buildConfig.json:", config);
 }
 
 updateConfig();

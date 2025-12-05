@@ -1,5 +1,10 @@
 {
-  "buildId": "0.0.1",
-  "buildDate": "Initial build",
-  "environment": "Production"
+  "buildId": "0.1.2",
+  "buildDate": "12/5/2025, 7:51:21 PM",
+  "environment": "Production",
+  "vite": {
+    "vitePath": "/Dice-Web/",
+    "localVitePath": "/Dice-Web/",
+    "exportVitePath": "/_Games/dice_crash/"
+  }
 }

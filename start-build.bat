@@ -24,6 +24,14 @@ if not exist "node_modules\" (
     echo.
 )
 
+REM Prepare Vite base path for export
+echo [INFO] Setting Vite base path for export build...
+node scripts\updateBuildConfig.cjs --set-vite-path export --skip-metadata
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to set export Vite path.
+    exit /b 1
+)
+
 REM Start the development server
 echo [INFO] Starting Vite build...
 
@@ -36,6 +44,20 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 call npm run build
+set buildResult=%ERRORLEVEL%
+
+REM Restore local Vite base path after build
+echo [INFO] Restoring local Vite base path...
+node scripts\updateBuildConfig.cjs --set-vite-path local --skip-metadata
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to restore local Vite path.
+    exit /b 1
+)
+
+if %buildResult% NEQ 0 (
+    echo [ERROR] Build failed.
+    exit /b %buildResult%
+)
 
 pause
 

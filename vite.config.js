@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import buildConfig from './buildConfig.json' assert { type: 'json' };
+
+const basePath = buildConfig?.vite?.vitePath ?? '/Mines-Demo/';
 
 export default defineConfig({
-  base: '/Dice-Web/',
+  base: basePath,
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -22,4 +25,3 @@ export default defineConfig({
     },
   },
 });
-
