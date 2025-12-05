@@ -119,7 +119,6 @@ button.game-panel-value:focus-visible {
   font: inherit;
   outline: none;
   padding: 0;
-  padding-right: var(--game-panel-input-pad-right);
   user-select: text;
 }
 
@@ -140,18 +139,18 @@ button.game-panel-value:focus-visible {
 }
 
 .game-panel-icon--multiplier {
-  --game-panel-icon-width: 25px;
-  --game-panel-icon-height: 25px;
+  --game-panel-icon-width: 22px;
+  --game-panel-icon-height: 22px;
 }
 
 .game-panel-icon--roll-mode {
-  --game-panel-icon-width: 18px;
-  --game-panel-icon-height: 18px;
+  --game-panel-icon-width: 15px;
+  --game-panel-icon-height: 15px;
 }
 
 .game-panel-icon--win-chance {
-  --game-panel-icon-width: 17px;
-  --game-panel-icon-height: 17px;
+  --game-panel-icon-width: 14px;
+  --game-panel-icon-height: 14px;
 }
 
 @media (max-width: 768px), (orientation: portrait) {
