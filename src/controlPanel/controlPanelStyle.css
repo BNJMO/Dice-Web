@@ -4,6 +4,7 @@
   max-width: 27%;
   order: 1;
   min-height: 0;
+  min-width: 300px;
 }
 
 .control-panel {
@@ -496,7 +497,7 @@
 .control-mode-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   padding-bottom: 8px;
 }
 
@@ -802,6 +803,7 @@
     flex: 1 1 auto;
     max-width: none;
     width: 100%;
+    min-width: 0px;
   }
 
   .control-panel {
