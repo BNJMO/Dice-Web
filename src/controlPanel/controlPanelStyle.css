@@ -99,6 +99,7 @@
   color: #92aab7;
   font-size: 0.95rem;
   font-weight: 900;
+  user-select: none;
 }
 
 .control-row-value {
@@ -453,6 +454,7 @@
 .control-animations-label {
   font-size: 0.95rem;
   color: #92aab7;
+  user-select: none;
 }
 
 .control-animations-switch {
@@ -498,6 +500,7 @@
   font-size: 0.95rem;
   font-weight: 900;
   padding-left: 4px;
+  user-select: none;
 }
 
 .auto-number-field {
@@ -548,6 +551,7 @@
   flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
+  user-select: none;
 }
 
 .control-switch {
@@ -688,6 +692,7 @@
 
 .auto-advanced-summary-label {
   font-weight: 600;
+  user-select: none;
 }
 
 .auto-advanced-summary-value {
