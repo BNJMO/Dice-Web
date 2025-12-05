@@ -329,35 +329,6 @@ export function createBottomGamePanel({
   let appliedScale = 1;
   let lastScaledHeight = 0;
   let lastIsPortrait = isPortraitMode();
-  let lastLabelMinHeight = 0;
-
-  function syncLabelHeights() {
-    const labels = Array.from(panel.querySelectorAll(".game-panel-label"));
-
-    panel.style.removeProperty("--game-panel-label-min-height");
-
-    const maxHeight = labels.reduce((tallest, label) => {
-      const rect = label.getBoundingClientRect?.();
-      if (!rect || !Number.isFinite(rect.height)) return tallest;
-      return Math.max(tallest, Math.round(rect.height));
-    }, 0);
-
-    if (!Number.isFinite(maxHeight) || maxHeight <= 0) {
-      if (lastLabelMinHeight !== 0) {
-        lastLabelMinHeight = 0;
-        return true;
-      }
-      return false;
-    }
-
-    if (maxHeight !== lastLabelMinHeight) {
-      panel.style.setProperty("--game-panel-label-min-height", `${maxHeight}px`);
-      lastLabelMinHeight = maxHeight;
-      return true;
-    }
-
-    return false;
-  }
 
   function layout() {
     let desiredScale = 1;
@@ -413,24 +384,21 @@ export function createBottomGamePanel({
       refresh(true);
     }
 
-    const labelsResized = syncLabelHeights();
-
-    return scaleChanged || heightChanged || portraitChanged || labelsResized;
+    return scaleChanged || heightChanged || portraitChanged;
   }
 
-    function getScaledHeight() {
-      const panelHeight = Number(panel.offsetHeight);
-      if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
-        return 0;
-      }
-      return panelHeight;
+  function getScaledHeight() {
+    const panelHeight = Number(panel.offsetHeight);
+    if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
+      return 0;
     }
+    return panelHeight;
+  }
 
   function refresh(force = false) {
     multiplierBox.refresh(force);
     rollModeBox.refresh(force);
     winChanceBox.refresh(force);
-    syncLabelHeights();
   }
 
   const handleSliderChange = () => {

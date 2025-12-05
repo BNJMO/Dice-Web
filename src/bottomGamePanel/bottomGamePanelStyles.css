@@ -35,7 +35,6 @@
   letter-spacing: 0.08em;
   color: #92aab7;
   line-height: 1.35;
-  min-height: var(--game-panel-label-min-height, auto);
 }
 
 .game-panel-value {
@@ -156,5 +155,11 @@ button.game-panel-value:focus-visible {
     padding: 22px 14px;
     bottom: 14px;
     max-height: 30%;
+  }
+}
+
+@media (max-width: 404px) and (orientation: portrait) {
+  .game-panel-label {
+    min-height: calc(1.35em * 2);
   }
 }
