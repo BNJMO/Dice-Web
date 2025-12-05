@@ -39,6 +39,7 @@
 
 .game-panel-value {
   --game-panel-icon-space: calc(var(--game-panel-icon-width, 20px) + 24px);
+  --game-panel-input-pad-right: var(--game-panel-icon-space);
 
   position: relative;
   display: flex;
@@ -111,12 +112,14 @@ button.game-panel-value:focus-visible {
 
 .game-panel-input {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   color: inherit;
   font: inherit;
   outline: none;
   padding: 0;
+  padding-right: var(--game-panel-input-pad-right);
   user-select: text;
 }
 
