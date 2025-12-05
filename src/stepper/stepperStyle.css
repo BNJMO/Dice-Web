@@ -63,7 +63,7 @@
 
 @media (max-width: 600px) {
   .game-panel-value.has-stepper {
-    padding-right: 0px;
+    padding-right: var(--game-panel-icon-space);
   }
 
   .game-panel-value.has-stepper .game-panel-stepper {
