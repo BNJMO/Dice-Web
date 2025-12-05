@@ -35,7 +35,7 @@
   letter-spacing: 0.08em;
   color: #92aab7;
   line-height: 1.35;
-  min-height: calc(1.35em * 2);
+  min-height: var(--game-panel-label-min-height, auto);
 }
 
 .game-panel-value {
