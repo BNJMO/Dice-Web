@@ -19,7 +19,7 @@
   border-radius: 6px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, right 0.2s ease;
   box-shadow: 0 4px 10px rgba(9, 27, 38, 0.35);
 }
 
