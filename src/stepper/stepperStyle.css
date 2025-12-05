@@ -1,5 +1,6 @@
 .game-panel-value.has-stepper {
-  padding-right: 88px;
+  --game-panel-input-pad-right: calc(var(--game-panel-icon-space) + 48px);
+  padding-right: var(--game-panel-input-pad-right);
 }
 
 .has-stepper {
@@ -19,7 +20,7 @@
   border-radius: 6px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, right 0.2s ease;
   box-shadow: 0 4px 10px rgba(9, 27, 38, 0.35);
 }
 
@@ -63,7 +64,8 @@
 
 @media (max-width: 600px) {
   .game-panel-value.has-stepper {
-    padding-right: 0px;
+    --game-panel-input-pad-right: var(--game-panel-icon-space);
+    padding-right: var(--game-panel-input-pad-right);
   }
 
   .game-panel-value.has-stepper .game-panel-stepper {

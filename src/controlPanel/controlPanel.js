@@ -22,6 +22,22 @@ function clampToZero(value) {
 }
 
 export class ControlPanel extends EventTarget {
+  enableSelectAllOnFocus(input) {
+    if (!input) return;
+
+    const selectAll = () => {
+      if (typeof input.select === "function") {
+        input.select();
+      }
+    };
+
+    input.addEventListener("focus", selectAll);
+    input.addEventListener("pointerup", (event) => {
+      event.preventDefault();
+      selectAll();
+    });
+  }
+
   constructor(mount, options = {}) {
     super();
     this.options = {
@@ -191,6 +207,7 @@ export class ControlPanel extends EventTarget {
     this.betInput.addEventListener("blur", () => {
       this.setBetInputValue(this.betInput.value);
     });
+    this.enableSelectAllOnFocus(this.betInput);
     this.betInputWrapper.appendChild(this.betInput);
 
     const icon = document.createElement("img");
@@ -344,6 +361,7 @@ export class ControlPanel extends EventTarget {
       this.updateNumberOfBetsIcon();
       this.dispatchNumberOfBetsChange();
     });
+    this.enableSelectAllOnFocus(this.autoNumberOfBetsInput);
     this.autoNumberOfBetsField.appendChild(this.autoNumberOfBetsInput);
 
     this.autoNumberOfBetsInfinityIcon = document.createElement("img");
@@ -576,6 +594,8 @@ export class ControlPanel extends EventTarget {
       this.dispatchStrategyValueChange(key, value);
     });
 
+    this.enableSelectAllOnFocus(input);
+
     this.sanitizeStrategyInput(input);
 
     return row;
@@ -598,6 +618,7 @@ export class ControlPanel extends EventTarget {
     input.spellcheck = false;
     input.className = "control-bet-input";
     input.value = "0.00000000";
+    this.enableSelectAllOnFocus(input);
     wrapper.appendChild(input);
 
     const icon = document.createElement("img");
@@ -971,12 +992,17 @@ export class ControlPanel extends EventTarget {
   }
 
   updateNumberOfBetsIcon() {
-    if (!this.autoNumberOfBetsInfinityIcon || !this.autoNumberOfBetsInput) return;
+    if (
+      !this.autoNumberOfBetsInfinityIcon ||
+      !this.autoNumberOfBetsInput ||
+      !this.autoNumberOfBetsField
+    ) {
+      return;
+    }
     const current = Number(this.autoNumberOfBetsInput.value) || 0;
-    this.autoNumberOfBetsInfinityIcon.classList.toggle(
-      "is-visible",
-      current === 0
-    );
+    const isInfinite = current === 0;
+    this.autoNumberOfBetsInfinityIcon.classList.toggle("is-visible", isInfinite);
+    this.autoNumberOfBetsField.classList.toggle("is-infinity-hidden", !isInfinite);
   }
 
   updateAdvancedVisibility() {

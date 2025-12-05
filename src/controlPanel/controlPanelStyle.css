@@ -2,7 +2,6 @@
   flex: 0 1 27%;
   display: flex;
   max-width: 27%;
-  min-width: 300px;
   order: 1;
   min-height: 0;
 }
@@ -22,11 +21,15 @@
   overflow: hidden;
 }
 
+.control-panel button {
+  user-select: none;
+}
+
 .control-panel-scroll {
   flex: 0 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   overflow-y: auto;
   max-height: 100%;
   min-height: 0;
@@ -57,6 +60,7 @@
   border-radius: 40px;
   padding: 14px 0;
   cursor: pointer;
+  user-select: none;
   transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
@@ -99,18 +103,21 @@
   color: #92aab7;
   font-size: 0.95rem;
   font-weight: 900;
+  user-select: none;
+  margin-top: 4px;
 }
 
 .control-row-value {
   color: #92aab7;
   font-size: 1rem;
   font-weight: 900;
+  user-select: none;
 }
 
 .control-bet-box {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0px;
   background: #223845;
   border-radius: 8px;
   padding: 0px;
@@ -289,11 +296,12 @@
   background: #223845;
   color: #f5f6ff;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.0rem;
   border-radius: 8px;
   padding: 12px 16px;
   flex: 0 0 auto;
   cursor: pointer;
+  user-select: none;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -440,6 +448,7 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: #ffffff;
+  user-select: none;
 }
 
 .control-animations-toggle {
@@ -453,6 +462,7 @@
 .control-animations-label {
   font-size: 0.95rem;
   color: #92aab7;
+  user-select: none;
 }
 
 .control-animations-switch {
@@ -468,6 +478,7 @@
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
+  user-select: none;
   transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
 
@@ -498,6 +509,7 @@
   font-size: 0.95rem;
   font-weight: 900;
   padding-left: 4px;
+  user-select: none;
 }
 
 .auto-number-field {
@@ -506,6 +518,10 @@
   --control-bet-infinity-offset: 10px;
   --control-bet-icon-offset: 54px;
   padding: 14px var(--control-bet-padding-right) 14px 8px;
+}
+
+.auto-number-field.is-infinity-hidden {
+  --control-bet-stepper-offset: calc(var(--control-bet-infinity-offset) + 12px);
 }
 
 .auto-number-input {
@@ -548,6 +564,7 @@
   flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
+  user-select: none;
 }
 
 .control-switch {
@@ -688,6 +705,7 @@
 
 .auto-advanced-summary-label {
   font-weight: 600;
+  user-select: none;
 }
 
 .auto-advanced-summary-value {
@@ -809,15 +827,12 @@
   }
 
   .control-bet-action {
-    padding: 10px 14px;
-    font-size: 0.9rem;
-  }
-
-  .control-bet-box {
-    gap: 10px;
+    padding: 12px 16px;
+    font-size: 1.0rem;
   }
 
   .control-toggle {
+    margin-top: 8px;
     order: 99;
   }
 }

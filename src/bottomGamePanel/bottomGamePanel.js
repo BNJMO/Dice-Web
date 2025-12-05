@@ -387,13 +387,13 @@ export function createBottomGamePanel({
     return scaleChanged || heightChanged || portraitChanged;
   }
 
-    function getScaledHeight() {
-      const panelHeight = Number(panel.offsetHeight);
-      if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
-        return 0;
-      }
-      return panelHeight;
+  function getScaledHeight() {
+    const panelHeight = Number(panel.offsetHeight);
+    if (!Number.isFinite(panelHeight) || panelHeight <= 0) {
+      return 0;
     }
+    return panelHeight;
+  }
 
   function refresh(force = false) {
     multiplierBox.refresh(force);

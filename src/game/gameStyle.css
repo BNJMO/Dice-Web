@@ -54,7 +54,7 @@
   .game-container {
     order: 1;
     padding-top: 0px;
-    min-height: 330px;
+    min-height: 430px;
     max-height: 380px;
     padding-top: 2px;
     align-items: center;
@@ -64,6 +64,12 @@
   #game {
     min-height: 360px;
     justify-content: center;
+  }
+}
+
+@media (max-width: 404px) and (orientation: portrait) {
+  .game-container {
+    min-height: 450px;
   }
 }
 

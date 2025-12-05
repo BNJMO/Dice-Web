@@ -27,6 +27,14 @@ if not exist "node_modules\" (
 REM Start the development server
 echo [INFO] Starting Vite build...
 
+REM Update build metadata
+echo [INFO] Updating build metadata...
+node scripts\updateBuildConfig.cjs
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to update build metadata.
+    exit /b 1
+)
+
 call npm run build
 
 pause
