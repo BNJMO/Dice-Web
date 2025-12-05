@@ -830,6 +830,10 @@
     padding: 12px 16px;
     font-size: 1.0rem;
   }
+  
+  .control-start-autobet-btn {
+    order: -1;
+  }
 
   .control-toggle {
     margin-top: 8px;
