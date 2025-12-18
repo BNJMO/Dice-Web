@@ -116,7 +116,7 @@ export class ControlPanel extends EventTarget {
     this.buildBetAmountDisplay();
     this.buildBetControls();
     this.buildModeSections();
-    this.buildFooter();
+    // this.buildFooter();
 
     this.setBetAmountDisplay(this.options.initialBetAmountDisplay);
     this.setProfitOnWinDisplay(this.options.initialProfitOnWinDisplay);
