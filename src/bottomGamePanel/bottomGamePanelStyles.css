@@ -31,8 +31,7 @@
   display: flex;
   align-items: center;
   font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
   color: #92aab7;
   line-height: 1.35;
 }
@@ -106,13 +105,8 @@ button.game-panel-value:focus-visible {
 }
 
 .game-panel-display {
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.game-panel-input {
   flex: 1;
-  min-width: 0;
+  min-width: 10dvw;
   border: none;
   background: transparent;
   color: inherit;
@@ -120,6 +114,22 @@ button.game-panel-value:focus-visible {
   outline: none;
   padding: 0;
   user-select: text;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.game-panel-input {
+  flex: 1;
+  min-width: 10dvw;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+  padding: 0;
+  user-select: text;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .game-panel-input::placeholder {
@@ -128,7 +138,7 @@ button.game-panel-value:focus-visible {
 
 .game-panel-icon {
   position: absolute;
-  right: 16px;
+  right: 10%;
   width: var(--game-panel-icon-width, 20px);
   height: var(--game-panel-icon-height, 20px);
   opacity: 0.85;
@@ -139,8 +149,8 @@ button.game-panel-value:focus-visible {
 }
 
 .game-panel-icon--multiplier {
-  --game-panel-icon-width: 22px;
-  --game-panel-icon-height: 22px;
+  --game-panel-icon-width: 20px;
+  --game-panel-icon-height: 20px;
 }
 
 .game-panel-icon--roll-mode {
@@ -149,8 +159,8 @@ button.game-panel-value:focus-visible {
 }
 
 .game-panel-icon--win-chance {
-  --game-panel-icon-width: 14px;
-  --game-panel-icon-height: 14px;
+  --game-panel-icon-width: 13px;
+  --game-panel-icon-height: 13px;
 }
 
 @media (max-width: 768px), (orientation: portrait) {
