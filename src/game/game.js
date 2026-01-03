@@ -47,6 +47,8 @@ const SLIDER = {
   // 1 keeps the previous behaviour, 0 locks the track to its base width.
   trackWidthCompensationStrength: 0.5,
   handleOffsetRatio: 0.06,
+  // Shifts the entire slider (background, track, handle, dice) vertically.
+  containerOffsetRatio: -0.45,
   tickEdgePaddingRatio: -6,
   tickPadding: -28,
   tickTextSizeRatio: 0.27,
@@ -408,6 +410,11 @@ export async function createGame(mount, opts = {}) {
     0,
     (opts.sliderDragCooldown ?? 0.05) * 1000
   );
+  const sliderContainerOffsetRatio = Number.isFinite(
+    opts.sliderContainerOffsetRatio
+  )
+    ? opts.sliderContainerOffsetRatio
+    : SLIDER.containerOffsetRatio;
   const sliderSoundConfig = {
     dragMinPitch: sliderDragMinPitch,
     dragMaxPitch: sliderDragMaxPitch,
@@ -628,6 +635,7 @@ export async function createGame(mount, opts = {}) {
     },
     animationsEnabled,
     appContainer: appContainerElement,
+    containerOffsetRatio: sliderContainerOffsetRatio,
   });
   ui.addChild(sliderUi.container);
   betHistory.layout({ animate: false });
@@ -776,6 +784,7 @@ export async function createGame(mount, opts = {}) {
     onRollModeChange = () => {},
     animationsEnabled: initialAnimationsEnabled = true,
     appContainer = null,
+    containerOffsetRatio: overrideContainerOffsetRatio = null,
   } = {}) {
     const {
       dragMinPitch = 0.9,
@@ -813,6 +822,11 @@ export async function createGame(mount, opts = {}) {
       : 0;
     const trackHeightRatio = Number.isFinite(SLIDER.trackHeightRatio)
       ? SLIDER.trackHeightRatio
+      : 0;
+    const containerOffsetRatio = Number.isFinite(overrideContainerOffsetRatio)
+      ? overrideContainerOffsetRatio
+      : Number.isFinite(SLIDER.containerOffsetRatio)
+      ? SLIDER.containerOffsetRatio
       : 0;
     const backgroundOffsetRatio = Number.isFinite(
       SLIDER.backgroundOffsetRatio
@@ -1789,7 +1803,11 @@ export async function createGame(mount, opts = {}) {
         minY,
         app.renderer.height - bottomPaddingCandidate
       );
-      sliderContainer.position.set(app.renderer.width / 2, sliderY);
+      const sliderOffset = baseHeight * containerOffsetRatio;
+      sliderContainer.position.set(
+        app.renderer.width / 2,
+        sliderY + sliderOffset
+      );
     }
 
     updateTickLayout();
