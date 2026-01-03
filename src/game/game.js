@@ -48,7 +48,7 @@ const SLIDER = {
   trackWidthCompensationStrength: 0.5,
   handleOffsetRatio: 0.06,
   // Shifts the entire slider (background, track, handle, dice) vertically.
-  containerOffsetRatio: 0,
+  containerOffsetRatio: -0.45,
   tickEdgePaddingRatio: -6,
   tickPadding: -28,
   tickTextSizeRatio: 0.27,
