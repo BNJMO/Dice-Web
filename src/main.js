@@ -23,7 +23,7 @@ let serverAutoTimeoutId = null;
 const serverRelay = new ServerRelay();
 let demoMode = serverRelay.demoMode;
 let serverPanel = null;
-let lastRollMode = "over";
+let lastRollMode = "inside";
 let awaitingServerBetOutcome = false;
 let awaitingServerAutoOutcome = false;
 let lastWinChance = null;
@@ -69,12 +69,10 @@ const opts = {
   onLost: () => {},
   onStateChange: () => {},
   onSliderValueChange: (target) => {
-    const sliderValue = Number(target);
-    const normalizedTarget = Number.isFinite(sliderValue) ? sliderValue : 0;
-    const winChance =
-      lastRollMode === "under"
-        ? clampPercent(normalizedTarget)
-        : clampPercent(100 - normalizedTarget);
+    const targetValues = Array.isArray(target)
+      ? target.map(Number)
+      : [Number(target)];
+    const winChance = calculateWinChance(lastRollMode, targetValues);
     lastWinChance = winChance;
     const multiplier = winChance > 0 ? 99 / winChance : Infinity;
     lastTargetMultiplier = multiplier;
@@ -82,7 +80,7 @@ const opts = {
     console.debug(`Main calculated win chance: ${winChance.toFixed(2)}%`);
 
     sendRelayMessage("game:slider-change", {
-      target: normalizedTarget,
+      targetValues,
       rollMode: lastRollMode,
       winChance,
       multiplier,
@@ -90,6 +88,7 @@ const opts = {
   },
   onRollModeChange: (mode) => {
     lastRollMode = mode;
+    controlPanel?.setRollMode?.(mode);
     console.debug(`Roll mode changed to ${mode}`);
     sendRelayMessage("game:roll-mode-change", { mode });
   },
@@ -144,6 +143,12 @@ window.addEventListener("keydown", (event) => {
       }
       sendRelayMessage("control:betvaluechange", detail);
     });
+    controlPanel.addEventListener("rollmodechange", (event) => {
+      const mode = event?.detail?.mode ?? "inside";
+      game?.setRollMode?.(mode);
+      lastRollMode = mode;
+      sendRelayMessage("control:rollmodechange", { mode });
+    });
     controlPanel.addEventListener("numberofbetschange", (event) => {
       sendRelayMessage("control:numberofbetschange", event?.detail ?? {});
     });
@@ -194,6 +199,9 @@ window.addEventListener("keydown", (event) => {
   try {
     game = await createGame("#game", opts);
     window.game = game;
+    const initialRollMode = controlPanel?.getRollMode?.() ?? "inside";
+    game?.setRollMode?.(initialRollMode);
+    lastRollMode = initialRollMode;
     const initialWinChance = toFiniteNumber(game?.getWinChance?.());
     if (initialWinChance !== null) {
       lastWinChance = initialWinChance;
@@ -234,7 +242,10 @@ function handleBet() {
     return;
   }
   const roll = Math.random() * 100;
-  const winChance = Math.max(0, (100 - roll) / 100);
+  const winChance = Math.max(
+    0,
+    (Number.isFinite(lastWinChance) ? lastWinChance : 0) / 100
+  );
   console.debug(
     `Bet placed. Revealing roll ${roll.toFixed(1)} with ${(
       winChance * 100
@@ -768,6 +779,35 @@ function clampPercent(value) {
     return 0;
   }
   return Math.max(0, Math.min(100, numeric));
+}
+
+function calculateWinChance(rollMode, values) {
+  if (!Array.isArray(values) || values.length < 2) {
+    return 0;
+  }
+  if (rollMode === "between" && values.length >= 4) {
+    const sorted = values
+      .slice(0, 4)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value))
+      .sort((a, b) => a - b);
+    if (sorted.length < 4) {
+      return 0;
+    }
+    const totalRange = Math.max(0, sorted[1] - sorted[0]) +
+      Math.max(0, sorted[3] - sorted[2]);
+    return clampPercent(totalRange);
+  }
+  const sorted = values
+    .slice(0, 2)
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+  if (sorted.length < 2) {
+    return 0;
+  }
+  const insideRange = Math.max(0, sorted[1] - sorted[0]);
+  return clampPercent(rollMode === "outside" ? 100 - insideRange : insideRange);
 }
 
 function getTargetMultiplierValue() {

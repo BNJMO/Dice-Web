@@ -50,6 +50,7 @@ export class ControlPanel extends EventTarget {
       initialProfitOnWinDisplay: options.initialProfitOnWinDisplay ?? "$0.00",
       initialProfitValue: options.initialProfitValue ?? "0.00000000",
       initialMode: options.initialMode ?? "manual",
+      initialRollMode: options.initialRollMode ?? "inside",
       gameName: options.gameName ?? "Game Name",
       minesLabel: options.minesLabel ?? "Mines",
       gemsLabel: options.gemsLabel ?? "Gems",
@@ -66,6 +67,11 @@ export class ControlPanel extends EventTarget {
     this.host.innerHTML = "";
 
     this.mode = this.options.initialMode === "auto" ? "auto" : "manual";
+    this.rollMode =
+      this.options.initialRollMode === "between" ||
+      this.options.initialRollMode === "outside"
+        ? this.options.initialRollMode
+        : "inside";
 
     this.animationsEnabled = Boolean(this.options.initialAnimationsEnabled);
 
@@ -115,6 +121,7 @@ export class ControlPanel extends EventTarget {
     this.buildToggle();
     this.buildBetAmountDisplay();
     this.buildBetControls();
+    this.buildRollModeSelect();
     this.buildModeSections();
     // this.buildFooter();
 
@@ -254,6 +261,49 @@ export class ControlPanel extends EventTarget {
       this.doubleButton
     );
     this.scrollContainer.appendChild(this.betBox);
+  }
+
+  buildRollModeSelect() {
+    this.rollModeSelectWrapper = document.createElement("div");
+    this.rollModeSelectWrapper.className = "control-select-field";
+
+    this.rollModeSelect = document.createElement("select");
+    this.rollModeSelect.className = "control-select";
+    this.rollModeSelect.setAttribute("aria-label", "Roll mode");
+    this.rollModeSelect.addEventListener("change", () => {
+      const value = this.rollModeSelect.value;
+      this.rollMode =
+        value === "between" || value === "outside" ? value : "inside";
+      this.dispatchEvent(
+        new CustomEvent("rollmodechange", {
+          detail: { mode: this.rollMode },
+        })
+      );
+    });
+
+    const options = [
+      { value: "inside", label: "Inside" },
+      { value: "outside", label: "Outside" },
+      { value: "between", label: "Between" },
+    ];
+
+    options.forEach((option) => {
+      const optionEl = document.createElement("option");
+      optionEl.value = option.value;
+      optionEl.textContent = option.label;
+      this.rollModeSelect.appendChild(optionEl);
+    });
+
+    this.rollModeSelect.value = this.rollMode;
+
+    this.rollModeSelectWrapper.appendChild(this.rollModeSelect);
+
+    const arrow = document.createElement("span");
+    arrow.className = "control-select-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    this.rollModeSelectWrapper.appendChild(arrow);
+
+    this.scrollContainer.appendChild(this.rollModeSelectWrapper);
   }
 
   buildMinesLabel() {
@@ -1357,6 +1407,18 @@ export class ControlPanel extends EventTarget {
     this.minesSelectWrapper.classList.toggle("is-non-clickable", !isClickable);
   }
 
+  setRollModeSelectState(state) {
+    if (!this.rollModeSelect || !this.rollModeSelectWrapper) return;
+    const normalized =
+      state === "clickable" || state === true || state === "enabled"
+        ? "clickable"
+        : "non-clickable";
+    const isClickable = normalized === "clickable";
+    this.rollModeSelect.disabled = !isClickable;
+    this.rollModeSelect.setAttribute("aria-disabled", String(!isClickable));
+    this.rollModeSelectWrapper.classList.toggle("is-non-clickable", !isClickable);
+  }
+
   setAutoStartButtonMode(mode) {
     if (!this.autoStartButton) return;
     const normalized =
@@ -1383,6 +1445,7 @@ export class ControlPanel extends EventTarget {
     this.setRandomPickState(clickable ? "clickable" : "non-clickable");
     this.setAutoStartButtonState(clickable ? "clickable" : "non-clickable");
     this.setMinesSelectState(clickable ? "clickable" : "non-clickable");
+    this.setRollModeSelectState(clickable ? "clickable" : "non-clickable");
     this.setNumberOfBetsClickable(clickable);
     this.setAdvancedToggleClickable(clickable);
     this.setAdvancedStrategyControlsClickable(clickable);
@@ -1434,6 +1497,22 @@ export class ControlPanel extends EventTarget {
     if (this.doubleButton) {
       this.doubleButton.disabled = !clickable;
       this.doubleButton.classList.toggle("is-non-clickable", !clickable);
+    }
+    if (this.rollModeSelect) {
+      this.setRollModeSelectState(clickable);
+    }
+  }
+
+  getRollMode() {
+    return this.rollMode ?? "inside";
+  }
+
+  setRollMode(mode) {
+    const normalized =
+      mode === "between" || mode === "outside" ? mode : "inside";
+    this.rollMode = normalized;
+    if (this.rollModeSelect) {
+      this.rollModeSelect.value = normalized;
     }
   }
 

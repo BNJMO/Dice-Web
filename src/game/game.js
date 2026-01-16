@@ -39,7 +39,7 @@ const SLIDER = {
   rangeMax: 100,
   step: 1,
   leftColor: 0xf40029,
-  rightColor: 0xf0ff31,
+  rightColor: 0x00d26a,
   trackHeightRatio: 0.15,
   trackPaddingRatio: 0.035,
   trackOffsetRatio: 0.05,
@@ -53,6 +53,14 @@ const SLIDER = {
   tickPadding: -28,
   tickTextSizeRatio: 0.27,
   backgroundOffsetRatio: 0,
+};
+
+const ROLL_MODES = ["inside", "outside", "between"];
+
+const DEFAULT_SLIDER_VALUES = {
+  inside: [25, 75],
+  outside: [25, 75],
+  between: [25, 50, 62.5, 87.5],
 };
 
 const SLIDER_BACKGROUND_FIXED_SEGMENTS = [
@@ -934,32 +942,39 @@ export async function createGame(mount, opts = {}) {
     const unscalePosition = (position) =>
       trackScaleFactor !== 0 ? position / trackScaleFactor : position;
 
-    let handle;
-    if (textures.handle) {
-      handle = new Sprite(textures.handle);
-      handle.anchor.set(0.5);
-    } else {
-      const handleWidth = barHeight * 1.2;
-      const handleHeight = barHeight * 1.6;
-      const fallbackHandle = new Graphics();
-      fallbackHandle
-        .roundRect(
-          -handleWidth / 2,
-          -handleHeight / 2,
-          handleWidth,
-          handleHeight,
-          handleWidth / 4
-        )
-        .fill(0x6d5eff);
-      handle = fallbackHandle;
+    const handles = [];
+    const handleBaseScales = [];
+    const maxHandles = 4;
+    for (let i = 0; i < maxHandles; i += 1) {
+      let handle;
+      if (textures.handle) {
+        handle = new Sprite(textures.handle);
+        handle.anchor.set(0.5);
+      } else {
+        const handleWidth = barHeight * 1.2;
+        const handleHeight = barHeight * 1.6;
+        const fallbackHandle = new Graphics();
+        fallbackHandle
+          .roundRect(
+            -handleWidth / 2,
+            -handleHeight / 2,
+            handleWidth,
+            handleHeight,
+            handleWidth / 4
+          )
+          .fill(0x6d5eff);
+        handle = fallbackHandle;
+      }
+      handle.zIndex = 20 + i;
+      handle.eventMode = "static";
+      handle.cursor = "pointer";
+      sliderContainer.addChild(handle);
+      handles.push(handle);
+      handleBaseScales.push({
+        x: handle.scale.x ?? 1,
+        y: handle.scale.y ?? 1,
+      });
     }
-    handle.zIndex = 20;
-    handle.eventMode = "static";
-    handle.cursor = "pointer";
-    sliderContainer.addChild(handle);
-
-    const handleBaseScaleX = handle.scale.x ?? 1;
-    const handleBaseScaleY = handle.scale.y ?? 1;
 
     const diceContainer = new Container();
     diceContainer.zIndex = 40;
@@ -1020,9 +1035,14 @@ export async function createGame(mount, opts = {}) {
       SLIDER.maxValue,
       Math.max(SLIDER.minValue, (SLIDER.minValue + SLIDER.maxValue) / 2)
     );
-    let sliderValue = defaultSliderValue;
     let sliderDragging = false;
-    let rollMode = "over";
+    let rollMode = "inside";
+    let sliderValues = [
+      ...DEFAULT_SLIDER_VALUES.inside,
+      ...DEFAULT_SLIDER_VALUES.between.slice(2),
+    ];
+    let activeHandleIndex = 0;
+    let activeHandleCount = 2;
     let diceHasShown = false;
     let diceAnimationCancel = null;
     let diceFadeOutCancel = null;
@@ -1031,14 +1051,16 @@ export async function createGame(mount, opts = {}) {
     let diceLabelColorCancel = null;
     let diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
     let diceLastOutcome = null;
-    let lastHandlePosition = valueToPosition(sliderValue);
+    let lastHandlePositions = sliderValues.map((value) =>
+      valueToPosition(value)
+    );
     let lastHandleUpdateTime = performance.now();
     let lastSliderDragSoundTime = -Infinity;
 
     function emitSliderChange() {
       try {
         onChange({
-          value: sliderValue,
+          values: getActiveValues(),
           rollMode,
           winChance: getWinChance(),
           multiplier: getMultiplier(),
@@ -1079,6 +1101,76 @@ export async function createGame(mount, opts = {}) {
       return clampRange(SLIDER.rangeMin + ratio * sliderRange);
     }
 
+    function getActiveHandleCount() {
+      return rollMode === "between" ? 4 : 2;
+    }
+
+    function getActiveValues() {
+      return sliderValues.slice(0, getActiveHandleCount());
+    }
+
+    function normalizeSliderValues() {
+      const handleCount = getActiveHandleCount();
+      const defaults =
+        DEFAULT_SLIDER_VALUES[rollMode] ?? DEFAULT_SLIDER_VALUES.inside;
+      const nextValues = [];
+      for (let i = 0; i < handleCount; i += 1) {
+        const raw = sliderValues[i];
+        let value = Number.isFinite(raw) ? raw : defaults[i] ?? defaultSliderValue;
+        value = clampBounds(value);
+        const minValue = SLIDER.minValue + SLIDER.step * i;
+        const maxValue =
+          SLIDER.maxValue - SLIDER.step * (handleCount - 1 - i);
+        value = Math.min(maxValue, Math.max(minValue, value));
+        if (i > 0 && value <= nextValues[i - 1]) {
+          value = Math.min(maxValue, nextValues[i - 1] + SLIDER.step);
+        }
+        nextValues.push(value);
+      }
+      sliderValues = [...nextValues, ...sliderValues.slice(handleCount)];
+      lastHandlePositions = sliderValues.map((value) =>
+        valueToPosition(value)
+      );
+    }
+
+    function isWinningValue(value) {
+      const [first, second, third, fourth] = sliderValues;
+      if (rollMode === "outside") {
+        return value <= first || value >= second;
+      }
+      if (rollMode === "between") {
+        return (
+          (value >= first && value <= second) ||
+          (value >= third && value <= fourth)
+        );
+      }
+      return value >= first && value <= second;
+    }
+
+    function getWinLoseSegments() {
+      const handleCount = getActiveHandleCount();
+      const boundaries = [
+        SLIDER.rangeMin,
+        ...sliderValues.slice(0, handleCount),
+        SLIDER.rangeMax,
+      ];
+      boundaries.sort((a, b) => a - b);
+      const segments = [];
+      for (let i = 0; i < boundaries.length - 1; i += 1) {
+        const start = boundaries[i];
+        const end = boundaries[i + 1];
+        if (end <= start) continue;
+        const midpoint = (start + end) / 2;
+        const isWin = isWinningValue(midpoint);
+        segments.push({
+          start,
+          end,
+          color: isWin ? SLIDER.rightColor : SLIDER.leftColor,
+        });
+      }
+      return segments;
+    }
+
     function updateTickLayout() {
       const labelOffset = Math.max(12, barHeight * 0.45);
       tickItems.forEach(({ container, value }) => {
@@ -1092,25 +1184,39 @@ export async function createGame(mount, opts = {}) {
     }
 
     function updateSliderVisuals() {
-      const basePosition = valueToPosition(sliderValue);
-      const position = scalePosition(basePosition);
-      handle.position.set(position, trackCenterY + handleOffsetY);
-
-      leftBar.clear();
-      rightBar.clear();
       const sliderScaleX = sliderWidthScale > 0 ? sliderWidthScale : 1;
       const widthCompensation = sliderScaleX > 0 ? 1 / sliderScaleX : 1;
+      leftBar.clear();
+      rightBar.clear();
       leftBar.scale.set(widthCompensation, 1);
       rightBar.scale.set(widthCompensation, 1);
-      const scaledTrackStart = scalePosition(trackStart);
-      const scaledTrackEnd = scalePosition(trackEnd);
-      const leftWidth = Math.max(0, position - scaledTrackStart);
-      const rightWidth = Math.max(0, scaledTrackEnd - position);
-      if (leftWidth > 0) {
-        const color =
-          rollMode === "under" ? SLIDER.rightColor : SLIDER.leftColor;
-        const drawStart = scaledTrackStart * sliderScaleX;
-        const drawWidth = leftWidth * sliderScaleX;
+
+      const handleCount = getActiveHandleCount();
+      const activeValues = getActiveValues();
+      for (let i = 0; i < handles.length; i += 1) {
+        const handle = handles[i];
+        if (i < handleCount) {
+          const basePosition = valueToPosition(activeValues[i]);
+          const position = scalePosition(basePosition);
+          handle.position.set(position, trackCenterY + handleOffsetY);
+          handle.visible = true;
+          handle.eventMode = "static";
+          handle.cursor = "pointer";
+        } else {
+          handle.visible = false;
+          handle.eventMode = "none";
+        }
+      }
+
+      const segments = getWinLoseSegments();
+      segments.forEach((segment) => {
+        const { start, end, color } = segment;
+        const startPos = scalePosition(valueToPosition(start));
+        const endPos = scalePosition(valueToPosition(end));
+        const drawStart = Math.min(startPos, endPos) * sliderScaleX;
+        const drawWidth =
+          Math.max(0, Math.abs(endPos - startPos)) * sliderScaleX;
+        if (drawWidth <= 0) return;
         leftBar
           .roundRect(
             drawStart,
@@ -1120,41 +1226,68 @@ export async function createGame(mount, opts = {}) {
             barRadius
           )
           .fill(color);
-      }
-
-      if (rightWidth > 0) {
-        const color =
-          rollMode === "under" ? SLIDER.leftColor : SLIDER.rightColor;
-        const drawStart = position * sliderScaleX;
-        const drawWidth = rightWidth * sliderScaleX;
-        rightBar
-          .roundRect(
-            drawStart,
-            trackCenterY - barHeight / 2,
-            drawWidth,
-            barHeight,
-            barRadius
-          )
-          .fill(color);
-      }
+      });
     }
 
-    function setSliderValue(value, options = {}) {
+    function setHandleValues(values, options = {}) {
       const { snap = true } = options ?? {};
-      const previousPosition = lastHandlePosition;
+      const handleCount = getActiveHandleCount();
+      const nextValues = [];
+      for (let i = 0; i < handleCount; i += 1) {
+        const raw = Number(values[i]);
+        const fallback = Number.isFinite(sliderValues[i])
+          ? sliderValues[i]
+          : defaultSliderValue;
+        const baseValue = Number.isFinite(raw)
+          ? snap
+            ? snapValue(raw)
+            : raw
+          : fallback;
+        let clamped = clampBounds(baseValue);
+        const minValue = SLIDER.minValue + SLIDER.step * i;
+        const maxValue =
+          SLIDER.maxValue - SLIDER.step * (handleCount - 1 - i);
+        clamped = Math.min(maxValue, Math.max(minValue, clamped));
+        if (i > 0 && clamped <= nextValues[i - 1]) {
+          clamped = Math.min(maxValue, nextValues[i - 1] + SLIDER.step);
+        }
+        nextValues.push(Number.isFinite(clamped) ? Number(clamped.toFixed(2)) : 0);
+      }
+      sliderValues = [...nextValues, ...sliderValues.slice(handleCount)];
+      updateSliderVisuals();
+      emitSliderChange();
+      lastHandlePositions = sliderValues.map((value) => valueToPosition(value));
+      lastHandleUpdateTime = performance.now();
+      return sliderValues;
+    }
+
+    function setHandleValue(index, value, options = {}) {
+      const { snap = true } = options ?? {};
+      const handleCount = getActiveHandleCount();
+      if (index < 0 || index >= handleCount) {
+        return sliderValues[index];
+      }
+      const previousPosition = lastHandlePositions[index] ?? 0;
       const baseValue = snap ? snapValue(value) : value;
-      const clamped = clampBounds(baseValue);
+      let clamped = clampBounds(baseValue);
+      const minValue =
+        index > 0 ? sliderValues[index - 1] + SLIDER.step : SLIDER.minValue;
+      const maxValue =
+        index < handleCount - 1
+          ? sliderValues[index + 1] - SLIDER.step
+          : SLIDER.maxValue;
+      clamped = Math.min(maxValue, Math.max(minValue, clamped));
       const nextValue = Number.isFinite(clamped)
         ? Number(clamped.toFixed(2))
-        : sliderValue;
-      const changed = nextValue !== sliderValue;
-      sliderValue = nextValue;
+        : sliderValues[index];
+      const changed = nextValue !== sliderValues[index];
+      sliderValues[index] = nextValue;
       updateSliderVisuals();
 
       const now = performance.now();
       if (changed) {
         emitSliderChange();
-        const newPosition = valueToPosition(sliderValue);
+        const newPosition = valueToPosition(sliderValues[index]);
         const deltaPosition =
           Math.abs(newPosition - previousPosition) * trackScaleFactor;
         const deltaTime = Math.max(1, now - lastHandleUpdateTime);
@@ -1174,12 +1307,12 @@ export async function createGame(mount, opts = {}) {
           });
           lastSliderDragSoundTime = now;
         }
-        lastHandlePosition = newPosition;
+        lastHandlePositions[index] = newPosition;
       } else {
-        lastHandlePosition = valueToPosition(sliderValue);
+        lastHandlePositions[index] = valueToPosition(sliderValues[index]);
       }
       lastHandleUpdateTime = now;
-      return sliderValue;
+      return sliderValues[index];
     }
 
     function getRollMode() {
@@ -1187,9 +1320,20 @@ export async function createGame(mount, opts = {}) {
     }
 
     function setRollMode(mode) {
-      const normalized = mode === "under" ? "under" : "over";
+      const normalized = ROLL_MODES.includes(mode) ? mode : "inside";
       if (rollMode === normalized) return rollMode;
       rollMode = normalized;
+      if (rollMode === "between") {
+        sliderValues = [...DEFAULT_SLIDER_VALUES.between];
+      } else {
+        sliderValues = [
+          ...DEFAULT_SLIDER_VALUES.inside,
+          ...sliderValues.slice(2),
+        ];
+      }
+      activeHandleCount = getActiveHandleCount();
+      activeHandleIndex = Math.min(activeHandleIndex, activeHandleCount - 1);
+      normalizeSliderValues();
       playSoundEffect("rollModeToggle");
       updateSliderVisuals();
       emitRollModeChange();
@@ -1198,32 +1342,74 @@ export async function createGame(mount, opts = {}) {
     }
 
     function toggleRollMode() {
-      return setRollMode(rollMode === "over" ? "under" : "over");
+      const index = ROLL_MODES.indexOf(rollMode);
+      const nextIndex = index >= 0 ? (index + 1) % ROLL_MODES.length : 0;
+      return setRollMode(ROLL_MODES[nextIndex]);
     }
 
     function resetState() {
       sliderDragging = false;
       sliderContainer.cursor = "pointer";
-      handle.cursor = "pointer";
       const now = performance.now();
       lastSliderDragSoundTime = now;
-      setRollMode("over");
-      setSliderValue(defaultSliderValue);
+      setRollMode("inside");
+      sliderValues = [
+        ...DEFAULT_SLIDER_VALUES.inside,
+        ...DEFAULT_SLIDER_VALUES.between.slice(2),
+      ];
+      normalizeSliderValues();
+      updateSliderVisuals();
+      emitSliderChange();
     }
 
     function getWinChance() {
-      const clamped = clampRange(clampBounds(sliderValue));
-      const raw = rollMode === "over" ? SLIDER.rangeMax - clamped : clamped;
+      const values = getActiveValues();
+      if (rollMode === "between") {
+        const total = Math.max(0, values[1] - values[0]) +
+          Math.max(0, values[3] - values[2]);
+        return Number(total.toFixed(4));
+      }
+      const insideRange = Math.max(0, values[1] - values[0]);
+      const raw = rollMode === "outside"
+        ? SLIDER.rangeMax - insideRange
+        : insideRange;
       return Number(raw.toFixed(4));
     }
 
     function setWinChance(value) {
       const numeric = Number(value);
-      if (!Number.isFinite(numeric)) return sliderValue;
+      if (!Number.isFinite(numeric)) return sliderValues[0];
       const clampedChance = Math.max(0, Math.min(SLIDER.rangeMax, numeric));
-      const targetValue =
-        rollMode === "over" ? SLIDER.rangeMax - clampedChance : clampedChance;
-      return setSliderValue(targetValue, { snap: false });
+      if (rollMode === "between") {
+        const [first, second, third, fourth] = sliderValues;
+        const firstCenter = (first + second) / 2;
+        const secondCenter = (third + fourth) / 2;
+        const range1 = Math.max(0, second - first);
+        const range2 = Math.max(0, fourth - third);
+        const total = range1 + range2;
+        const desiredTotal = clampedChance;
+        const scale = total > 0 ? desiredTotal / total : 0.5;
+        const nextRange1 = total > 0 ? range1 * scale : desiredTotal / 2;
+        const nextRange2 = total > 0 ? range2 * scale : desiredTotal / 2;
+        return setHandleValues(
+          [
+            firstCenter - nextRange1 / 2,
+            firstCenter + nextRange1 / 2,
+            secondCenter - nextRange2 / 2,
+            secondCenter + nextRange2 / 2,
+          ],
+          { snap: false }
+        );
+      }
+      const desiredInside =
+        rollMode === "outside" ? SLIDER.rangeMax - clampedChance : clampedChance;
+      const [first, second] = sliderValues;
+      const mid = (first + second) / 2;
+      const halfRange = desiredInside / 2;
+      return setHandleValues(
+        [mid - halfRange, mid + halfRange],
+        { snap: false }
+      );
     }
 
     function getMultiplier() {
@@ -1235,7 +1421,7 @@ export async function createGame(mount, opts = {}) {
     function setMultiplier(value) {
       const numeric = Number(value);
       if (!Number.isFinite(numeric) || numeric <= 0) {
-        return sliderValue;
+        return sliderValues[0];
       }
       const desiredChance = 99 / numeric;
       return setWinChance(desiredChance);
@@ -1245,15 +1431,39 @@ export async function createGame(mount, opts = {}) {
       const local = sliderContainer.toLocal(event.global);
       const adjustedX = unscalePosition(local.x);
       const rawValue = positionToValue(adjustedX);
-      setSliderValue(rawValue);
+      setHandleValue(activeHandleIndex, rawValue);
     }
 
-    function pointerDown(event) {
+    function findNearestHandleIndex(value) {
+      const activeValues = getActiveValues();
+      let nearestIndex = 0;
+      let nearestDistance = Infinity;
+      activeValues.forEach((handleValue, index) => {
+        const distance = Math.abs(handleValue - value);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      });
+      return nearestIndex;
+    }
+
+    function pointerDown(event, handleIndex = null) {
       event.stopPropagation?.();
       sliderDragging = true;
       sliderContainer.cursor = "grabbing";
-      handle.cursor = "grabbing";
+      handles.forEach((handle) => {
+        handle.cursor = "grabbing";
+      });
       playSoundEffect("sliderDown");
+      if (handleIndex === null) {
+        const local = sliderContainer.toLocal(event.global);
+        const adjustedX = unscalePosition(local.x);
+        const rawValue = positionToValue(adjustedX);
+        activeHandleIndex = findNearestHandleIndex(rawValue);
+      } else {
+        activeHandleIndex = handleIndex;
+      }
       updateFromPointer(event);
     }
 
@@ -1261,11 +1471,15 @@ export async function createGame(mount, opts = {}) {
       if (!sliderDragging) return;
       sliderDragging = false;
       sliderContainer.cursor = "pointer";
-      handle.cursor = "pointer";
+      handles.forEach((handle) => {
+        handle.cursor = "pointer";
+      });
       playSoundEffect("sliderUp");
-      console.debug(`Roll over target set to ${sliderValue.toFixed(1)}%`);
+      console.debug(
+        `Roll targets set to ${getActiveValues().map((value) => value.toFixed(1)).join(", ")}%`
+      );
       try {
-        onRelease(sliderValue);
+        onRelease(getActiveValues());
       } catch (err) {
         console.warn("Slider release callback failed", err);
       }
@@ -1279,7 +1493,9 @@ export async function createGame(mount, opts = {}) {
     sliderContainer.on("pointerdown", pointerDown);
     sliderContainer.on("pointerup", pointerUp);
     sliderContainer.on("pointerupoutside", pointerUp);
-    handle.on?.("pointerdown", pointerDown);
+    handles.forEach((handle, index) => {
+      handle.on?.("pointerdown", (event) => pointerDown(event, index));
+    });
 
     const stagePointerMove = (event) => pointerMove(event);
     const stagePointerUp = () => pointerUp();
@@ -1375,10 +1591,11 @@ export async function createGame(mount, opts = {}) {
         return;
       }
       diceContainer.visible = true;
+      const fallbackValue = sliderValues[0] ?? defaultSliderValue;
       const basePosition =
         Number.isFinite(target.basePosition)
           ? target.basePosition
-          : valueToPosition(clampRange(target.value ?? sliderValue));
+          : valueToPosition(clampRange(target.value ?? fallbackValue));
       const scaledPosition = scalePosition(basePosition);
       diceContainer.position.x = scaledPosition;
       target.positionX = scaledPosition;
@@ -1559,10 +1776,14 @@ export async function createGame(mount, opts = {}) {
       const startX = scalePosition(startBaseX);
       const endX = scalePosition(endBaseX);
 
+      const [first, second, third, fourth] = sliderValues;
       const isWin = Number.isFinite(numericRoll)
-        ? rollMode === "under"
-          ? clampedRoll < sliderValue
-          : clampedRoll >= sliderValue
+        ? rollMode === "outside"
+          ? clampedRoll <= first || clampedRoll >= second
+          : rollMode === "between"
+          ? (clampedRoll >= first && clampedRoll <= second) ||
+            (clampedRoll >= third && clampedRoll <= fourth)
+          : clampedRoll >= first && clampedRoll <= second
         : false;
 
       const diceWasVisible =
@@ -1613,7 +1834,7 @@ export async function createGame(mount, opts = {}) {
           label: displayLabel,
           isWin,
           roll: clampedRoll,
-          target: sliderValue,
+          target: getActiveValues(),
         };
       }
 
@@ -1681,7 +1902,7 @@ export async function createGame(mount, opts = {}) {
         label: displayLabel,
         isWin,
         roll: clampedRoll,
-        target: sliderValue,
+        target: getActiveValues(),
       };
     }
 
@@ -1810,9 +2031,10 @@ export async function createGame(mount, opts = {}) {
       );
     }
 
+    normalizeSliderValues();
     updateTickLayout();
     updateSliderVisuals();
-    lastHandlePosition = valueToPosition(sliderValue);
+    lastHandlePositions = sliderValues.map((value) => valueToPosition(value));
     lastHandleUpdateTime = performance.now();
     resetDice();
     layout();
@@ -1827,8 +2049,10 @@ export async function createGame(mount, opts = {}) {
       revealDiceRoll,
       resetDice,
       resetState,
-      getValue: () => sliderValue,
-      setValue: (value) => setSliderValue(value),
+      getValue: () => sliderValues[0],
+      getValues: () => getActiveValues(),
+      setValue: (value) => setHandleValue(0, value),
+      setValues: (values) => setHandleValues(values),
       getRollMode,
       setRollMode,
       toggleRollMode,
@@ -1836,9 +2060,10 @@ export async function createGame(mount, opts = {}) {
       setWinChance,
       getMultiplier,
       setMultiplier,
+      setHandleValue: (index, value) => setHandleValue(index, value),
       destroy: () => {
         sliderContainer.removeAllListeners();
-        handle.removeAllListeners?.();
+        handles.forEach((handle) => handle.removeAllListeners?.());
         app.stage.off("pointermove", stagePointerMove);
         app.stage.off("pointerup", stagePointerUp);
         app.stage.off("pointerupoutside", stagePointerUp);
