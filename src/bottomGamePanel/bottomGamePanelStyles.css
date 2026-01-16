@@ -100,17 +100,23 @@ button.game-panel-value:focus-visible {
   padding-right: 56px;
 }
 
-.game-panel-value.game-panel-range {
-  --game-panel-icon-space: 12px;
-  padding-right: 12px;
+.game-panel-range-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  cursor: text;
 }
 
-.game-panel-range .game-panel-input {
-  min-width: 70px;
-  flex: 1 1 70px;
+.game-panel-value.game-panel-range-value {
+  --game-panel-icon-space: 12px;
+  padding-right: 12px;
+  flex: 1 1 90px;
+  min-width: 90px;
+}
+
+.game-panel-range-value .game-panel-input {
+  min-width: 0;
+  width: 100%;
 }
 
 .game-panel-separator {
@@ -120,7 +126,7 @@ button.game-panel-value:focus-visible {
 }
 
 .game-panel-spacer {
-  width: 12px;
+  width: 16px;
 }
 
 .game-panel-value.game-panel-toggle:hover {

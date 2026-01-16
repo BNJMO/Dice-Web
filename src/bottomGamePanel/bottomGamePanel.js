@@ -251,7 +251,7 @@ export function createBottomGamePanel({
     container.appendChild(labelEl);
 
     const valueWrapper = document.createElement("div");
-    valueWrapper.className = "game-panel-value game-panel-range";
+    valueWrapper.className = "game-panel-range-row";
     container.appendChild(valueWrapper);
 
     let inputs = [];
@@ -303,11 +303,12 @@ export function createBottomGamePanel({
       inputs = [];
       inputStates = [];
       const count = mode === "between" ? 4 : 2;
-      const positions = [];
-      for (let i = 0; i < count; i += 1) {
-        positions.push(i);
-      }
+      const positions = Array.from({ length: count }, (_, index) => index);
       positions.forEach((index, positionIndex) => {
+        const valueBox = document.createElement("div");
+        valueBox.className = "game-panel-value game-panel-range-value";
+        valueWrapper.appendChild(valueBox);
+
         const input = document.createElement("input");
         input.type = "text";
         input.className = "game-panel-input";
@@ -315,7 +316,7 @@ export function createBottomGamePanel({
         input.spellcheck = false;
         input.autocomplete = "off";
         input.setAttribute("aria-label", `${getModeLabel(mode)} target ${index + 1}`);
-        valueWrapper.appendChild(input);
+        valueBox.appendChild(input);
         inputs.push(input);
         inputStates.push({ editing: false });
 
@@ -357,16 +358,19 @@ export function createBottomGamePanel({
           }
         });
 
-        if (positionIndex === 0) return;
-        if (mode === "between" && positionIndex === 2) {
+        if (positionIndex === count - 1) {
+          return;
+        }
+
+        const separator = document.createElement("span");
+        separator.className = "game-panel-separator";
+        separator.textContent = "&";
+        valueWrapper.appendChild(separator);
+
+        if (mode === "between" && positionIndex === 1) {
           const spacer = document.createElement("span");
           spacer.className = "game-panel-spacer";
-          valueWrapper.insertBefore(spacer, input);
-        } else {
-          const separator = document.createElement("span");
-          separator.className = "game-panel-separator";
-          separator.textContent = "&";
-          valueWrapper.insertBefore(separator, input);
+          valueWrapper.appendChild(spacer);
         }
       });
     }
