@@ -100,6 +100,29 @@ button.game-panel-value:focus-visible {
   padding-right: 56px;
 }
 
+.game-panel-value.game-panel-range {
+  --game-panel-icon-space: 12px;
+  padding-right: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+  cursor: text;
+}
+
+.game-panel-range .game-panel-input {
+  min-width: 70px;
+  flex: 1 1 70px;
+}
+
+.game-panel-separator {
+  color: #92aab7;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.game-panel-spacer {
+  width: 12px;
+}
+
 .game-panel-value.game-panel-toggle:hover {
   border-color: #325b73;
 }
@@ -169,6 +192,23 @@ button.game-panel-value:focus-visible {
     padding: 22px 14px;
     bottom: 14px;
     max-height: 30%;
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .game-panel-item--multiplier {
+    order: 1;
+    flex: 1 1 45%;
+  }
+
+  .game-panel-item--win-chance {
+    order: 2;
+    flex: 1 1 45%;
+  }
+
+  .game-panel-item--range {
+    order: 3;
+    flex: 1 1 100%;
   }
 }
 

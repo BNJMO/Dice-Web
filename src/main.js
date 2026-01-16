@@ -23,7 +23,7 @@ let serverAutoTimeoutId = null;
 const serverRelay = new ServerRelay();
 let demoMode = serverRelay.demoMode;
 let serverPanel = null;
-let lastRollMode = "over";
+let lastRollMode = "inside";
 let awaitingServerBetOutcome = false;
 let awaitingServerAutoOutcome = false;
 let lastWinChance = null;
@@ -68,30 +68,37 @@ const opts = {
   },
   onLost: () => {},
   onStateChange: () => {},
-  onSliderValueChange: (target) => {
-    const sliderValue = Number(target);
-    const normalizedTarget = Number.isFinite(sliderValue) ? sliderValue : 0;
-    const winChance =
-      lastRollMode === "under"
-        ? clampPercent(normalizedTarget)
-        : clampPercent(100 - normalizedTarget);
+  onSliderValueChange: (details) => {
+    const normalizedDetails =
+      details && typeof details === "object" ? details : {};
+    const winChance = clampPercent(Number(normalizedDetails.winChance));
+    const multiplier = Number(normalizedDetails.multiplier);
+    const values = Array.isArray(normalizedDetails.values)
+      ? normalizedDetails.values.map((value) => Number(value))
+      : [];
+    lastRollMode = normalizedDetails.rollMode ?? lastRollMode;
     lastWinChance = winChance;
-    const multiplier = winChance > 0 ? 99 / winChance : Infinity;
-    lastTargetMultiplier = multiplier;
+    lastTargetMultiplier =
+      Number.isFinite(multiplier) && multiplier > 0
+        ? multiplier
+        : winChance > 0
+        ? 99 / winChance
+        : Infinity;
 
     console.debug(`Main calculated win chance: ${winChance.toFixed(2)}%`);
 
     sendRelayMessage("game:slider-change", {
-      target: normalizedTarget,
+      targets: values,
       rollMode: lastRollMode,
       winChance,
-      multiplier,
+      multiplier: lastTargetMultiplier,
     });
   },
   onRollModeChange: (mode) => {
     lastRollMode = mode;
     console.debug(`Roll mode changed to ${mode}`);
     sendRelayMessage("game:roll-mode-change", { mode });
+    controlPanel?.setRollMode?.(mode, { emit: false });
   },
 };
 
@@ -143,6 +150,15 @@ window.addEventListener("keydown", (event) => {
         }
       }
       sendRelayMessage("control:betvaluechange", detail);
+    });
+    controlPanel.addEventListener("rollmodechange", (event) => {
+      const mode = event?.detail?.mode;
+      if (!mode) {
+        return;
+      }
+      lastRollMode = mode;
+      game?.setRollMode?.(mode);
+      sendRelayMessage("control:rollmodechange", { mode });
     });
     controlPanel.addEventListener("numberofbetschange", (event) => {
       sendRelayMessage("control:numberofbetschange", event?.detail ?? {});
