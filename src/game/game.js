@@ -1027,13 +1027,17 @@ export async function createGame(mount, opts = {}) {
 
     const precision = SLIDER.step > 0 ? Math.round(1 / SLIDER.step) : 0;
     const defaultRollMode = "inside";
-    const defaultSliderValues = [
+    const defaultInsideOutsideValues = [
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 25)),
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 75)),
+    ];
+    const defaultBetweenValues = [
+      Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 25)),
+      Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 50)),
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 62.5)),
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 87.5)),
     ];
-    let sliderValues = [...defaultSliderValues];
+    let sliderValues = [...defaultBetweenValues];
     let sliderDragging = false;
     let activeHandleIndex = null;
     let rollMode = defaultRollMode;
@@ -1099,6 +1103,12 @@ export async function createGame(mount, opts = {}) {
 
     function getActiveValues() {
       return sliderValues.slice(0, getActiveHandleCount());
+    }
+
+    function getDefaultValuesForMode(mode) {
+      return mode === "between"
+        ? [...defaultBetweenValues]
+        : [...defaultInsideOutsideValues];
     }
 
     function getOrderedValues(values) {
@@ -1289,9 +1299,14 @@ export async function createGame(mount, opts = {}) {
     function setRollMode(mode) {
       const normalized = normalizeRollMode(mode);
       if (rollMode === normalized) return rollMode;
+      const wasBetween = rollMode === "between";
+      const isBetween = normalized === "between";
       rollMode = normalized;
       lastHandlePositions = sliderValues.map((value) => valueToPosition(value));
       activeHandleIndex = null;
+      if (wasBetween !== isBetween) {
+        setSliderValues(getDefaultValuesForMode(normalized), { snap: false });
+      }
       playSoundEffect("rollModeToggle");
       updateSliderVisuals();
       emitRollModeChange();
@@ -1308,7 +1323,7 @@ export async function createGame(mount, opts = {}) {
       const now = performance.now();
       lastSliderDragSoundTime = now;
       setRollMode(defaultRollMode);
-      setSliderValues(defaultSliderValues, { snap: false });
+      setSliderValues(getDefaultValuesForMode(defaultRollMode), { snap: false });
     }
 
     function getWinChance() {
