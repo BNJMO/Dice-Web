@@ -1037,7 +1037,7 @@ export async function createGame(mount, opts = {}) {
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 62.5)),
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 87.5)),
     ];
-    let sliderValues = [...defaultBetweenValues];
+    let sliderValues = getDefaultValuesForMode(defaultRollMode);
     let sliderDragging = false;
     let activeHandleIndex = null;
     let rollMode = defaultRollMode;
