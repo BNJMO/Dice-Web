@@ -1,6 +1,5 @@
 import { Stepper } from "../stepper/stepper.js";
 import multiplierIconUrl from "../../assets/sprites/MultiplierIcon.svg";
-import rollModeIconUrl from "../../assets/sprites/RollOverIcon.svg";
 import winChanceIconUrl from "../../assets/sprites/WinChanceIcon.svg";
 
 export function createBottomGamePanel({
@@ -66,7 +65,11 @@ export function createBottomGamePanel({
 
   const notifySliderApplied = () => {
     try {
-      onSliderValueChange(sliderUi.getValue());
+      const details =
+        typeof sliderUi.getChangeDetails === "function"
+          ? sliderUi.getChangeDetails()
+          : null;
+      onSliderValueChange(details);
     } catch (err) {
       console.warn("onSliderValueChange callback failed", err);
     }
@@ -239,55 +242,166 @@ export function createBottomGamePanel({
     };
   }
 
-  function createRollModeBox() {
+  function createRangeBox() {
     const container = document.createElement("div");
-    container.className = "game-panel-item";
+    container.className = "game-panel-item game-panel-item--range";
 
     const labelEl = document.createElement("span");
     labelEl.className = "game-panel-label";
     container.appendChild(labelEl);
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "game-panel-value game-panel-toggle";
-    button.setAttribute("aria-label", "Toggle roll mode");
-    container.appendChild(button);
+    const valueWrapper = document.createElement("div");
+    valueWrapper.className = "game-panel-range-row";
+    container.appendChild(valueWrapper);
 
-    const valueEl = document.createElement("span");
-    valueEl.className = "game-panel-display";
-    button.appendChild(valueEl);
+    let inputs = [];
+    let inputStates = [];
 
-    const iconEl = document.createElement("img");
-    iconEl.src = rollModeIconUrl;
-    iconEl.alt = "";
-    iconEl.className = "game-panel-icon";
-    iconEl.classList.add("game-panel-icon--roll-mode");
-    button.appendChild(iconEl);
+    function sanitizeDecimalString(rawValue) {
+      if (typeof rawValue !== "string") {
+        return "";
+      }
+      let sanitized = rawValue.replace(/[^0-9.]/g, "");
+      const dotIndex = sanitized.indexOf(".");
+      if (dotIndex !== -1) {
+        const before = sanitized.slice(0, dotIndex + 1);
+        const after = sanitized.slice(dotIndex + 1).replace(/\./g, "");
+        sanitized = `${before}${after}`;
+      }
+      return sanitized;
+    }
 
-    button.addEventListener("click", () => {
-      sliderUi.toggleRollMode();
+    function getModeLabel(mode) {
+      if (mode === "outside") return "Outside";
+      if (mode === "between") return "Between";
+      return "Inside";
+    }
+
+    function getActiveValues() {
+      const values = sliderUi.getValues?.() ?? [];
+      return Array.isArray(values) ? values : [];
+    }
+
+    function handleCommit(index) {
+      const input = inputs[index];
+      if (!input) return;
+      const raw = input.value.trim();
+      if (!raw) {
+        refresh(true);
+        return;
+      }
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        sliderUi.setValueAt?.(index, numeric);
+        notifySliderApplied();
+      }
       refresh(true);
-      notifySliderApplied();
-    });
+    }
+
+    function buildInputs(mode) {
+      valueWrapper.innerHTML = "";
+      inputs = [];
+      inputStates = [];
+      const count = mode === "between" ? 4 : 2;
+      const positions = Array.from({ length: count }, (_, index) => index);
+      positions.forEach((index, positionIndex) => {
+        const valueBox = document.createElement("div");
+        valueBox.className = "game-panel-value game-panel-range-value";
+        valueWrapper.appendChild(valueBox);
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "game-panel-input";
+        input.inputMode = "decimal";
+        input.spellcheck = false;
+        input.autocomplete = "off";
+        input.setAttribute("aria-label", `${getModeLabel(mode)} target ${index + 1}`);
+        valueBox.appendChild(input);
+        inputs.push(input);
+        inputStates.push({ editing: false });
+
+        input.addEventListener("focus", () => {
+          inputStates[index].editing = true;
+          setTimeout(() => input.select(), 0);
+        });
+
+        input.addEventListener("blur", () => {
+          inputStates[index].editing = false;
+          handleCommit(index);
+        });
+
+        input.addEventListener("input", () => {
+          const raw = input.value;
+          const selection = input.selectionStart ?? raw.length;
+          const sanitized = sanitizeDecimalString(raw);
+          if (sanitized !== raw) {
+            const delta = raw.length - sanitized.length;
+            input.value = sanitized;
+            const newPos = Math.max(0, selection - delta);
+            try {
+              input.setSelectionRange(newPos, newPos);
+            } catch {}
+          }
+        });
+
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            inputStates[index].editing = false;
+            handleCommit(index);
+            input.blur();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            inputStates[index].editing = false;
+            refresh(true);
+            input.blur();
+          }
+        });
+
+        if (positionIndex === count - 1) {
+          return;
+        }
+
+        const separator = document.createElement("span");
+        separator.className = "game-panel-separator";
+        separator.textContent = "&";
+        valueWrapper.appendChild(separator);
+
+        if (mode === "between" && positionIndex === 1) {
+          const spacer = document.createElement("span");
+          spacer.className = "game-panel-spacer";
+          valueWrapper.appendChild(spacer);
+        }
+      });
+    }
 
     function refresh(force = false) {
-      const mode = sliderUi.getRollMode();
-      labelEl.textContent = mode === "under" ? "Roll Under" : "Roll Over";
-      button.setAttribute("data-mode", mode);
-      const value = sliderUi.getValue();
-      if (force || document.activeElement !== button) {
+      const mode = sliderUi.getRollMode?.() ?? "inside";
+      const label = getModeLabel(mode);
+      labelEl.textContent = label;
+      if (!inputs.length || inputs.length !== (mode === "between" ? 4 : 2)) {
+        buildInputs(mode);
+      }
+      const values = getActiveValues();
+      inputs.forEach((input, index) => {
+        if (inputStates[index]?.editing && !force) return;
+        const value = values[index];
         const fallbackValue = formatPanelValue(NaN, (v) => v.toFixed(2), "0.00");
-        valueEl.textContent = Number.isFinite(value)
+        input.value = Number.isFinite(value)
           ? formatPanelValue(value, (v) => v.toFixed(2), fallbackValue)
           : fallbackValue;
-      }
+      });
     }
 
     function setClickable(isClickable) {
       const clickable = Boolean(isClickable);
-      button.disabled = !clickable;
-      button.classList.toggle("is-non-clickable", !clickable);
+      valueWrapper.classList.toggle("is-non-clickable", !clickable);
+      inputs.forEach((input) => {
+        input.disabled = !clickable;
+      });
     }
+
+    refresh(true);
 
     return {
       container,
@@ -307,7 +421,9 @@ export function createBottomGamePanel({
     afterCommit: notifySliderApplied,
   });
 
-  const rollModeBox = createRollModeBox();
+  multiplierBox.container.classList.add("game-panel-item--multiplier");
+
+  const rangeBox = createRangeBox();
 
   const winChanceBox = createEditableBox({
     label: "Win Chance",
@@ -321,7 +437,9 @@ export function createBottomGamePanel({
     allowDecimalOnly: true,
   });
 
-  panel.append(multiplierBox.container, rollModeBox.container, winChanceBox.container);
+  winChanceBox.container.classList.add("game-panel-item--win-chance");
+
+  panel.append(multiplierBox.container, rangeBox.container, winChanceBox.container);
 
   root.appendChild(panel);
 
@@ -329,6 +447,17 @@ export function createBottomGamePanel({
   let appliedScale = 1;
   let lastScaledHeight = 0;
   let lastIsPortrait = isPortraitMode();
+
+  function updateRangeLayoutVariables() {
+    const mode = sliderUi.getRollMode?.() ?? "inside";
+    const rangeBoxCount = mode === "between" ? 4 : 2;
+    const panelBoxCount = rangeBoxCount + 2;
+    panel.style.setProperty("--range-box-count", String(rangeBoxCount));
+    panel.style.setProperty("--panel-box-count", String(panelBoxCount));
+    panel.style.setProperty("--range-separator-count", String(rangeBoxCount - 1));
+    panel.style.setProperty("--range-separator-width", "14px");
+    panel.style.setProperty("--range-spacer-width", mode === "between" ? "16px" : "0px");
+  }
 
   function layout() {
     let desiredScale = 1;
@@ -384,6 +513,8 @@ export function createBottomGamePanel({
       refresh(true);
     }
 
+    updateRangeLayoutVariables();
+
     return scaleChanged || heightChanged || portraitChanged;
   }
 
@@ -397,8 +528,9 @@ export function createBottomGamePanel({
 
   function refresh(force = false) {
     multiplierBox.refresh(force);
-    rollModeBox.refresh(force);
+    rangeBox.refresh(force);
     winChanceBox.refresh(force);
+    updateRangeLayoutVariables();
   }
 
   const handleSliderChange = () => {
@@ -438,7 +570,7 @@ export function createBottomGamePanel({
   }
 
   function setRollModeClickable(isClickable) {
-    rollModeBox?.setClickable?.(isClickable);
+    rangeBox?.setClickable?.(isClickable);
   }
 
   function setWinChanceClickable(isClickable) {
@@ -447,7 +579,7 @@ export function createBottomGamePanel({
 
   function setControlsClickable(isClickable) {
     multiplierBox?.setClickable?.(isClickable);
-    rollModeBox?.setClickable?.(isClickable);
+    rangeBox?.setClickable?.(isClickable);
     winChanceBox?.setClickable?.(isClickable);
   }
 
