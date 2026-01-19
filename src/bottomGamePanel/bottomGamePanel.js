@@ -15,7 +15,7 @@ export function createBottomGamePanel({
 
   const portraitMediaQuery =
     typeof window !== "undefined" && typeof window.matchMedia === "function"
-      ? window.matchMedia("(max-width: 768px), (orientation: portrait)")
+      ? window.matchMedia("(max-width: 853px)")
       : null;
 
   let removePortraitModeWatcher = () => {};

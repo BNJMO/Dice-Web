@@ -69,7 +69,7 @@ body {
   --app-container-vertical-padding: 32px;
 }
 
-@media (max-width: 768px), (orientation: portrait) {
+@media (max-width: 853px) {
   body {
     --app-body-vertical-padding: 0px;
     padding: 0px;
