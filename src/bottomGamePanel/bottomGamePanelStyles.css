@@ -192,12 +192,12 @@ button.game-panel-value:focus-visible {
   --game-panel-icon-height: 13px;
 }
 
-@media (max-width: 768px), (orientation: portrait) {
+@media (max-width: 853px) {
   .game-bottom-panel {
     gap: 12px;
     padding: 22px 14px;
     bottom: 14px;
-    max-height: 30%;
+    max-height: none;
     flex-wrap: wrap;
     row-gap: 12px;
   }
@@ -215,6 +215,34 @@ button.game-panel-value:focus-visible {
   .game-panel-item--range {
     order: 3;
     flex: 1 1 100%;
+  }
+}
+
+@media (min-width: 854px) {
+  .game-bottom-panel {
+    flex-wrap: nowrap;
+  }
+
+  .game-panel-item {
+    flex: 1 1 0;
+  }
+
+  .game-panel-value {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .game-panel-range-row {
+    flex-wrap: nowrap;
+  }
+
+  .game-panel-value.game-panel-range-value {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .game-panel-separator {
+    flex: 0 0 auto;
   }
 }
 

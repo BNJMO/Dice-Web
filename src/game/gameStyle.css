@@ -50,12 +50,12 @@
   aspect-ratio: 1 / 1;
 }
 
-@media (max-width: 768px), (orientation: portrait) {
+@media (max-width: 853px) {
   .game-container {
     order: 1;
     padding-top: 0px;
-    min-height: 430px;
-    max-height: 380px;
+    min-height: 560px;
+    max-height: none;
     padding-top: 2px;
     align-items: center;
     justify-content: center;
@@ -63,6 +63,9 @@
 
   #game {
     min-height: 360px;
+    height: auto;
+    aspect-ratio: auto;
+    padding-bottom: 200px;
     justify-content: center;
   }
 }
@@ -72,4 +75,3 @@
     min-height: 450px;
   }
 }
-
