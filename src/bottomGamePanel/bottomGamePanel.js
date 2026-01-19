@@ -448,6 +448,17 @@ export function createBottomGamePanel({
   let lastScaledHeight = 0;
   let lastIsPortrait = isPortraitMode();
 
+  function updateRangeLayoutVariables() {
+    const mode = sliderUi.getRollMode?.() ?? "inside";
+    const rangeBoxCount = mode === "between" ? 4 : 2;
+    const panelBoxCount = rangeBoxCount + 2;
+    panel.style.setProperty("--range-box-count", String(rangeBoxCount));
+    panel.style.setProperty("--panel-box-count", String(panelBoxCount));
+    panel.style.setProperty("--range-separator-count", String(rangeBoxCount - 1));
+    panel.style.setProperty("--range-separator-width", "14px");
+    panel.style.setProperty("--range-spacer-width", mode === "between" ? "16px" : "0px");
+  }
+
   function layout() {
     let desiredScale = 1;
 
@@ -502,6 +513,8 @@ export function createBottomGamePanel({
       refresh(true);
     }
 
+    updateRangeLayoutVariables();
+
     return scaleChanged || heightChanged || portraitChanged;
   }
 
@@ -517,6 +530,7 @@ export function createBottomGamePanel({
     multiplierBox.refresh(force);
     rangeBox.refresh(force);
     winChanceBox.refresh(force);
+    updateRangeLayoutVariables();
   }
 
   const handleSliderChange = () => {

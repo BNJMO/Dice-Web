@@ -125,7 +125,10 @@ function getRendererResolution() {
 }
 
 function createDevicePixelRatioWatcher(callback) {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+  if (
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function"
+  ) {
     return () => {};
   }
 
@@ -281,7 +284,11 @@ function createSegmentedSliderBackground(texture, { ranges = [] } = {}) {
       segmentsConfig.push({ start: cursor, end: startClamped, stretch: true });
     }
     const endClamped = Math.max(startClamped, end);
-    segmentsConfig.push({ start: startClamped, end: endClamped, stretch: false });
+    segmentsConfig.push({
+      start: startClamped,
+      end: endClamped,
+      stretch: false,
+    });
     cursor = Math.max(cursor, endClamped);
   });
 
@@ -828,9 +835,7 @@ export async function createGame(mount, opts = {}) {
       : Number.isFinite(SLIDER.containerOffsetRatio)
       ? SLIDER.containerOffsetRatio
       : 0;
-    const backgroundOffsetRatio = Number.isFinite(
-      SLIDER.backgroundOffsetRatio
-    )
+    const backgroundOffsetRatio = Number.isFinite(SLIDER.backgroundOffsetRatio)
       ? SLIDER.backgroundOffsetRatio
       : 0;
 
@@ -842,11 +847,13 @@ export async function createGame(mount, opts = {}) {
       });
       background = segmented?.container ?? new Sprite(textures.background);
       updateBackgroundScale = segmented?.updateScale;
-      baseWidth = segmented?.baseWidth ??
+      baseWidth =
+        segmented?.baseWidth ??
         textures.background.width ??
         background.width ??
         fallbackWidth;
-      baseHeight = segmented?.baseHeight ??
+      baseHeight =
+        segmented?.baseHeight ??
         textures.background.height ??
         background.height ??
         fallbackHeight;
@@ -1030,6 +1037,8 @@ export async function createGame(mount, opts = {}) {
     const defaultInsideOutsideValues = [
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 25)),
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 75)),
+      Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 62.5)),
+      Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 87.5)),
     ];
     const defaultBetweenValues = [
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 25)),
@@ -1037,7 +1046,7 @@ export async function createGame(mount, opts = {}) {
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 62.5)),
       Math.min(SLIDER.maxValue, Math.max(SLIDER.minValue, 87.5)),
     ];
-    let sliderValues = [...defaultBetweenValues];
+    let sliderValues = getDefaultValuesForMode(defaultRollMode);
     let sliderDragging = false;
     let activeHandleIndex = null;
     let rollMode = defaultRollMode;
@@ -1049,7 +1058,9 @@ export async function createGame(mount, opts = {}) {
     let diceLabelColorCancel = null;
     let diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.default;
     let diceLastOutcome = null;
-    let lastHandlePositions = sliderValues.map((value) => valueToPosition(value));
+    let lastHandlePositions = sliderValues.map((value) =>
+      valueToPosition(value)
+    );
     let lastHandleUpdateTime = performance.now();
     let lastSliderDragSoundTime = -Infinity;
 
@@ -1323,7 +1334,9 @@ export async function createGame(mount, opts = {}) {
       const now = performance.now();
       lastSliderDragSoundTime = now;
       setRollMode(defaultRollMode);
-      setSliderValues(getDefaultValuesForMode(defaultRollMode), { snap: false });
+      setSliderValues(getDefaultValuesForMode(defaultRollMode), {
+        snap: false,
+      });
     }
 
     function getWinChance() {
@@ -1366,7 +1379,9 @@ export async function createGame(mount, opts = {}) {
 
       const mid = (values[0] + values[1]) / 2;
       const desiredRange =
-        rollMode === "outside" ? SLIDER.rangeMax - clampedChance : clampedChance;
+        rollMode === "outside"
+          ? SLIDER.rangeMax - clampedChance
+          : clampedChance;
       const half = desiredRange / 2;
       const nextValues = [mid - half, mid + half];
       return setSliderValues(nextValues, { snap: false });
@@ -1395,7 +1410,10 @@ export async function createGame(mount, opts = {}) {
       }
       if (rollMode === "between") {
         const [a, b, c, d] = values;
-        return (rollValue >= a && rollValue <= b) || (rollValue >= c && rollValue <= d);
+        return (
+          (rollValue >= a && rollValue <= b) ||
+          (rollValue >= c && rollValue <= d)
+        );
       }
       const [low, high] = values;
       return rollValue >= low && rollValue <= high;
@@ -1428,8 +1446,7 @@ export async function createGame(mount, opts = {}) {
     function pointerDown(event, index = null) {
       event.stopPropagation?.();
       sliderDragging = true;
-      activeHandleIndex =
-        typeof index === "number" ? index : activeHandleIndex;
+      activeHandleIndex = typeof index === "number" ? index : activeHandleIndex;
       sliderContainer.cursor = "grabbing";
       handles.forEach((handle) => {
         handle.cursor = "grabbing";
@@ -1475,8 +1492,7 @@ export async function createGame(mount, opts = {}) {
     app.stage.on("pointerupoutside", stagePointerUp);
 
     function applyDiceScale() {
-      const widthCompensation =
-        sliderWidthScale > 0 ? 1 / sliderWidthScale : 1;
+      const widthCompensation = sliderWidthScale > 0 ? 1 / sliderWidthScale : 1;
       const appliedScale = diceScaleValue * diceOrientationScale;
       diceContainer.scale.set(appliedScale * widthCompensation, appliedScale);
     }
@@ -1513,8 +1529,7 @@ export async function createGame(mount, opts = {}) {
       const isPortrait = isAppContainerInPortraitMode();
       const nextScale = isPortrait ? DICE_PORTRAIT_SCALE : 1;
       if (
-        Math.abs(nextScale - diceOrientationScale) <=
-        DICE_ORIENTATION_EPSILON
+        Math.abs(nextScale - diceOrientationScale) <= DICE_ORIENTATION_EPSILON
       ) {
         return;
       }
@@ -1525,10 +1540,7 @@ export async function createGame(mount, opts = {}) {
     if (portraitMediaQuery) {
       const handlePortraitModeChange = () => updateDiceOrientationScale();
       if (typeof portraitMediaQuery.addEventListener === "function") {
-        portraitMediaQuery.addEventListener(
-          "change",
-          handlePortraitModeChange
-        );
+        portraitMediaQuery.addEventListener("change", handlePortraitModeChange);
         removePortraitModeWatcher = () =>
           portraitMediaQuery.removeEventListener(
             "change",
@@ -1561,12 +1573,11 @@ export async function createGame(mount, opts = {}) {
         return;
       }
       diceContainer.visible = true;
-      const basePosition =
-        Number.isFinite(target.basePosition)
-          ? target.basePosition
-          : valueToPosition(
-              clampRange(target.value ?? getActiveValues()[0] ?? SLIDER.rangeMin)
-            );
+      const basePosition = Number.isFinite(target.basePosition)
+        ? target.basePosition
+        : valueToPosition(
+            clampRange(target.value ?? getActiveValues()[0] ?? SLIDER.rangeMin)
+          );
       const scaledPosition = scalePosition(basePosition);
       diceContainer.position.x = scaledPosition;
       target.positionX = scaledPosition;
@@ -1577,9 +1588,8 @@ export async function createGame(mount, opts = {}) {
       diceLabel.style.fill = target.targetColor;
       diceLabelShadowColor = DICE_LABEL_SHADOW_COLORS.target;
       if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color = numberToHexColorString(
-          diceLabelShadowColor
-        );
+        diceLabel.style.dropShadow.color =
+          numberToHexColorString(diceLabelShadowColor);
       }
     }
 
@@ -1777,9 +1787,8 @@ export async function createGame(mount, opts = {}) {
         ? targetColor
         : DICE_LABEL_COLORS.default;
       if (diceLabel.style.dropShadow) {
-        diceLabel.style.dropShadow.color = numberToHexColorString(
-          diceLabelShadowColor
-        );
+        diceLabel.style.dropShadow.color =
+          numberToHexColorString(diceLabelShadowColor);
       }
 
       diceContainer.visible = true;
@@ -2240,7 +2249,9 @@ export async function createGame(mount, opts = {}) {
     };
   }
 
-  stopDevicePixelRatioWatcher = createDevicePixelRatioWatcher(() => resizeToContainer());
+  stopDevicePixelRatioWatcher = createDevicePixelRatioWatcher(() =>
+    resizeToContainer()
+  );
 
   resizeToContainer();
   setTimeout(resizeToContainer, 0);
