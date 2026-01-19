@@ -17,6 +17,11 @@
   z-index: 20;
   pointer-events: auto;
   user-select: none;
+  --panel-box-count: 4;
+  --range-box-count: 2;
+  --range-separator-count: 1;
+  --range-separator-width: 14px;
+  --range-spacer-width: 0px;
 }
 
 .game-panel-item {
@@ -124,6 +129,9 @@ button.game-panel-value:focus-visible {
   color: #92aab7;
   font-weight: 600;
   font-size: 0.9rem;
+  width: var(--range-separator-width);
+  text-align: center;
+  flex: 0 0 var(--range-separator-width);
 }
 
 .game-panel-spacer {
@@ -220,8 +228,30 @@ button.game-panel-value:focus-visible {
 }
 
 @media (min-width: 854px) {
-  .game-panel-item {
-    flex: 1 1 0;
+  .game-bottom-panel {
+    --panel-gap: 16px;
+  }
+
+  .game-panel-item--multiplier,
+  .game-panel-item--win-chance {
+    flex: 0 0
+      calc(
+        (100% - (var(--panel-box-count) - 1) * var(--panel-gap) -
+              (var(--range-separator-count) * var(--range-separator-width)) -
+              var(--range-spacer-width)) / var(--panel-box-count)
+      );
+  }
+
+  .game-panel-item--range {
+    flex: 0 0
+      calc(
+        ((100% - (var(--panel-box-count) - 1) * var(--panel-gap) -
+          (var(--range-separator-count) * var(--range-separator-width)) -
+          var(--range-spacer-width)) / var(--panel-box-count)) *
+          var(--range-box-count) +
+          (var(--range-separator-count) * var(--range-separator-width)) +
+          var(--range-spacer-width)
+      );
   }
 
   .game-panel-value {
@@ -230,11 +260,16 @@ button.game-panel-value:focus-visible {
 
   .game-panel-range-row {
     flex-wrap: nowrap;
+    gap: 0;
   }
 
   .game-panel-value.game-panel-range-value {
     flex: 1 1 0;
     min-width: 0;
+  }
+
+  .game-panel-spacer {
+    flex: 0 0 var(--range-spacer-width);
   }
 }
 

@@ -69,12 +69,12 @@
 
 @media (max-width: 853px) {
   .game-container {
-    min-height: 620px;
+    min-height: 760px;
     max-height: none;
   }
 
   #game {
-    min-height: 620px;
+    min-height: 760px;
   }
 }
 
