@@ -119,6 +119,25 @@ export async function initializeSessionId({
   url = DEFAULT_SERVER_URL,
   relay,
 } = {}) {
+  const locationHref =
+    typeof window !== "undefined" && typeof window.location?.href === "string"
+      ? window.location.href
+      : null;
+
+  if (locationHref) {
+    try {
+      const urlParams = new URL(locationHref).searchParams;
+      const tokenFromUrl = urlParams.get("gameToken");
+
+      if (typeof tokenFromUrl === "string" && tokenFromUrl.length > 0) {
+        sessionId = tokenFromUrl;
+        return tokenFromUrl;
+      }
+    } catch (error) {
+      // Ignore invalid URL values and fall back to session id endpoint request.
+    }
+  }
+
   const baseUrl = normalizeBaseUrl(url);
   const endpoint = `${baseUrl}/get_session_id`;
 
