@@ -8,6 +8,7 @@ let sessionId = null;
 let sessionGameDetails = null;
 let sessionGameUrl = null;
 let sessionUserToken = null;
+let sessionScratchGameId = null;
 let lastBetResult = null;
 let lastBetRoundId = null;
 let lastBetBalance = null;
@@ -53,6 +54,31 @@ export function getGameUrl() {
 
 export function getUserToken() {
   return sessionUserToken;
+}
+
+function getLocationSearchParams() {
+  const locationHref =
+    typeof window !== "undefined" && typeof window.location?.href === "string"
+      ? window.location.href
+      : null;
+
+  if (!locationHref) {
+    return null;
+  }
+
+  try {
+    return new URL(locationHref).searchParams;
+  } catch (error) {
+    return null;
+  }
+}
+
+function getResolvedScratchGameId(fallbackGameId = DEFAULT_SCRATCH_GAME_ID) {
+  if (typeof sessionScratchGameId === "string" && sessionScratchGameId.length > 0) {
+    return normalizeScratchGameId(sessionScratchGameId);
+  }
+
+  return normalizeScratchGameId(fallbackGameId);
 }
 
 function ensureRelay(relay) {
@@ -119,6 +145,21 @@ export async function initializeSessionId({
   url = DEFAULT_SERVER_URL,
   relay,
 } = {}) {
+  const urlParams = getLocationSearchParams();
+
+  if (urlParams) {
+    const gameIdFromUrl = urlParams.get("gameId");
+    if (typeof gameIdFromUrl === "string" && gameIdFromUrl.length > 0) {
+      sessionScratchGameId = normalizeScratchGameId(gameIdFromUrl);
+    }
+
+    const tokenFromUrl = urlParams.get("gameToken");
+    if (typeof tokenFromUrl === "string" && tokenFromUrl.length > 0) {
+      sessionId = tokenFromUrl;
+      return tokenFromUrl;
+    }
+  }
+
   const baseUrl = normalizeBaseUrl(url);
   const endpoint = `${baseUrl}/get_session_id`;
 
@@ -233,7 +274,7 @@ export async function initializeGameSession({
   }
 
   const baseUrl = normalizeBaseUrl(url);
-  const gameId = normalizeScratchGameId(scratchGameId);
+  const gameId = getResolvedScratchGameId(scratchGameId);
   const endpoint = `${baseUrl}/join/${encodeURIComponent(gameId)}/`;
 
   sessionGameDetails = null;
@@ -389,7 +430,7 @@ export async function submitBet({
   }
 
   const baseUrl = normalizeBaseUrl(url);
-  const normalizedGameId = normalizeScratchGameId(gameId);
+  const normalizedGameId = getResolvedScratchGameId(gameId);
   const endpoint = `${baseUrl}/post/${encodeURIComponent(
     normalizedGameId
   )}?betInfo`;
