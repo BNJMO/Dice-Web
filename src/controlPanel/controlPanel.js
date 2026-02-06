@@ -1,5 +1,9 @@
 import { Stepper } from "../stepper/stepper.js";
-import bitcoinIconUrl from "../../assets/sprites/controlPanel/BitCoin.svg";
+import {
+  getBitcoinAsset,
+  getDollarAsset,
+  getEuroAsset,
+} from "../currencyProvider.js";
 import infinityIconUrl from "../../assets/sprites/controlPanel/Infinity.svg";
 import percentageIconUrl from "../../assets/sprites/controlPanel/Percentage.svg";
 
@@ -65,6 +69,11 @@ export class ControlPanel extends EventTarget {
     this.host = resolveMount(mount);
     this.host.innerHTML = "";
 
+    this.currencyVariation = options.currencyVariation ?? "orange";
+    this.currencyName = options.initialCurrencyName ?? "Euro";
+    this.currencyIcons = [];
+    this.currencyRelay = options.relay ?? null;
+
     this.mode = this.options.initialMode === "auto" ? "auto" : "manual";
 
     this.animationsEnabled = Boolean(this.options.initialAnimationsEnabled);
@@ -117,6 +126,9 @@ export class ControlPanel extends EventTarget {
     this.buildBetControls();
     this.buildModeSections();
     // this.buildFooter();
+
+    this.updateCurrencyIcons(this.currencyName);
+    this.subscribeToCurrencyUpdates();
 
     this.setBetAmountDisplay(this.options.initialBetAmountDisplay);
     this.setProfitOnWinDisplay(this.options.initialProfitOnWinDisplay);
@@ -211,10 +223,11 @@ export class ControlPanel extends EventTarget {
     this.betInputWrapper.appendChild(this.betInput);
 
     const icon = document.createElement("img");
-    icon.src = bitcoinIconUrl;
+    icon.src = this.resolveCurrencyAsset(this.currencyName);
     icon.alt = "";
     icon.className = "control-bet-input-icon";
     this.betInputWrapper.appendChild(icon);
+    this.currencyIcons.push(icon);
 
     this.betStepper = new Stepper({
       onStepUp: () => this.adjustBetValue(1e-8),
@@ -622,10 +635,11 @@ export class ControlPanel extends EventTarget {
     wrapper.appendChild(input);
 
     const icon = document.createElement("img");
-    icon.src = bitcoinIconUrl;
+    icon.src = this.resolveCurrencyAsset(this.currencyName);
     icon.alt = "";
     icon.className = "control-bet-input-icon";
     wrapper.appendChild(icon);
+    this.currencyIcons.push(icon);
 
     const stepper = new Stepper({
       onStepUp: () => {
@@ -794,10 +808,11 @@ export class ControlPanel extends EventTarget {
     this.profitBox.appendChild(this.profitValue);
 
     const icon = document.createElement("img");
-    icon.src = bitcoinIconUrl;
+    icon.src = this.resolveCurrencyAsset(this.currencyName);
     icon.alt = "";
     icon.className = "control-profit-icon";
     this.profitBox.appendChild(icon);
+    this.currencyIcons.push(icon);
 
     const parent = this.manualSection ?? this.scrollContainer;
     parent.appendChild(this.profitBox);
@@ -862,6 +877,50 @@ export class ControlPanel extends EventTarget {
     this.updateModeButtons();
     this.updateModeSections();
     this.dispatchEvent(new CustomEvent("modechange", { detail: { mode: this.mode } }));
+  }
+
+  resolveCurrencyAsset(currencyName) {
+    const variation = this.currencyVariation;
+    switch (currencyName) {
+      case "Euro":
+        return getEuroAsset(variation) ?? getBitcoinAsset(variation);
+      case "Dollar":
+        return getDollarAsset(variation) ?? getBitcoinAsset(variation);
+      case "Bitcoin":
+      default:
+        return getBitcoinAsset(variation);
+    }
+  }
+
+  updateCurrencyIcons(currencyName) {
+    const asset = this.resolveCurrencyAsset(currencyName);
+    this.currencyIcons.forEach((icon) => {
+      icon.src = asset;
+    });
+  }
+
+  setCurrencyName(currencyName) {
+    if (typeof currencyName !== "string" || !currencyName.trim()) {
+      return;
+    }
+    if (this.currencyName === currencyName) {
+      return;
+    }
+    this.currencyName = currencyName;
+    this.updateCurrencyIcons(currencyName);
+  }
+
+  subscribeToCurrencyUpdates() {
+    if (!this.currencyRelay?.addEventListener) {
+      return;
+    }
+    this.currencyRelay.addEventListener("incoming", (event) => {
+      const { type, payload } = event?.detail ?? {};
+      if (type !== "currencyUpdated") {
+        return;
+      }
+      this.setCurrencyName(payload?.currency);
+    });
   }
 
   updateModeButtons() {
