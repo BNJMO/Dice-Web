@@ -116,6 +116,7 @@ window.addEventListener("keydown", (event) => {
   try {
     controlPanel = new ControlPanel("#control-panel", {
       gameName: "Dice",
+      initialCurrencyName: "Euro",
       relay: serverRelay,
     });
     controlPanel?.setInteractable?.(false);

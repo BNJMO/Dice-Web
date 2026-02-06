@@ -70,7 +70,7 @@ export class ControlPanel extends EventTarget {
     this.host.innerHTML = "";
 
     this.currencyVariation = options.currencyVariation ?? "orange";
-    this.currencyName = options.initialCurrencyName ?? "Bitcoin";
+    this.currencyName = options.initialCurrencyName ?? "Euro";
     this.currencyIcons = [];
     this.currencyRelay = options.relay ?? null;
 
