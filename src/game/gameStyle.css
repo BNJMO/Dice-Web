@@ -2,7 +2,6 @@
   flex: 1 1 640px;
   background: #091b26;
   border-radius: 20px;
-  border: 1px solid #223845;
   position: relative;
   overflow: hidden;
   min-height: clamp(

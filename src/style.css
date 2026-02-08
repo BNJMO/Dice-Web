@@ -20,48 +20,45 @@
     0 0 0 0px rgba(34, 56, 69, 0.5);
 }
 
+html,
 body {
-  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Arial,
-    sans-serif;
+  height: 100%;
+}
+
+body {
+  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI",
+    Arial, sans-serif;
   background: #091b26;
   color: #ffffff;
-  --app-body-vertical-padding: clamp(16px, 6vh, 80px);
-  min-height: 100vh;
+  --app-body-vertical-padding: 0px;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--app-body-vertical-padding) clamp(16px, 4vw, 24px);
+  padding: 0;
 }
 
 .app-wrapper {
   width: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
   align-items: stretch;
   box-sizing: border-box;
   flex: 1;
-  min-height: 0;
+  min-height: 100%;
+  height: 100%;
 }
 
 .app-container {
   width: 100%;
-  max-width: 1280px;
   min-height: 100%;
-  height: min(
-    100%,
-    max(0px, calc(100vh - (var(--app-body-vertical-padding, 0px) * 2)))
-  );
-  max-height: max(
-    0px,
-    calc(100vh - (var(--app-body-vertical-padding, 0px) * 2))
-  );
+  height: 100%;
+  max-height: 100%;
   display: flex;
-  gap: 16px;
+  gap: 10px;
   background: #142733;
-  border-radius: 28px;
-  border: 1px solid #223845;
-  padding: 16px;
+  padding: 10px;
   padding-right: 8px;
   box-shadow: 0 24px 48px rgba(9, 27, 38, 0.35);
   flex-direction: row;
