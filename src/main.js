@@ -187,7 +187,7 @@ window.addEventListener("keydown", (event) => {
     });
     controlPanel.setBetAmountDisplay("0.00");
     controlPanel.setProfitOnWinDisplay("0.00");
-    controlPanel.setProfitValue("0.00000000");
+    controlPanel.setProfitValue("0.00");
   } catch (err) {
     console.error("Control panel initialization failed:", err);
   }
