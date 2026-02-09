@@ -50,8 +50,8 @@ export class ControlPanel extends EventTarget {
       initialTotalProfitMultiplier:
         options.initialTotalProfitMultiplier ?? 1,
       initialBetValue: options.initialBetValue ?? "0.00000000",
-      initialBetAmountDisplay: options.initialBetAmountDisplay ?? "$0.00",
-      initialProfitOnWinDisplay: options.initialProfitOnWinDisplay ?? "$0.00",
+      initialBetAmountDisplay: options.initialBetAmountDisplay ?? "0.00",
+      initialProfitOnWinDisplay: options.initialProfitOnWinDisplay ?? "0.00",
       initialProfitValue: options.initialProfitValue ?? "0.00000000",
       initialMode: options.initialMode ?? "manual",
       gameName: options.gameName ?? "Game Name",
@@ -1275,15 +1275,26 @@ export class ControlPanel extends EventTarget {
     return Number.isFinite(numeric) ? numeric : 0;
   }
 
+  formatDisplayAmount(value) {
+    const numeric = Number(this.parseBetValue(value));
+    if (Number.isFinite(numeric)) {
+      return clampToZero(numeric).toFixed(2);
+    }
+    if (typeof value === "string") {
+      return value;
+    }
+    return "0.00";
+  }
+
   setBetAmountDisplay(value) {
     if (this.betAmountValue) {
-      this.betAmountValue.textContent = value;
+      this.betAmountValue.textContent = this.formatDisplayAmount(value);
     }
   }
 
   setProfitOnWinDisplay(value) {
     if (this.profitOnWinValue) {
-      this.profitOnWinValue.textContent = value;
+      this.profitOnWinValue.textContent = this.formatDisplayAmount(value);
     }
   }
 
