@@ -235,6 +235,10 @@ function handleBet() {
   if (!demoMode) {
     return;
   }
+  const betValue = toFiniteNumber(controlPanel?.getBetValue?.()) ?? 0;
+  if (betValue <= 0) {
+    return;
+  }
   const roll = Math.random() * 100;
   const winChance = Math.max(0, (100 - roll) / 100);
   console.debug(
@@ -243,8 +247,9 @@ function handleBet() {
     ).toFixed(2)}% win chance.`
   );
 
-  const betValue = controlPanel?.getBetValue?.() ?? 0;
-  controlPanel?.setBetAmountDisplay?.(betValue.toFixed(2));
+  // const betValue = controlPanel?.getBetValue?.() ?? 0;
+  // controlPanel?.setBetAmountDisplay?.(betValue.toFixed(2));
+  controlPanel?.setBetAmountDisplay?.(`$${betValue.toFixed(2)}`);
   const potentialProfit = betValue * winChance;
   controlPanel?.setProfitOnWinDisplay?.(potentialProfit.toFixed(2));
   controlPanel?.setProfitValue?.(potentialProfit);
