@@ -1167,6 +1167,7 @@ export class ControlPanel extends EventTarget {
   }
 
   dispatchBetValueChange(value = this.betInput.value) {
+    this.setBetAmountDisplay(value);
     this.dispatchEvent(
       new CustomEvent("betvaluechange", {
         detail: { value: value, numericValue: this.getBetValue() },
@@ -1253,14 +1254,15 @@ export class ControlPanel extends EventTarget {
 
   setProfitValue(value) {
     if (!this.profitValue) return;
+    let displayValue = "0.0";
     if (Number.isFinite(Number(value))) {
       const numeric = Number(value);
-      this.profitValue.textContent = clampToZero(numeric).toFixed(1);
+      displayValue = clampToZero(numeric).toFixed(1);
     } else if (typeof value === "string") {
-      this.profitValue.textContent = this.formatDisplayAmount(value);
-    } else {
-      this.profitValue.textContent = "0.0";
+      displayValue = this.formatDisplayAmount(value);
     }
+    this.profitValue.textContent = displayValue;
+    this.setProfitOnWinDisplay(displayValue);
   }
 
   setGameName(name) {
