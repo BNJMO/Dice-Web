@@ -64,7 +64,7 @@ const opts = {
     const betValue = controlPanel?.getBetValue?.() ?? 0;
     const estimatedProfit = betValue * 0.015;
     controlPanel?.setProfitValue(estimatedProfit);
-    controlPanel?.setProfitOnWinDisplay?.(estimatedProfit.toFixed(2));
+    controlPanel?.setProfitOnWinDisplay?.(estimatedProfit.toFixed(1));
   },
   onLost: () => {},
   onStateChange: () => {},
@@ -185,9 +185,9 @@ window.addEventListener("keydown", (event) => {
         requestServerAutoBetStop();
       }
     });
-    controlPanel.setBetAmountDisplay("0.00");
-    controlPanel.setProfitOnWinDisplay("0.00");
-    controlPanel.setProfitValue("0.00");
+    controlPanel.setBetAmountDisplay("0.0");
+    controlPanel.setProfitOnWinDisplay("0.0");
+    controlPanel.setProfitValue("0.0");
   } catch (err) {
     console.error("Control panel initialization failed:", err);
   }
@@ -235,10 +235,6 @@ function handleBet() {
   if (!demoMode) {
     return;
   }
-  const betValue = toFiniteNumber(controlPanel?.getBetValue?.()) ?? 0;
-  if (betValue <= 0) {
-    return;
-  }
   const roll = Math.random() * 100;
   const winChance = Math.max(0, (100 - roll) / 100);
   console.debug(
@@ -247,11 +243,10 @@ function handleBet() {
     ).toFixed(2)}% win chance.`
   );
 
-  // const betValue = controlPanel?.getBetValue?.() ?? 0;
-  // controlPanel?.setBetAmountDisplay?.(betValue.toFixed(2));
-  controlPanel?.setBetAmountDisplay?.(`$${betValue.toFixed(2)}`);
+  const betValue = controlPanel?.getBetValue?.() ?? 0;
+  controlPanel?.setBetAmountDisplay?.(betValue.toFixed(1));
   const potentialProfit = betValue * winChance;
-  controlPanel?.setProfitOnWinDisplay?.(potentialProfit.toFixed(2));
+  controlPanel?.setProfitOnWinDisplay?.(potentialProfit.toFixed(1));
   controlPanel?.setProfitValue?.(potentialProfit);
 
   game?.revealDiceOutcome?.({ roll });
@@ -679,7 +674,7 @@ function processServerRoll(payload = {}) {
   }
 
   const betAmountDisplay =
-    payload.betAmountDisplay ?? `${betValue.toFixed(2)}`;
+    payload.betAmountDisplay ?? `${betValue.toFixed(1)}`;
   controlPanel?.setBetAmountDisplay?.(betAmountDisplay);
 
   const winChanceRatio = (() => {
@@ -706,7 +701,7 @@ function processServerRoll(payload = {}) {
 
   const profitOnWinDisplay =
     payload.profitOnWinDisplay ??
-    `${(Number.isFinite(potentialProfit) ? potentialProfit : 0).toFixed(2)}`;
+    `${(Number.isFinite(potentialProfit) ? potentialProfit : 0).toFixed(1)}`;
   controlPanel?.setProfitOnWinDisplay?.(profitOnWinDisplay);
 
   if (

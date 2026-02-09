@@ -49,10 +49,10 @@ export class ControlPanel extends EventTarget {
       profitOnWinLabel: options.profitOnWinLabel ?? "Profit on Win",
       initialTotalProfitMultiplier:
         options.initialTotalProfitMultiplier ?? 1,
-      initialBetValue: options.initialBetValue ?? "0.00",
-      initialBetAmountDisplay: options.initialBetAmountDisplay ?? "0.00",
-      initialProfitOnWinDisplay: options.initialProfitOnWinDisplay ?? "0.00",
-      initialProfitValue: options.initialProfitValue ?? "0.00",
+      initialBetValue: options.initialBetValue ?? "0.0",
+      initialBetAmountDisplay: options.initialBetAmountDisplay ?? "0.0",
+      initialProfitOnWinDisplay: options.initialProfitOnWinDisplay ?? "0.0",
+      initialProfitValue: options.initialProfitValue ?? "0.0",
       initialMode: options.initialMode ?? "manual",
       gameName: options.gameName ?? "Game Name",
       minesLabel: options.minesLabel ?? "Mines",
@@ -363,7 +363,7 @@ export class ControlPanel extends EventTarget {
     this.autoNumberOfBetsInput.autocomplete = "off";
     this.autoNumberOfBetsInput.spellcheck = false;
     this.autoNumberOfBetsInput.className = "control-bet-input auto-number-input";
-    this.autoNumberOfBetsInput.value = "0.00";
+    this.autoNumberOfBetsInput.value = "0.0";
     this.autoNumberOfBetsInput.addEventListener("input", () => {
       this.sanitizeNumberOfBets();
       this.updateNumberOfBetsIcon();
@@ -428,7 +428,7 @@ export class ControlPanel extends EventTarget {
     profitLabel.textContent = "Stop on Profit";
     const profitValue = document.createElement("span");
     profitValue.className = "auto-advanced-summary-value";
-    profitValue.textContent = "0.00";
+    profitValue.textContent = "0.0";
     profitRow.append(profitLabel, profitValue);
     this.autoAdvancedContent.appendChild(profitRow);
 
@@ -455,7 +455,7 @@ export class ControlPanel extends EventTarget {
     lossLabel.textContent = "Stop on Loss";
     const lossValue = document.createElement("span");
     lossValue.className = "auto-advanced-summary-value";
-    lossValue.textContent = "0.00";
+    lossValue.textContent = "0.0";
     lossRow.append(lossLabel, lossValue);
     this.autoAdvancedContent.appendChild(lossRow);
 
@@ -554,7 +554,7 @@ export class ControlPanel extends EventTarget {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.className = "control-bet-input";
-    input.value = "0.00";
+    input.value = "0.0";
     field.appendChild(input);
 
     const icon = document.createElement("img");
@@ -630,7 +630,7 @@ export class ControlPanel extends EventTarget {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.className = "control-bet-input";
-    input.value = "0.00";
+    input.value = "0.0";
     this.enableSelectAllOnFocus(input);
     wrapper.appendChild(input);
 
@@ -965,11 +965,11 @@ export class ControlPanel extends EventTarget {
     if (!this.autoNumberOfBetsInput) return;
     const raw = this.autoNumberOfBetsInput.value.replace(/[^\d.]/g, "");
     if (!raw || raw === ".") {
-      this.autoNumberOfBetsInput.value = "0.00";
+      this.autoNumberOfBetsInput.value = "0.0";
       return;
     }
     const numeric = Math.max(0, Number.parseFloat(raw) || 0);
-    this.autoNumberOfBetsInput.value = numeric.toFixed(2);
+    this.autoNumberOfBetsInput.value = numeric.toFixed(1);
   }
 
   sanitizeStrategyInput(input, { enforceMinimum = false } = {}) {
@@ -977,8 +977,8 @@ export class ControlPanel extends EventTarget {
 
     const raw = input.value.replace(/[^\d.]/g, "");
     if (!raw || raw === ".") {
-      input.value = "0.00";
-      return "0.00";
+      input.value = "0.0";
+      return "0.0";
     }
 
     let numeric = Number.parseFloat(raw);
@@ -1007,7 +1007,7 @@ export class ControlPanel extends EventTarget {
     if (!this.autoNumberOfBetsInput) return;
     const current = Number(this.autoNumberOfBetsInput.value) || 0;
     const next = Math.max(0, current + delta);
-    this.autoNumberOfBetsInput.value = next.toFixed(2);
+    this.autoNumberOfBetsInput.value = next.toFixed(1);
     this.updateNumberOfBetsIcon();
     this.dispatchNumberOfBetsChange();
   }
@@ -1099,7 +1099,7 @@ export class ControlPanel extends EventTarget {
   }
 
   adjustCurrencyInputValue(input, delta) {
-    if (!input) return "0.00";
+    if (!input) return "0.0";
     const current = Number(this.parseBetValue(input.value));
     const next = clampToZero(
       (Number.isFinite(current) ? current : 0) + Number(delta || 0)
@@ -1110,7 +1110,7 @@ export class ControlPanel extends EventTarget {
   }
 
   normalizeCurrencyInputValue(input) {
-    if (!input) return "0.00";
+    if (!input) return "0.0";
     const formatted = this.formatBetValue(input.value);
     input.value = formatted;
     return formatted;
@@ -1149,9 +1149,9 @@ export class ControlPanel extends EventTarget {
   formatBetValue(value) {
     const numeric = Number(this.parseBetValue(value));
     if (!Number.isFinite(numeric)) {
-      return "0.00";
+      return "0.0";
     }
-    return clampToZero(numeric).toFixed(2);
+    return clampToZero(numeric).toFixed(1);
   }
 
   parseBetValue(value) {
@@ -1201,7 +1201,7 @@ export class ControlPanel extends EventTarget {
 
   formatStrategyValue(value) {
     const clamped = Math.max(0, Number.isFinite(value) ? value : 0);
-    return clamped.toFixed(2);
+    return clamped.toFixed(1);
   }
 
   dispatchStopOnProfitChange(value) {
@@ -1231,12 +1231,12 @@ export class ControlPanel extends EventTarget {
     }
     const numeric = Number(this.parseBetValue(value));
     if (Number.isFinite(numeric)) {
-      return clampToZero(numeric).toFixed(2);
+      return clampToZero(numeric).toFixed(1);
     }
     if (typeof value === "string") {
       return value;
     }
-    return "0.00";
+    return "0.0";
   }
 
   setBetAmountDisplay(value) {
@@ -1255,11 +1255,11 @@ export class ControlPanel extends EventTarget {
     if (!this.profitValue) return;
     if (Number.isFinite(Number(value))) {
       const numeric = Number(value);
-      this.profitValue.textContent = clampToZero(numeric).toFixed(2);
+      this.profitValue.textContent = clampToZero(numeric).toFixed(1);
     } else if (typeof value === "string") {
       this.profitValue.textContent = this.formatDisplayAmount(value);
     } else {
-      this.profitValue.textContent = "0.00";
+      this.profitValue.textContent = "0.0";
     }
   }
 
@@ -1469,7 +1469,7 @@ export class ControlPanel extends EventTarget {
   setNumberOfBetsValue(value) {
     if (!this.autoNumberOfBetsInput) return;
     const normalized = Math.max(0, Number(value) || 0);
-    this.autoNumberOfBetsInput.value = normalized.toFixed(2);
+    this.autoNumberOfBetsInput.value = normalized.toFixed(1);
     this.updateNumberOfBetsIcon();
   }
 

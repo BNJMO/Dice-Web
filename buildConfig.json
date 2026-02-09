@@ -1,6 +1,6 @@
 {
-  "buildId": "0.1.11",
-  "buildDate": "2/9/2026, 4:03:49 AM",
+  "buildId": "0.1.13",
+  "buildDate": "2/10/2026, 2:22:16 AM",
   "environment": "Production",
   "vite": {
     "vitePath": "/Dice-Web/",
