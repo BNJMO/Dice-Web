@@ -55,6 +55,8 @@ export class ControlPanel extends EventTarget {
       initialProfitValue: options.initialProfitValue ?? "0.0",
       initialMode: options.initialMode ?? "manual",
       gameName: options.gameName ?? "Game Name",
+      rollModeLabel: options.rollModeLabel ?? "Roll Mode",
+      initialRollMode: options.initialRollMode ?? "inside",
       minesLabel: options.minesLabel ?? "Mines",
       gemsLabel: options.gemsLabel ?? "Gems",
       animationsLabel: options.animationsLabel ?? "Animations",
@@ -75,6 +77,7 @@ export class ControlPanel extends EventTarget {
     this.currencyRelay = options.relay ?? null;
 
     this.mode = this.options.initialMode === "auto" ? "auto" : "manual";
+    this.rollMode = this.normalizeRollMode(this.options.initialRollMode);
 
     this.animationsEnabled = Boolean(this.options.initialAnimationsEnabled);
 
@@ -82,6 +85,7 @@ export class ControlPanel extends EventTarget {
     this.betButtonState = "clickable";
     this.randomPickButtonState = "clickable";
     this.minesSelectState = "clickable";
+    this.rollModeSelectState = "clickable";
     this.autoStartButtonState = "clickable";
     this.autoStartButtonMode = "start";
     this.showServerPanelVisible = false;
@@ -124,6 +128,8 @@ export class ControlPanel extends EventTarget {
     this.buildToggle();
     this.buildBetAmountDisplay();
     this.buildBetControls();
+    this.buildRollModeLabel();
+    this.buildRollModeSelect();
     this.buildModeSections();
     // this.buildFooter();
 
@@ -143,6 +149,7 @@ export class ControlPanel extends EventTarget {
     this.updateOnWinMode();
     this.updateOnLossMode();
     this.updateAnimationToggle();
+    this.updateRollModeSelect();
 
     this.setupResponsiveLayout();
   }
@@ -269,6 +276,45 @@ export class ControlPanel extends EventTarget {
     this.scrollContainer.appendChild(this.betBox);
   }
 
+  buildRollModeLabel() {
+    const row = document.createElement("div");
+    row.className = "control-row";
+
+    const label = document.createElement("span");
+    label.className = "control-row-label";
+    label.textContent = this.options.rollModeLabel;
+    row.appendChild(label);
+
+    this.scrollContainer.appendChild(row);
+  }
+
+  buildRollModeSelect() {
+    this.rollModeSelectWrapper = document.createElement("div");
+    this.rollModeSelectWrapper.className = "control-select-field";
+
+    this.rollModeSelect = document.createElement("select");
+    this.rollModeSelect.className = "control-select";
+    this.rollModeSelect.setAttribute("aria-label", this.options.rollModeLabel);
+    this.rollModeSelect.addEventListener("change", () => {
+      const value = this.normalizeRollMode(this.rollModeSelect.value);
+      this.rollMode = value;
+      this.dispatchEvent(
+        new CustomEvent("rollmodechange", { detail: { mode: this.rollMode } })
+      );
+    });
+
+    this.rollModeSelectWrapper.appendChild(this.rollModeSelect);
+
+    const arrow = document.createElement("span");
+    arrow.className = "control-select-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    this.rollModeSelectWrapper.appendChild(arrow);
+
+    this.scrollContainer.appendChild(this.rollModeSelectWrapper);
+
+    this.setRollModeSelectState(this.rollModeSelectState);
+  }
+
   buildMinesLabel() {
     const row = document.createElement("div");
     row.className = "control-row";
@@ -305,6 +351,26 @@ export class ControlPanel extends EventTarget {
     this.scrollContainer.appendChild(this.minesSelectWrapper);
 
     this.setMinesSelectState(this.minesSelectState);
+  }
+
+  updateRollModeSelect() {
+    if (!this.rollModeSelect) return;
+    const options = [
+      { label: "Inside", value: "inside" },
+      { label: "Outside", value: "outside" },
+      { label: "Between", value: "between" },
+    ];
+    this.rollModeSelect.innerHTML = "";
+    options.forEach((option) => {
+      const item = document.createElement("option");
+      item.value = option.value;
+      item.textContent = option.label;
+      this.rollModeSelect.appendChild(item);
+    });
+
+    const normalized = this.normalizeRollMode(this.rollMode);
+    this.rollMode = normalized;
+    this.rollModeSelect.value = normalized;
   }
 
   buildGemsLabel() {
@@ -1382,6 +1448,19 @@ export class ControlPanel extends EventTarget {
     this.minesSelectWrapper.classList.toggle("is-non-clickable", !isClickable);
   }
 
+  setRollModeSelectState(state) {
+    if (!this.rollModeSelect || !this.rollModeSelectWrapper) return;
+    const normalized =
+      state === "clickable" || state === true || state === "enabled"
+        ? "clickable"
+        : "non-clickable";
+    this.rollModeSelectState = normalized;
+    const isClickable = normalized === "clickable";
+    this.rollModeSelect.disabled = !isClickable;
+    this.rollModeSelect.setAttribute("aria-disabled", String(!isClickable));
+    this.rollModeSelectWrapper.classList.toggle("is-non-clickable", !isClickable);
+  }
+
   setAutoStartButtonMode(mode) {
     if (!this.autoStartButton) return;
     const normalized =
@@ -1408,6 +1487,7 @@ export class ControlPanel extends EventTarget {
     this.setRandomPickState(clickable ? "clickable" : "non-clickable");
     this.setAutoStartButtonState(clickable ? "clickable" : "non-clickable");
     this.setMinesSelectState(clickable ? "clickable" : "non-clickable");
+    this.setRollModeSelectState(clickable ? "clickable" : "non-clickable");
     this.setNumberOfBetsClickable(clickable);
     this.setAdvancedToggleClickable(clickable);
     this.setAdvancedStrategyControlsClickable(clickable);
@@ -1436,6 +1516,36 @@ export class ControlPanel extends EventTarget {
       this.animationToggleButton.classList.toggle("is-non-clickable", !clickable);
       this.animationToggleButton.setAttribute("aria-disabled", String(!clickable));
     }
+  }
+
+  normalizeRollMode(mode) {
+    if (mode === "outside") {
+      return "outside";
+    }
+    if (mode === "between") {
+      return "between";
+    }
+    return "inside";
+  }
+
+  setRollMode(mode, { emit = true } = {}) {
+    const normalized = this.normalizeRollMode(mode);
+    if (this.rollMode === normalized && this.rollModeSelect?.value === normalized) {
+      return;
+    }
+    this.rollMode = normalized;
+    if (this.rollModeSelect) {
+      this.rollModeSelect.value = normalized;
+    }
+    if (emit) {
+      this.dispatchEvent(
+        new CustomEvent("rollmodechange", { detail: { mode: this.rollMode } })
+      );
+    }
+  }
+
+  getRollMode() {
+    return this.normalizeRollMode(this.rollMode);
   }
 
   setBetControlsClickable(isClickable) {
