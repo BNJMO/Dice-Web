@@ -66,9 +66,19 @@
   }
 }
 
+@media (max-width: 853px) {
+  .game-container {
+    min-height: 760px;
+    max-height: none;
+  }
+
+  #game {
+    min-height: 760px;
+  }
+}
+
 @media (max-width: 404px) and (orientation: portrait) {
   .game-container {
     min-height: 450px;
   }
 }
-
